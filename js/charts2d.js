@@ -35,9 +35,12 @@ export function renderBarReadout(container, vector, opts = {}) {
 
     const from = Math.min(50, pctX(score));
     const width = Math.abs(pctX(score) - 50);
-    const scoreHtml = spansZero
-      ? `<span class="bar-score leans" title="confidence band spans zero — sign uncertain">leans ${escapeHtml(score >= 0 ? a.posLabel : a.negLabel)} <span class="muted">(${sign(score)})</span></span>`
-      : `<span class="bar-score ${dir}">${sign(score)}</span>`;
+    const centered = Math.abs(score) < 0.05;
+    const scoreHtml = !spansZero
+      ? `<span class="bar-score ${dir}">${sign(score)}</span>`
+      : centered
+        ? `<span class="bar-score leans" title="confidence band spans zero — no clear lean">centered <span class="muted">(0.0)</span></span>`
+        : `<span class="bar-score leans" title="band spans zero — sign not firmly determined">leans ${escapeHtml(score >= 0 ? a.posLabel : a.negLabel)} <span class="muted">(${sign(score)})</span></span>`;
     const whisker = band && band.lo !== band.hi
       ? `<line x1="${pctX(band.lo)}" y1="6" x2="${pctX(band.hi)}" y2="6" class="ci-line"/>
          <line x1="${pctX(band.lo)}" y1="2.5" x2="${pctX(band.lo)}" y2="9.5" class="ci-cap"/>
@@ -74,12 +77,16 @@ function ordinal(n) { const s = ["th", "st", "nd", "rd"], v = n % 100; return n 
 // ---------------------------------------------------------------------------
 export function quadrantSVG(vector, xKey, yKey, opts = {}) {
   const size = opts.size || 300;
-  const pad = 54; // room for pole labels
-  const plot = size; // inner plot square side
-  const W = plot + pad * 2;
-  const H = plot + pad * 2;
+  // Labels sit in the margins on their own rows/corners so long pole names never
+  // clip off-canvas. Horizontal poles go in the BOTTOM corners (full plot width
+  // to breathe); vertical poles are centred top and bottom.
+  const padSide = 20, padTop = 26, padBottom = 52;
+  const plot = size;
+  const W = plot + padSide * 2;
+  const H = plot + padTop + padBottom;
   const ax = axisByKey(xKey), ay = axisByKey(yKey);
-  const cx = pad, cy = pad;
+  const cx = padSide, cy = padTop;
+  const labelSet = opts.labelNames ? new Set(opts.labelNames) : null; // figures to label (declutter)
 
   const toX = (v) => cx + ((v + 100) / 200) * plot;
   const toY = (v) => cy + ((100 - v) / 200) * plot; // positive up
@@ -113,13 +120,15 @@ export function quadrantSVG(vector, xKey, yKey, opts = {}) {
       `<circle cx="${toX(p[0])}" cy="${toY(p[1])}" r="2.5" class="cloud-dot"/>`).join("");
   }
 
-  // labeled figure markers (historical figures).
+  // figure markers: dots always (with hover title); labels only for a highlight
+  // set (e.g. the nearest few) so 24 names don't collide into an unreadable mass.
   let figMarks = "";
   if (opts.figures && opts.figures.length) {
     figMarks = opts.figures.map((f) => {
       const x = toX(f.v[xKey] || 0), y = toY(f.v[yKey] || 0);
-      return `<g class="fig"><circle cx="${x}" cy="${y}" r="4" class="fig-dot"><title>${escapeHtml(f.name)}</title></circle>` +
-        `<text x="${x + 6}" y="${y - 4}" class="fig-lbl">${escapeHtml(f.name)}</text></g>`;
+      const showLabel = !labelSet || labelSet.has(f.name);
+      const lbl = showLabel ? `<text x="${x + 5}" y="${y - 4}" class="fig-lbl">${escapeHtml(f.name)}</text>` : "";
+      return `<g class="fig"><circle cx="${x}" cy="${y}" r="4" class="fig-dot"><title>${escapeHtml(f.name)}</title></circle>${lbl}</g>`;
     }).join("");
   }
 
@@ -136,13 +145,48 @@ export function quadrantSVG(vector, xKey, yKey, opts = {}) {
     ${figMarks}
     <circle cx="${px}" cy="${py}" r="6" class="you-dot"/>
     <circle cx="${px}" cy="${py}" r="11" class="you-halo"/>
-    <!-- pole labels -->
-    <text x="${midX}" y="${cy - 14}" class="pole-lbl top">${escapeHtml(ay.posLabel)}</text>
-    <text x="${midX}" y="${cy + plot + 26}" class="pole-lbl bot">${escapeHtml(ay.negLabel)}</text>
-    <text x="${cx - 8}" y="${midY}" class="pole-lbl left">${escapeHtml(ax.negLabel)}</text>
-    <text x="${cx + plot + 8}" y="${midY}" class="pole-lbl right">${escapeHtml(ax.posLabel)}</text>
-    <text x="${cx + 4}" y="${cy + plot + 42}" class="axis-name">${escapeHtml(ax.label)} ↔</text>
-    <text x="${cx + 4}" y="${cy - 34}" class="axis-name">${escapeHtml(ay.label)} ↕</text>
+    <!-- pole labels: y+ top-centre, y- bottom-centre, x-/x+ in the bottom corners -->
+    <text x="${midX}" y="${cy - 12}" class="pole-lbl top">${escapeHtml(ay.posLabel)}</text>
+    <text x="${cx}" y="${cy + plot + 18}" class="pole-lbl xneg">◀ ${escapeHtml(ax.negLabel)}</text>
+    <text x="${cx + plot}" y="${cy + plot + 18}" class="pole-lbl xpos">${escapeHtml(ax.posLabel)} ▶</text>
+    <text x="${midX}" y="${cy + plot + 38}" class="pole-lbl bot">${escapeHtml(ay.negLabel)}</text>
+  </svg>`;
+}
+
+// ---------------------------------------------------------------------------
+// Single-axis number line: user marker + every archetype's position on ONE axis.
+// (No percentage — positions and distances only.) Returns an inline SVG string.
+// ---------------------------------------------------------------------------
+export function axisLineSVG(userVec, axisKey, archetypes, labelNames) {
+  const a = axisByKey(axisKey);
+  const W = 460, H = 96, padX = 24, midY = 48;
+  const x0 = padX, x1 = W - padX, span = x1 - x0;
+  const toX = (v) => x0 + ((v + 100) / 200) * span;
+  const u = userVec[axisKey] || 0;
+  const labelSet = labelNames ? new Set(labelNames) : null;
+
+  const ticks = archetypes.map((arch, i) => {
+    const x = toX(arch.v[axisKey] || 0);
+    const show = !labelSet || labelSet.has(arch.name);
+    // stagger labels above/below the axis to reduce collision
+    const above = i % 2 === 0;
+    const ly = above ? midY - 12 : midY + 20;
+    const lbl = show ? `<text x="${x}" y="${ly}" class="axl-arch">${escapeHtml(arch.name)}</text>` : "";
+    return `<line x1="${x}" y1="${midY - 5}" x2="${x}" y2="${midY + 5}" class="axl-tick"><title>${escapeHtml(arch.name)}: ${arch.v[axisKey]}</title></line>${lbl}`;
+  }).join("");
+
+  const ux = toX(u);
+  return `
+  <svg class="axis-line" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="Archetype positions on ${escapeHtml(a.label)}">
+    <line x1="${x0}" y1="${midY}" x2="${x1}" y2="${midY}" class="axl-axis"/>
+    <line x1="${toX(0)}" y1="${midY - 8}" x2="${toX(0)}" y2="${midY + 8}" class="axl-zero"/>
+    ${ticks}
+    <line x1="${ux}" y1="${midY - 14}" x2="${ux}" y2="${midY + 14}" class="axl-you"/>
+    <circle cx="${ux}" cy="${midY}" r="5" class="axl-you-dot"><title>You: ${Math.round(u * 10) / 10}</title></circle>
+    <text x="${x0}" y="${H - 6}" class="axl-pole neg">${escapeHtml(a.negLabel)}</text>
+    <text x="${x1}" y="${H - 6}" class="axl-pole pos">${escapeHtml(a.posLabel)}</text>
+    <text x="${ux}" y="${midY - 20}" class="axl-you-lbl">You</text>
   </svg>`;
 }
 

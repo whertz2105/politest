@@ -30,6 +30,7 @@
       <label>Y <select id="ax1"></select></label>
       <label>Z <select id="ax2"></select></label>
       <label><input type="checkbox" id="autorotate"> Autorotate</label>
+      <label><input type="checkbox" id="show-labels"> Labels</label>
       <button id="copy-view" class="btn">Copy view link</button>
     </div>
 
@@ -184,6 +185,7 @@
       });
 
       document.getElementById("autorotate").addEventListener("change", (e) => explorer.setAutorotate(e.target.checked));
+      document.getElementById("show-labels").addEventListener("change", (e) => explorer.setLabelsVisible(e.target.checked));
 
       // debounce camera->hash
       let camTimer = 0;

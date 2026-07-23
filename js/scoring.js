@@ -110,9 +110,112 @@ export function validateQuestions(raw) {
   return { questions, errors, warnings };
 }
 
-// The subset served for a given mode. "quick" => only core:true questions.
+// Length modes -> target question count. Deep = the whole bank.
+export const MODE_SIZES = { quick: 100, normal: 250, deep: Infinity };
+export function normalizeMode(mode) {
+  if (mode === "quick" || mode === "normal" || mode === "deep") return mode;
+  if (mode === "full") return "deep";          // legacy alias
+  return "normal";                              // sensible default
+}
+
+function primaryAxisOf(q) {
+  let best = null;
+  for (const k of Object.keys(q.axes || {})) {
+    if (isAxisKey(k) && (best === null || Math.abs(q.axes[k]) > Math.abs(q.axes[best]))) best = k;
+  }
+  return best;
+}
+// interleave three severity rungs, then id, so a prefix of the list spreads sev
+function orderBySevThenId(arr) {
+  const g = { 1: [], 2: [], 3: [] };
+  for (const q of arr.slice().sort((a, b) => a.id - b.id)) g[[1, 2, 3].includes(q.sev) ? q.sev : 2].push(q);
+  const out = []; let i = 0, any = true;
+  while (any) { any = false; for (const s of [1, 2, 3]) { if (i < g[s].length) { out.push(g[s][i]); any = true; } } i++; }
+  return out;
+}
+function zip(a, b) {
+  const out = [], n = Math.max(a.length, b.length);
+  for (let i = 0; i < n; i++) { if (i < a.length) out.push(a[i]); if (i < b.length) out.push(b[i]); }
+  return out;
+}
+
+// Deterministic, balanced subset of ~`target` questions: even coverage across all
+// axes (round-robin), keying-balanced (+/- interleaved), severity-spread, always
+// including attention checks, and keeping consistency pairs intact. Stable (no
+// randomness) so every taker in a mode answers the same set.
+export function selectQuestionSet(questions, target) {
+  if (!Number.isFinite(target) || questions.length <= target) return questions.slice();
+  const byId = new Map(questions.map((q) => [q.id, q]));
+  const chosen = new Set();
+
+  // attention checks always included
+  for (const q of questions) if (q.type === "attention") chosen.add(q.id);
+
+  // pair partner lookup (to keep pairs whole)
+  const pairs = new Map();
+  for (const q of questions) if (q.pair) { if (!pairs.has(q.pair)) pairs.set(q.pair, []); pairs.get(q.pair).push(q); }
+  const partnerOf = new Map();
+  for (const items of pairs.values()) if (items.length === 2) { partnerOf.set(items[0].id, items[1].id); partnerOf.set(items[1].id, items[0].id); }
+
+  // per-primary-axis buckets, sign+sev interleaved
+  const buckets = new Map();
+  const perAxis = {};
+  for (const q of questions) {
+    if (q.type === "attention" || !q.axes) continue;
+    const a = primaryAxisOf(q); if (!a) continue;
+    (perAxis[a] = perAxis[a] || []).push(q);
+  }
+  for (const a of Object.keys(perAxis)) {
+    const items = perAxis[a];
+    const pos = orderBySevThenId(items.filter((q) => q.axes[a] > 0));
+    const neg = orderBySevThenId(items.filter((q) => q.axes[a] < 0));
+    buckets.set(a, zip(pos, neg));
+  }
+
+  const axes = AXIS_KEYS.filter((a) => buckets.has(a));
+  const idx = Object.fromEntries(axes.map((a) => [a, 0]));
+  let guard = 0;
+  while (chosen.size < target && guard < questions.length * 2) {
+    let progressed = false;
+    for (const a of axes) {
+      if (chosen.size >= target) break;
+      const list = buckets.get(a);
+      while (idx[a] < list.length && chosen.has(list[idx[a]].id)) idx[a]++;
+      if (idx[a] < list.length) {
+        const q = list[idx[a]++];
+        chosen.add(q.id);
+        const partner = partnerOf.get(q.id);
+        if (partner !== undefined && !chosen.has(partner)) chosen.add(partner);
+        progressed = true;
+      }
+    }
+    if (!progressed) break;
+    guard++;
+  }
+  return questions.filter((q) => chosen.has(q.id));
+}
+
+// The subset served for a given length mode.
 export function questionsForMode(questions, mode) {
-  return mode === "quick" ? questions.filter((q) => q.core === true) : questions;
+  const m = normalizeMode(mode);
+  if (m === "deep") return questions.slice();
+  return selectQuestionSet(questions, MODE_SIZES[m]);
+}
+
+// Stable 32-bit fingerprint of the whole bank (id + axes + type/expect/pair per
+// item). Used to REFUSE resuming a session whose bank differs from the loaded one
+// — ids can collide across bank versions while the underlying question changed,
+// which would silently mis-score answers.
+export function bankSignature(questions) {
+  let h = 2166136261 >>> 0;
+  const feed = (s) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } };
+  const sorted = questions.slice().sort((a, b) => a.id - b.id);
+  feed("n=" + sorted.length + ";");
+  for (const q of sorted) {
+    const ax = Object.keys(q.axes || {}).sort().map((k) => k + ":" + q.axes[k]).join(",");
+    feed(q.id + "|" + ax + "|" + (q.type || "") + "|" + (q.expect == null ? "" : q.expect) + "|" + (q.pair || "") + ";");
+  }
+  return h >>> 0;
 }
 
 // Items that actually load axes (exclude attention checks).
@@ -220,7 +323,12 @@ export function computeConsistency(answers, questions) {
   }
   const meanErr = pairs.length ? pairs.reduce((s, p) => s + p.error, 0) / pairs.length : 0;
   const overallPct = pairs.length ? Math.round(clamp(100 - meanErr, 0, 100)) : null;
-  return { pairs, perAxisError, axisWarn, overallPct, count: pairs.length };
+  // A pair "fails" when the two answers are >40 points from mirroring. A high
+  // fail RATE across many pairs signals answer↔question MISALIGNMENT (a bug),
+  // not mere opinion — the results page uses this as a data-integrity canary.
+  const failedPairs = pairs.filter((p) => p.error > 40).length;
+  const failRate = pairs.length ? failedPairs / pairs.length : 0;
+  return { pairs, perAxisError, axisWarn, overallPct, count: pairs.length, failedPairs, failRate };
 }
 
 // ---------------------------------------------------------------------------

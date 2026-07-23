@@ -12,15 +12,21 @@
     <section class="hero">
       <h1 id="app-title">DecaCompass</h1>
       <p id="app-tagline" class="muted"></p>
-      <div class="mode-picker" role="radiogroup" aria-label="Answer mode">
+      <div class="picker-label">Answer style</div>
+      <div class="mode-picker" role="radiogroup" aria-label="Answer style">
         <button class="mode-opt" type="button" data-mode="classic">
           <b>Classic</b><span class="muted">Five buttons — faster</span></button>
         <button class="mode-opt" type="button" data-mode="precision">
           <b>Precision</b><span class="muted">Slider — exact placement</span></button>
       </div>
-      <div class="toggle-line">
-        <input type="checkbox" id="quick-mode" style="width:22px;height:22px">
-        <label for="quick-mode">Quick mode (100-question subset)</label>
+      <div class="picker-label">Length</div>
+      <div class="mode-picker" role="radiogroup" aria-label="Test length">
+        <button class="mode-opt" type="button" data-len="quick">
+          <b>Quick</b><span class="muted">100 questions</span></button>
+        <button class="mode-opt" type="button" data-len="normal">
+          <b>Normal</b><span class="muted">250 questions</span></button>
+        <button class="mode-opt" type="button" data-len="deep">
+          <b>Deep</b><span class="muted">Full 400-item bank</span></button>
       </div>
       <div class="btn-row" style="justify-content:center">
         <a class="btn btn-primary" id="start-btn" href="test.html">Take the test</a>
@@ -46,34 +52,41 @@
     document.getElementById("app-title").textContent = APP_NAME;
     document.getElementById("app-tagline").textContent = APP_TAGLINE;
 
-    const MODE_KEY = "dc_mode";
-    const quick = document.getElementById("quick-mode");
-    try { quick.checked = localStorage.getItem(MODE_KEY) === "quick"; } catch {}
     const note = document.getElementById("count-note");
-    const setNote = () => {
-      note.textContent = quick.checked
-        ? `Quick mode: ~${QUICK_TEST_SIZE} questions.`
-        : `Full test: ~${FULL_TEST_SIZE} questions.`;
-    };
-    setNote();
-    quick.addEventListener("change", () => {
-      try { localStorage.setItem(MODE_KEY, quick.checked ? "quick" : "full"); } catch {}
-      setNote();
-    });
+    const LEN_NOTE = { quick: "Quick — about 100 questions.", normal: "Normal — about 250 questions.", deep: "Deep — all 400 questions." };
 
-    // answer-mode picker
+    // answer-style picker
     const AMODE_KEY = "dc_answer_mode";
-    const modeBtns = [...document.querySelectorAll(".mode-opt")];
-    function applyMode() {
+    const styleBtns = [...document.querySelectorAll("[data-mode]")];
+    function applyStyle() {
       let m; try { m = localStorage.getItem(AMODE_KEY); } catch {}
       if (m !== "precision") m = "classic";
-      modeBtns.forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
+      styleBtns.forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
     }
-    modeBtns.forEach((b) => b.addEventListener("click", () => {
+    styleBtns.forEach((b) => b.addEventListener("click", () => {
       try { localStorage.setItem(AMODE_KEY, b.dataset.mode); } catch {}
-      applyMode();
+      applyStyle();
     }));
-    applyMode();
+    applyStyle();
+
+    // length picker (quick / normal / deep)
+    const LEN_KEY = "dc_mode";
+    const lenBtns = [...document.querySelectorAll("[data-len]")];
+    function currentLen() {
+      let m; try { m = localStorage.getItem(LEN_KEY); } catch {}
+      if (m === "quick" || m === "normal" || m === "deep") return m;
+      return m === "full" ? "deep" : "normal";
+    }
+    function applyLen() {
+      const m = currentLen();
+      lenBtns.forEach((b) => b.classList.toggle("active", b.dataset.len === m));
+      note.textContent = LEN_NOTE[m];
+    }
+    lenBtns.forEach((b) => b.addEventListener("click", () => {
+      try { localStorage.setItem(LEN_KEY, b.dataset.len); } catch {}
+      applyLen();
+    }));
+    applyLen();
 
     const prog = loadProgress();
     if (prog && Array.isArray(prog.order) && prog.order.length) {

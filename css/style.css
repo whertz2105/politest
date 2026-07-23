@@ -163,7 +163,7 @@ a.btn { text-decoration: none; }
 /* Test */
 .test-stage { max-width: 640px; margin: var(--s6) auto; }
 .progress { color: var(--fg-dim); font-variant-numeric: tabular-nums; font-size: var(--fs-sm); font-weight: 500; }
-.progress-bar { height: 6px; background: var(--bg-elev2); border-radius: var(--radius-pill); overflow: hidden; margin: var(--s2) 0 var(--s5); }
+.progress-bar { height: 8px; background: var(--bg-elev3); box-shadow: inset 0 0 0 1px var(--border); border-radius: var(--radius-pill); overflow: hidden; margin: var(--s2) 0 var(--s5); }
 .progress-bar > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width var(--t) var(--ease); }
 .q-text { font-size: clamp(1.3rem, 3.6vw, 1.7rem); font-weight: 650; letter-spacing: -0.01em; margin: var(--s4) 0 var(--s5); min-height: 3em; text-wrap: balance; }
 .answers { display: grid; gap: var(--s2); }
@@ -203,7 +203,7 @@ input[type="range"].slider:focus-visible { box-shadow: 0 0 0 4px var(--ring); }
 .bar-track { display: grid; grid-template-columns: minmax(70px,1fr) 3fr minmax(70px,1fr); align-items: center; gap: var(--s2); margin-top: var(--s1); }
 .bar-track .pole { font-size: var(--fs-xs); color: var(--fg-faint); }
 .bar-track .pole.pos { text-align: right; }
-.bar-svg { width: 100%; height: 12px; background: var(--bg-elev2); border-radius: var(--radius-pill); }
+.bar-svg { width: 100%; height: 12px; background: var(--bg-elev3); box-shadow: inset 0 0 0 1px var(--border); border-radius: var(--radius-pill); }
 .bar-mid { stroke: var(--border-strong); stroke-width: 0.6; }
 .bar-fill.pos { fill: var(--pos); } .bar-fill.neg { fill: var(--neg); }
 
@@ -233,11 +233,26 @@ input[type="range"].slider:focus-visible { box-shadow: 0 0 0 4px var(--ring); }
 .cloud-dot { fill: var(--accent-2); opacity: 0.2; }
 .fig-dot { fill: var(--pos); stroke: var(--bg); stroke-width: 0.8; }
 .fig-lbl { fill: var(--fg); font-size: 10px; font-weight: 600; }
-.pole-lbl { fill: var(--fg-dim); font-size: 11px; }
+.pole-lbl { fill: var(--fg-dim); font-size: 11px; font-weight: 500; }
 .pole-lbl.top, .pole-lbl.bot { text-anchor: middle; }
-.pole-lbl.left { text-anchor: end; }
-.pole-lbl.right { text-anchor: start; }
+.pole-lbl.xneg { text-anchor: start; }
+.pole-lbl.xpos { text-anchor: end; }
 .axis-name { fill: var(--fg); font-size: 11px; font-weight: 700; }
+
+/* Single-axis number line */
+.axis-line { width: 100%; height: auto; display: block; }
+.axl-axis { stroke: var(--border-strong); stroke-width: 1.5; }
+.axl-zero { stroke: var(--fg-faint); stroke-width: 1; }
+.axl-tick { stroke: var(--fg-dim); stroke-width: 1.5; opacity: 0.7; }
+.axl-arch { fill: var(--fg-dim); font-size: 8.5px; text-anchor: middle; }
+.axl-you { stroke: var(--accent); stroke-width: 2.5; }
+.axl-you-dot { fill: var(--accent); }
+.axl-you-lbl { fill: var(--accent); font-size: 10px; font-weight: 700; text-anchor: middle; }
+.axl-pole { fill: var(--fg-faint); font-size: 10px; }
+.axl-pole.neg { text-anchor: start; } .axl-pole.pos { text-anchor: end; }
+
+/* landing picker labels */
+.picker-label { font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-faint); margin: var(--s4) 0 0.3rem; }
 
 /* Pickers / selects */
 .picker { display: flex; gap: var(--s2); flex-wrap: wrap; align-items: center; }
@@ -317,6 +332,10 @@ details.card summary { cursor: pointer; }
   .site-nav a { padding: 0.5rem 0.6rem; }
   .mode-opt { min-width: 0; flex: 1 1 45%; }
   section > h2 { font-size: var(--fs-lg); }
+  /* charts get tiny on phones — drop the overlaid labels so the plot stays legible;
+     hover titles + the ranked lists still name every point. */
+  .fig-lbl, .axl-arch { display: none; }
+  .pole-lbl { font-size: 10px; }
 }
 
 /* Respect reduced-motion */

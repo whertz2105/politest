@@ -24,7 +24,8 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
   const { validateQuestions, migrateQuestions, questionsForMode, maxAttainable, itemCount,
           computeScores, computeAttention, computeConsistency, bootstrapConfidence,
           CLASSIC_MAP } = S;
-  const { matchArchetypes } = await importer("js/archetypes.js");
+  const { matchArchetypes, ARCHETYPES } = await importer("js/archetypes.js");
+  const { shuffleWithSeed } = await importer("js/app.js");
 
   // ---- load + migrate questions.json ----
   const qpath = path.join(ROOT, "data", "questions.json");
@@ -73,15 +74,29 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
   const zero = () => Object.fromEntries(AXIS_KEYS.map((k) => [k, 0]));
 
   // (REQUIRED, split-axis) distrust of the political class + RESTRICTED franchise
-  // must NOT read as populism.
+  // must NOT read as populism — Weak-or-lower AND trailing the top match by ≥10.
   {
     const v = zero(); v.trust_pol = -80; v.dem_fr = 70;
-    const byName = Object.fromEntries(matchArchetypes(v).map((m) => [m.name, m]));
+    const ranked = matchArchetypes(v);
+    const top = ranked[0];
+    const byName = Object.fromEntries(ranked.map((m) => [m.name, m]));
     for (const name of ["National Populist", "Left-Populist"]) {
       const m = byName[name];
-      if (m.similarity >= 70) fail(`{trust_pol:-80, dem_fr:+70} matches ${name} at ${m.similarity.toFixed(1)}% (${m.tier}) — must be Weak or lower.`);
-      else ok(`${name}: ${m.similarity.toFixed(1)}% (${m.tier}) — correctly not a populist match`);
+      const trail = top.similarity - m.similarity;
+      if (m.tier === "Strong" || m.tier === "Moderate") fail(`${name} is ${m.tier} @ ${m.similarity.toFixed(1)}% for the distrust+restricted vector — must be Weak or lower.`);
+      else if (trail < 10) fail(`${name} @ ${m.similarity.toFixed(1)}% trails top (${top.name} ${top.similarity.toFixed(1)}) by only ${trail.toFixed(1)} pts (need ≥10).`);
+      else ok(`${name}: ${m.similarity.toFixed(1)}% (${m.tier}), trails ${top.name} by ${trail.toFixed(1)} pts`);
     }
+  }
+  // Strong-tier cap: identical to Libertarian except one salient axis off by 45 ->
+  // similarity still ≥85 but tier must be capped to Moderate.
+  {
+    const lib = ARCHETYPES.find((a) => a.name === "Libertarian");
+    const v = { ...lib.v }; v.auth_pw = lib.v.auth_pw + 45;
+    const m = matchArchetypes(v).find((x) => x.name === "Libertarian");
+    if (m.similarity < 85) fail(`strong-cap fixture only ${m.similarity.toFixed(1)}% — cap not exercised.`);
+    else if (m.tier !== "Moderate") fail(`strong-cap: ${m.similarity.toFixed(1)}% tier ${m.tier} (expected Moderate — auth_pw off 45 on a salient axis).`);
+    else ok(`strong-cap: ${m.similarity.toFixed(1)}% capped to Moderate (salient auth_pw off 45)`);
   }
   {
     const v = zero();
@@ -181,6 +196,45 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
     if (sc.mkt === 100 && att1.failures === 1 && att1.failed === false && att2.failures === 2 && att2.failed === true)
       ok("attention items excluded from scoring; ≥2 failures flags the session");
     else fail(`attention test wrong: mkt=${sc.mkt}, att1=${att1.failures}/${att1.failed}, att2=${att2.failures}/${att2.failed}`);
+  }
+
+  // Order-independence regression: scoring joins by id, never by array index.
+  {
+    const Q = [
+      { id: 1, text: "a", axes: { mkt: 2 } }, { id: 2, text: "b", axes: { mkt: -1, soc: 2 } },
+      { id: 3, text: "c", axes: { wel: 2 } }, { id: 4, text: "d", axes: { soc: -2, mkt: 1 } }, { id: 5, text: "e", axes: { env: -2 } },
+    ];
+    const ans = { 1: 80, 2: 20, 3: 60, 4: 100, 5: 0 };
+    const s1 = computeScores(ans, Q).vector;
+    const shuffled = shuffleWithSeed(Q.map((q) => q.id), 12345).map((id) => Q.find((q) => q.id === id));
+    const s2 = computeScores(ans, shuffled).vector;
+    (AXIS_KEYS.every((k) => s1[k] === s2[k]))
+      ? ok("scoring is id-based: seed-shuffled order yields identical scores")
+      : fail("scoring changed with order — POSITIONAL COUPLING bug.");
+  }
+
+  // Length modes: sizes ~target, all axes covered, attention checks always in.
+  {
+    const quick = questionsForMode(full, "quick"), normal = questionsForMode(full, "normal"), deep = questionsForMode(full, "deep");
+    const cov = (set) => AXES.every((a) => itemCount(set, a.key) > 0);
+    const attn = questions.filter((q) => q.type === "attention");
+    const attnIn = (set) => attn.every((a) => set.some((q) => q.id === a.id));
+    const bad = [];
+    if (Math.abs(quick.length - 100) > 8) bad.push(`quick=${quick.length}`);
+    if (Math.abs(normal.length - 250) > 10) bad.push(`normal=${normal.length}`);
+    if (deep.length !== full.length) bad.push(`deep=${deep.length}≠${full.length}`);
+    if (!cov(quick)) bad.push("quick misses an axis");
+    if (!cov(normal)) bad.push("normal misses an axis");
+    if (!attnIn(quick) || !attnIn(normal)) bad.push("a mode dropped attention checks");
+    bad.length ? fail("mode sampling: " + bad.join("; "))
+      : ok(`modes: quick ${quick.length} / normal ${normal.length} / deep ${deep.length}; all axes covered, attention kept`);
+  }
+
+  // Nation normalization (revised bank).
+  {
+    let total = itemCount(full, "natl"), primary = 0;
+    for (const q of full) { if (q.type === "attention" || !q.axes) continue; let b = null; for (const k of Object.keys(q.axes)) if (!b || Math.abs(q.axes[k]) > Math.abs(q.axes[b])) b = k; if (b === "natl") primary++; }
+    ok(`natl coverage: ${primary} primary / ${total} total`);
   }
 
   console.log();

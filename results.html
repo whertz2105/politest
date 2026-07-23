@@ -15,6 +15,8 @@
       <a class="btn btn-primary" href="test.html">Take the test</a>
     </div>
 
+    <div id="integrity" class="card banner-bad" hidden></div>
+
     <div id="content" hidden>
       <div class="btn-row" style="margin:1rem 0">
         <button id="copy-link" class="btn">Copy share link</button>
@@ -35,9 +37,10 @@
         <h2>Closest archetypes</h2>
         <div id="arch-panel" class="card"></div>
         <details class="card">
-          <summary>Single-axis similarity (not an ideology match)</summary>
-          <p class="muted" style="font-size:0.85rem">Ranks archetypes by one axis only. <b>Not</b> an ideology match.</p>
+          <summary>Single-axis positions (not an ideology match)</summary>
+          <p class="muted" style="font-size:0.85rem">Where each archetype sits on one axis, and how far it is from you. This is <b>not</b> an ideology match — use the full-vector result above for that.</p>
           <div class="picker"><label for="single-axis">Axis:</label><select id="single-axis"></select></div>
+          <div id="single-line" style="max-width:480px;margin:0.5rem 0"></div>
           <ul class="arch-list" id="single-list"></ul>
         </details>
       </section>
@@ -81,7 +84,7 @@
     import { initShell, loadQuestionData, vectorFromHash, encodeVector, escapeHtml } from "./js/app.js";
     import { AXES, AXIS_KEYS, axisByKey, axisLabel } from "./js/axes.js";
     import { computeScores, questionsForMode } from "./js/scoring.js";
-    import { renderBarReadout, quadrantSVG, quadrantCard, downloadSvgAsPng } from "./js/charts2d.js";
+    import { renderBarReadout, quadrantSVG, quadrantCard, downloadSvgAsPng, axisLineSVG } from "./js/charts2d.js";
     import { ARCHETYPES, matchArchetypes, singleAxisMatch } from "./js/archetypes.js";
     import { validateFigures, nearestFigures } from "./js/figures.js";
 
@@ -172,10 +175,17 @@
     function renderSingleAxis(vector) {
       const sel = document.getElementById("single-axis");
       fillAxisSelect(sel, "mkt");
+      const line = document.getElementById("single-line");
       const list = document.getElementById("single-list");
       const draw = () => {
-        list.innerHTML = singleAxisMatch(vector, sel.value).slice(0, 6).map((r) =>
-          `<li><span>${escapeHtml(r.name)}</span><span class="sim">${r.proximity.toFixed(0)}% on ${escapeHtml(axisLabel(sel.value))}</span></li>`).join("");
+        const a = axisByKey(sel.value);
+        const ranked = singleAxisMatch(vector, sel.value);
+        const nearest = ranked.slice(0, 6).map((r) => r.name);
+        line.innerHTML = axisLineSVG(vector, sel.value, ARCHETYPES, nearest);
+        list.innerHTML = ranked.map((r) => {
+          const lean = r.axisScore > 0 ? a.posLabel : r.axisScore < 0 ? a.negLabel : "centre";
+          return `<li><span>${escapeHtml(r.name)} <span class="muted" style="font-size:0.76rem">${escapeHtml(lean)} ${r.axisScore > 0 ? "+" : ""}${r.axisScore}</span></span><span class="sim">${r.distance.toFixed(1)} away</span></li>`;
+        }).join("");
       };
       sel.addEventListener("change", draw); draw();
     }
@@ -192,10 +202,10 @@
       const cap = (e) => `<figcaption>${escapeHtml(ax.label)} × ${escapeHtml(ay.label)}${e || ""}</figcaption>`;
 
       if (cmpMode === "figures") {
-        meta.textContent = figures.length ? `${figures.length} figures` : "no figures loaded";
-        card.innerHTML = quadrantSVG(vector, x, y, { figures }) + cap(" — you vs figures");
-        if (!figures.length) { detail.innerHTML = `<p class="muted">No figures loaded.</p>`; return; }
+        meta.textContent = figures.length ? `${figures.length} figures · nearest labelled` : "no figures loaded";
         const near = nearestFigures(vector, figures, 6);
+        card.innerHTML = quadrantSVG(vector, x, y, { figures, labelNames: near.map((f) => f.name) }) + cap(" — you vs figures");
+        if (!figures.length) { detail.innerHTML = `<p class="muted">No figures loaded.</p>`; return; }
         detail.innerHTML = `<h4 style="margin-top:0">Closest historical figures</h4>
           <p class="muted" style="font-size:0.82rem">Full-vector similarity across all 22 axes.</p>
           <ul class="arch-list">${near.map((f) => `<li><span>${escapeHtml(f.name)}${f.era ? ` <span class="muted" style="font-size:0.76rem">${escapeHtml(f.era)}</span>` : ""}</span><span class="sim">${f.proximity.toFixed(0)}%</span></li>`).join("")}</ul>`;
@@ -301,8 +311,21 @@
     async function boot() {
       const resolved = resolveVector();
       if (!resolved) { document.getElementById("empty").hidden = false; return; }
-      document.getElementById("content").hidden = false;
       const { vector, own } = resolved;
+
+      // Canary: a high consistency-pair failure rate signals answer↔question
+      // MISALIGNMENT (a bug — e.g. a session resumed across a changed bank), not
+      // opinion. Refuse to render misleading results.
+      if (own && last && last.consistency && last.consistency.count >= 3 && last.consistency.failRate > 0.4) {
+        const c = last.consistency;
+        const el = document.getElementById("integrity");
+        el.hidden = false;
+        el.innerHTML = `<h2 style="margin-top:0">Results withheld — data-integrity problem</h2>
+          <p>${c.failedPairs} of ${c.count} consistency-check pairs conflict (${Math.round(c.failRate * 100)}%). That pattern almost always means answers were mis-aligned to questions — for example a test resumed after the question bank changed — rather than genuine opinion. Showing a compass here would mislead you.</p>
+          <div class="btn-row"><a class="btn btn-primary" href="test.html?fresh=1">Restart the test</a><a class="btn" href="index.html">Home</a></div>`;
+        return;
+      }
+      document.getElementById("content").hidden = false;
 
       let data = null;
       try { data = await loadQuestionData(); } catch {}
@@ -316,7 +339,7 @@
       document.getElementById("run-meta").textContent =
         (own && last ? `mode: ${last.answerMode || "classic"}` : "shared result") + ` · v${bankVersion} bank`;
       document.getElementById("bars-note").textContent = own
-        ? "Whiskers show 95% confidence bands; axes whose band spans zero are shown as “leans”." + (percentiles ? " Percentiles are vs the crowd." : "")
+        ? "95% confidence whiskers — they widen with low answer consistency; axes whose band spans zero show “leans”." + (percentiles ? " Percentiles are vs the crowd." : "")
         : "Shared result — validity detail (confidence bands, consistency) is only available to the person who took it.";
 
       renderBanners(last && last.attention, last && last.consistency);

@@ -61,7 +61,7 @@
       const core = questionsForMode(questions, "quick");
       const attentionN = full.filter((q) => q.type === "attention").length;
       const pairN = new Set(full.filter((q) => q.pair).map((q) => q.pair)).size;
-      const note = `<div class="card" style="grid-column:1/-1"><b>Bank v${bankVersion}</b> · ${full.length} items · ${attentionN} attention · ${pairN} consistency pairs`
+      const note = `<div class="card" style="grid-column:1/-1"><b>Bank v${bankVersion}</b> · ${full.length} items · ${attentionN} attention (hidden from table) · ${pairN} consistency pairs`
         + (approximated.length ? ` · <span class="muted">split axes approximated: ${approximated.map(escapeHtml).join(", ")}</span>` : "")
         + (hasSev ? "" : ` · <span class="muted">no severity (sev) tags</span>`) + `</div>`;
       const cells = AXES.map((a) => {
@@ -111,7 +111,10 @@
 
     function renderBody() {
       const filter = document.getElementById("filter").value.trim().toLowerCase();
-      let rows = questions.filter((q) =>
+      // Attention-check items are excluded from the public table (exposing their
+      // wording would make them trivially defeatable); they stay counted in the header.
+      const visible = questions.filter((q) => q.type !== "attention");
+      let rows = visible.filter((q) =>
         !filter || q.text.toLowerCase().includes(filter) || String(q.id) === filter);
       rows.sort((a, b) => {
         const va = valueFor(a, sortKey), vb = valueFor(b, sortKey);
@@ -133,7 +136,7 @@
           <td>${q.pair ? escapeHtml(q.pair) : ""}</td>${cells}</tr>`;
       }).join("");
       document.querySelector("#qtable tbody").innerHTML = body;
-      document.getElementById("rowcount").textContent = `${rows.length} of ${questions.length}`;
+      document.getElementById("rowcount").textContent = `${rows.length} of ${visible.length} (attention checks hidden)`;
     }
 
     (async () => {

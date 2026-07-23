@@ -170,33 +170,51 @@ export const ARCHETYPES = [
 // Matching
 // ---------------------------------------------------------------------------
 
-// Salience-weighted mean absolute difference -> similarity %.
+// Salience-weighted ROOT-MEAN-SQUARE distance -> similarity %. RMS (vs plain mean
+// abs) makes a few large single-axis disagreements cost proportionally more, so a
+// profile with strong outlier positions can't be diluted into a bland match by
+// many near-zero agreements.
 export function similarity(userVec, arch) {
   let wsum = 0, dsum = 0;
   for (const k of AXIS_KEYS) {
     const s = arch.s[k];
-    const d = Math.abs((userVec[k] || 0) - arch.v[k]);
-    dsum += s * d;
+    const d = (userVec[k] || 0) - arch.v[k];
+    dsum += s * d * d;
     wsum += s;
   }
-  const mean = wsum ? dsum / wsum : 0; // 0..200
-  return 100 * (1 - mean / 200);
+  const rms = wsum ? Math.sqrt(dsum / wsum) : 0; // 0..200
+  return 100 * (1 - rms / 200);
 }
 
-export function tierFor(sim) {
-  if (sim >= 85) return "Strong";
+// The largest disagreement on a DEFINITIONAL axis (salience >= 0.5).
+function maxDefiningDiff(userVec, arch) {
+  let m = 0;
+  for (const k of AXIS_KEYS) {
+    if (arch.s[k] >= 0.5) m = Math.max(m, Math.abs((userVec[k] || 0) - arch.v[k]));
+  }
+  return m;
+}
+
+// Tier from similarity, with a guard: a "Strong" match is capped to "Moderate"
+// if the profile differs by >40 points on any axis the archetype strongly defines
+// (salience >= 0.5) — you can't be a "Strong" X while contradicting a core X axis.
+export function tierFor(sim, userVec, arch) {
+  if (sim >= 85) {
+    if (userVec && arch && maxDefiningDiff(userVec, arch) > 40) return "Moderate";
+    return "Strong";
+  }
   if (sim >= 70) return "Moderate";
   if (sim >= 55) return "Weak";
   return "None";
 }
 
-// The three axes that most drive this archetype apart from the user, ranked by
-// salience-weighted disagreement so every label can explain itself.
+// The three largest RAW per-axis differences — what the user visibly differs on,
+// not salience-filtered.
 export function topDisagreements(userVec, arch, n = 3) {
   return AXIS_KEYS
-    .map((k) => ({ key: k, label: axisLabel(k), contribution: arch.s[k] * Math.abs((userVec[k] || 0) - arch.v[k]), diff: Math.abs((userVec[k] || 0) - arch.v[k]) }))
+    .map((k) => ({ key: k, label: axisLabel(k), diff: Math.abs((userVec[k] || 0) - arch.v[k]) }))
     .filter((x) => x.diff > 0)
-    .sort((a, b) => b.contribution - a.contribution)
+    .sort((a, b) => b.diff - a.diff)
     .slice(0, n);
 }
 
@@ -209,22 +227,25 @@ export function matchArchetypes(userVec) {
       return {
         name: arch.name,
         similarity: sim,
-        tier: tierFor(sim),
+        tier: tierFor(sim, userVec, arch),
         disagreements: topDisagreements(userVec, arch),
       };
     })
     .sort((a, b) => b.similarity - a.similarity);
 }
 
-// Single-axis proximity — EXPLICITLY not an ideology match. Ranks archetypes by
-// closeness on ONE axis only. UI must caption this accordingly.
+// Single-axis positions — EXPLICITLY not an ideology match. Returns every
+// archetype's POSITION on one axis plus its distance from the user, sorted by
+// absolute distance. No percentage (which is what produced meaningless ties):
+// the caller renders a number line + a distance-sorted list.
 export function singleAxisMatch(userVec, axisKey) {
+  const u = userVec[axisKey] || 0;
   return ARCHETYPES
     .map((arch) => ({
       name: arch.name,
       axisScore: arch.v[axisKey],
-      distance: Math.abs((userVec[axisKey] || 0) - arch.v[axisKey]),
-      proximity: 100 * (1 - Math.abs((userVec[axisKey] || 0) - arch.v[axisKey]) / 200),
+      salience: arch.s[axisKey],
+      distance: Math.abs(u - arch.v[axisKey]),
     }))
-    .sort((a, b) => a.distance - b.distance);
+    .sort((a, b) => a.distance - b.distance || b.salience - a.salience);
 }

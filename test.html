@@ -26,13 +26,18 @@
     import { initShell, loadQuestionData, makeSeed, shuffleWithSeed, saveProgress, loadProgress,
              clearProgress, encodeVector, PROGRESS_KEY, PROGRESS_KEY_LEGACY } from "./js/app.js";
     import { questionsForMode, computeScores, computeAttention, computeConsistency,
-             bootstrapConfidence, migrateAnswerValue, CLASSIC_ANSWERS } from "./js/scoring.js";
+             bootstrapConfidence, migrateAnswerValue, CLASSIC_ANSWERS, bankSignature } from "./js/scoring.js";
 
     initShell("test.html");
 
-    let all = [], served = [], byId = new Map(), state = null;
+    let all = [], served = [], byId = new Map(), state = null, currentSig = null, bankVersion = 2;
 
-    function testMode() { try { return localStorage.getItem("dc_mode") === "quick" ? "quick" : "full"; } catch { return "full"; } }
+    function testMode() {
+      let m; try { m = localStorage.getItem("dc_mode"); } catch {}
+      if (m === "quick" || m === "normal" || m === "deep") return m;
+      if (m === "full") return "deep";   // legacy alias
+      return "normal";                    // default
+    }
     function answerMode() { try { return localStorage.getItem("dc_answer_mode") === "precision" ? "precision" : "classic"; } catch { return "classic"; } }
 
     // Interpolated phrase for the slider readout.
@@ -47,10 +52,10 @@
 
     function startFresh(tMode, aMode) {
       served = questionsForMode(all, tMode);
-      if (!served.length) { served = all; tMode = "full"; }
+      if (!served.length) { served = all; tMode = "deep"; }
       const seed = makeSeed();
       const order = shuffleWithSeed(served.map((q) => q.id), seed);
-      state = { testMode: tMode, answerMode: aMode, seed, order, pos: 0, answers: {} };
+      state = { testMode: tMode, answerMode: aMode, seed, order, pos: 0, answers: {}, bankSig: currentSig, bankVersion };
       saveProgress(state);
     }
     function restoreServed() { served = questionsForMode(all, state.testMode); if (!served.length) served = all; }
@@ -76,7 +81,9 @@
         return;
       }
       all = data.questions;
+      bankVersion = data.bankVersion || 2;
       byId = new Map(all.map((q) => [q.id, q]));
+      currentSig = bankSignature(all);
       if (!all.length) {
         document.getElementById("stage").innerHTML = `<div class="card validation-errors"><h3>No valid questions</h3><p>See the <a href="data.html">Data page</a>.</p></div>`;
         return;
@@ -85,19 +92,39 @@
       const params = new URLSearchParams(location.search);
       const stored = loadProgress();
       const validStored = stored && Array.isArray(stored.order) && stored.order.length && stored.order.every((id) => byId.has(id));
-      if (params.has("fresh") || !validStored) startFresh(testMode(), answerMode());
-      else { state = stored; if (!state.answerMode) state.answerMode = answerMode(); restoreServed(); }
+
+      if (params.has("fresh")) { startFresh(testMode(), answerMode()); render(); return; }
+      // REFUSE to resume a session whose bank differs from the loaded one — ids can
+      // collide across bank versions while the underlying question changed, which
+      // would score answers against the wrong questions. Never merge positionally.
+      if (validStored && stored.bankSig !== currentSig) { renderBankChanged(); return; }
+      if (validStored) {
+        state = stored;
+        if (!state.answerMode) state.answerMode = answerMode();
+        restoreServed();
+        render();
+        return;
+      }
+      startFresh(testMode(), answerMode());
       render();
     }
 
+    function renderBankChanged() {
+      document.getElementById("stage").innerHTML = `<div class="card banner-warn">
+        <h3 style="margin-top:0">The question set has changed</h3>
+        <p>The question bank has been updated since you started this test, so your in-progress answers can no longer be reliably matched to the right questions. To avoid mis-scoring, please restart — your previous answers can't be safely carried over.</p>
+        <div class="btn-row"><a class="btn btn-primary" href="test.html?fresh=1">Restart test</a><a class="btn" href="index.html">Home</a></div></div>`;
+    }
+
+    const LEN_LABEL = { quick: "quick · 100", normal: "normal · 250", deep: "deep" };
     function render() {
       const total = state.order.length;
-      if (state.pos >= total) return finish();
+      if (state.pos >= total) return renderCompletion();
       const id = state.order[state.pos];
       const q = byId.get(id);
       document.getElementById("progress-text").textContent = `${state.pos + 1} / ${total}`;
       document.getElementById("mode-badge").textContent =
-        `· ${state.answerMode === "precision" ? "precision" : "classic"} mode${state.testMode === "quick" ? " · quick" : ""}`;
+        `· ${state.answerMode === "precision" ? "precision" : "classic"} · ${LEN_LABEL[state.testMode] || state.testMode}`;
       document.getElementById("progress-fill").style.width = `${(state.pos / total) * 100}%`;
       document.getElementById("q-text").textContent = q.text;
       document.getElementById("back-btn").disabled = state.pos === 0;
@@ -161,6 +188,22 @@
       area.querySelector("#next-btn").addEventListener("click", () => { if (engaged) record(Number(slider.value)); });
     }
 
+    function renderCompletion() {
+      const total = state.order.length;
+      document.getElementById("progress-text").textContent = `${total} / ${total}`;
+      document.getElementById("mode-badge").textContent = "· complete";
+      document.getElementById("progress-fill").style.width = "100%";
+      document.getElementById("q-text").textContent = "All questions answered.";
+      const area = document.getElementById("answer-area");
+      area.className = "";
+      area.innerHTML = `<div class="card" style="text-align:center">
+        <p>You answered all ${total} questions (${state.answerMode === "precision" ? "precision" : "classic"} mode). Ready to see your compass?</p>
+        <button id="finish-btn" class="btn btn-primary" style="min-width:240px">Finish and see results →</button></div>`;
+      area.querySelector("#finish-btn").addEventListener("click", finish);
+      document.getElementById("back-btn").disabled = false;   // go back to revise the last answer
+      document.getElementById("kbd-hint").textContent = "Press Enter (or the button) to see your results · ← Back to revise.";
+    }
+
     function record(v) {
       const id = state.order[state.pos];
       state.answers[id] = v;
@@ -196,6 +239,11 @@
     });
     window.addEventListener("keydown", (e) => {
       if (e.target.matches("input[type=number], textarea, select")) return;
+      if (state && state.pos >= state.order.length) {   // completion screen
+        if (e.key === "Enter") { e.preventDefault(); finish(); }
+        else if (e.key === "Backspace") { e.preventDefault(); back(); }
+        return;
+      }
       if (state && state.answerMode === "classic" && !e.target.matches("input")) {
         const o = CLASSIC_ANSWERS.find((x) => x.key === e.key);
         if (o) { e.preventDefault(); if (state.pos < state.order.length) record(o.v); return; }

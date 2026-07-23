@@ -202,7 +202,9 @@ export function createExplorer(mount, opts) {
   you.add(youLabel);
   scene.add(you);
 
-  // archetype markers
+  // archetype markers. Labels default OFF (28 names pile into an unreadable mass
+  // in the centre); the legend identifies dots by colour, and labels can be toggled.
+  let labelsOn = !!opts.showLabels;
   const archObjs = archetypes.map((a, i) => {
     const color = new THREE.Color(archColor(i, archetypes.length));
     const g = new THREE.Group();
@@ -210,9 +212,10 @@ export function createExplorer(mount, opts) {
       new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.35 }));
     const label = makeLabel(a.name, "#" + color.getHexString(), 0.8);
     label.position.set(0, 9, 0);
+    label.visible = labelsOn;
     g.add(dot, label);
     scene.add(g);
-    return { name: a.name, v: a.v, group: g, colorCss: color.getStyle(), visible: true };
+    return { name: a.name, v: a.v, group: g, label, colorCss: color.getStyle(), visible: true };
   });
 
   function positionMarkers() {
@@ -247,9 +250,10 @@ export function createExplorer(mount, opts) {
     setTrio(newTrio) { trio = newTrio.slice(); rebuildLabels(); positionMarkers(); },
     setArchVisible(name, vis) {
       const o = archObjs.find((x) => x.name === name);
-      if (o) { o.visible = vis; o.group.visible = vis; }
+      if (o) { o.visible = vis; o.group.visible = vis; o.label.visible = labelsOn && vis; }
     },
-    setAllArch(vis) { archObjs.forEach((o) => { o.visible = vis; o.group.visible = vis; }); },
+    setAllArch(vis) { archObjs.forEach((o) => { o.visible = vis; o.group.visible = vis; o.label.visible = labelsOn && vis; }); },
+    setLabelsVisible(vis) { labelsOn = vis; archObjs.forEach((o) => { o.label.visible = vis && o.visible; }); },
     setAutorotate(v) { controls.autoRotate = v; },
     onCameraChange(cb) { controls.onChange = cb; },
     getCameraState() { return controls.getState(); },
