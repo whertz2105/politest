@@ -79,14 +79,16 @@ NOT touched by `git pull` or the restart — it persists across deploys.**
 ---
 
 ## The API (for reference)
-- `POST /api/results` `{vector, mode, bank, items}` — store an opt-in completed result. → `{ok, id, count}`
+- `POST /api/results` `{vector, mode, bank, items}` — store a shared completed result. → `{ok, id, count}`
 - `POST /api/label` `{id, label}` — attach an optional self-chosen archetype label to a submitted result.
 - `POST /api/compare` `{vector, bank}` — read-only: `{count, percentiles, sample, axisOrder}` for the crowd graph, **per bank version** (v1/v2 never mixed). Does not store.
 - `GET  /api/stats` — `{count, byBank}`.
 
-Submission is **opt-in** (a checkbox on the results page, default off) and stores only
-the 22 scores, answer mode, bank version, and anonymous per-item answers — no PII, no IP,
-no timestamps. Runs that fail the attention checks are not eligible.
+Sharing is **opt-out** (on by default; a checkbox on the results page turns it off) and
+stores only the 22 scores, answer mode, bank version, and anonymous per-item answers — no
+PII, no IP, no timestamps. Runs that fail the attention checks are never shared. Users can
+clear their local results (browser-only) from the results page; already-submitted anonymous
+data is retained server-side and cannot be individually removed.
 
 ## Reporting tools (run on the droplet as needed; reporting only, never mutate data)
 - `node tools/audit.js` — deploy gate (per-axis health + unit tests); exits nonzero on any flag.

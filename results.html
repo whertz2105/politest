@@ -22,6 +22,7 @@
         <button id="copy-link" class="btn">Copy share link</button>
         <a class="btn" id="explore-3d" href="explore3d.html">Explore in 3D →</a>
         <a class="btn" href="test.html?fresh=1">Retake</a>
+        <button id="clear-local" class="btn" hidden>Clear my results</button>
         <span class="muted" id="run-meta" style="align-self:center"></span>
       </div>
 
@@ -81,7 +82,7 @@
   <div class="toast" id="toast"></div>
 
   <script type="module">
-    import { initShell, loadQuestionData, vectorFromHash, encodeVector, escapeHtml } from "./js/app.js";
+    import { initShell, loadQuestionData, vectorFromHash, encodeVector, escapeHtml, PROGRESS_KEY } from "./js/app.js";
     import { AXES, AXIS_KEYS, axisByKey, axisLabel } from "./js/axes.js";
     import { computeScores, questionsForMode } from "./js/scoring.js";
     import { renderBarReadout, quadrantSVG, quadrantCard, downloadSvgAsPng, axisLineSVG } from "./js/charts2d.js";
@@ -249,39 +250,64 @@
       renderCompare(vector);
     }
 
-    // ---- opt-in crowd submission (own runs only) ----
-    function setupContribute(vector) {
-      if (!last || !last.answers) return; // shared link -> no items to submit
+    // ---- opt-OUT crowd sharing (own runs only): shared by default. ----
+    const SHARE_KEY = "dc_share";
+    const sharingOn = () => { try { return localStorage.getItem(SHARE_KEY) !== "off"; } catch { return true; } };
+    let submittedEnc = false; // set in setupContribute once `last` is resolved
+
+    async function submitToCrowd(vector) {
+      try {
+        const res = await fetch("api/results", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vector, mode: last.answerMode, bank: bankVersion, items: last.answers }) });
+        const out = await res.json();
+        try { const s = JSON.parse(localStorage.getItem("dc_submitted") || "[]"); s.push(last.enc); localStorage.setItem("dc_submitted", JSON.stringify(s.slice(-50))); } catch {}
+        window.__dc_submit_id = out.id;
+        submittedEnc = true;
+        return out;
+      } catch { return null; }
+    }
+
+    async function setupContribute(vector) {
+      if (!last || !last.answers) return; // shared link -> nothing of ours to share
       document.getElementById("contribute-section").hidden = false;
       const el = document.getElementById("contribute");
       const eligible = !(last.attention && last.attention.failed);
-      let already = false;
-      try { already = (JSON.parse(localStorage.getItem("dc_submitted") || "[]")).includes(last.enc); } catch {}
+      if (!eligible) {
+        el.innerHTML = `<p class="muted">This run failed the attention checks, so it is <b>not</b> shared to the crowd dataset.</p>`;
+        return;
+      }
+      try { submittedEnc = JSON.parse(localStorage.getItem("dc_submitted") || "[]").includes(last.enc); } catch {}
+      // Opt-out: share automatically unless the user has turned sharing off.
+      if (sharingOn() && !submittedEnc) await submitToCrowd(vector);
 
-      if (!eligible) { el.innerHTML = `<p class="muted">This run isn't eligible to join the crowd dataset because it failed the attention checks.</p>`; return; }
-      if (already) { el.innerHTML = `<p class="muted">✓ Your anonymous result has been contributed. Thank you!</p>` + labelPickerHtml(); wireLabel(el); return; }
-
-      el.innerHTML = `
-        <label style="display:flex;gap:0.6rem;align-items:flex-start">
-          <input type="checkbox" id="opt-in" style="width:22px;height:22px;margin-top:2px">
-          <span>Share my <b>anonymous</b> result to power the crowd comparison.
-            <span class="muted" style="display:block;font-size:0.82rem">Stored: your 22 scores, answer mode, bank version, and per-item answers (0–100). No name, no IP, no time-of-day.</span></span>
-        </label>
-        <div class="btn-row" style="margin-top:0.8rem"><button id="submit-crowd" class="btn btn-primary" disabled>Contribute</button></div>`;
-      const cb = el.querySelector("#opt-in"), btn = el.querySelector("#submit-crowd");
-      cb.addEventListener("change", () => { btn.disabled = !cb.checked; });
-      btn.addEventListener("click", async () => {
-        btn.disabled = true; btn.textContent = "Contributing…";
-        try {
-          const res = await fetch("api/results", { method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ vector, mode: last.answerMode, bank: bankVersion, items: last.answers }) });
-          const out = await res.json();
-          try { const s = JSON.parse(localStorage.getItem("dc_submitted") || "[]"); s.push(last.enc); localStorage.setItem("dc_submitted", JSON.stringify(s.slice(-50))); } catch {}
-          window.__dc_submit_id = out.id;
-          el.innerHTML = `<p class="muted">✓ Contributed (you're #${out.count}). Thank you!</p>` + labelPickerHtml();
-          wireLabel(el);
-        } catch (e) { btn.disabled = false; btn.textContent = "Contribute"; toast("Couldn't reach the server."); }
-      });
+      const draw = () => {
+        const on = sharingOn();
+        el.innerHTML = `
+          <label style="display:flex;gap:0.6rem;align-items:flex-start">
+            <input type="checkbox" id="share-toggle" ${on ? "checked" : ""} style="width:22px;height:22px;margin-top:2px">
+            <span>Share my <b>anonymous</b> result with the crowd comparison <span class="muted">(on by default — untick to opt out)</span>.
+              <span class="muted" style="display:block;font-size:0.82rem">Stored: your 22 scores, answer mode, bank version, and anonymous per-item answers. No name, no IP, no time-of-day.</span></span>
+          </label>
+          <p class="muted" id="share-status" style="font-size:0.82rem;margin:0.6rem 0 0"></p>
+          ${submittedEnc ? labelPickerHtml() : ""}`;
+        el.querySelector("#share-status").textContent = submittedEnc
+          ? "✓ Your anonymous result has been shared. Thank you!"
+          : (on ? "" : "Sharing is off — this result was not shared.");
+        el.querySelector("#share-toggle").addEventListener("change", async (e) => {
+          if (e.target.checked) {
+            try { localStorage.setItem(SHARE_KEY, "on"); } catch {}
+            if (!submittedEnc) await submitToCrowd(vector);
+            draw();
+          } else {
+            try { localStorage.setItem(SHARE_KEY, "off"); } catch {}
+            el.querySelector("#share-status").textContent = submittedEnc
+              ? "Future tests won't be shared. Anonymous data already sent can't be individually removed from the server."
+              : "Sharing is off — this result was not shared.";
+          }
+        });
+        if (submittedEnc) wireLabel(el);
+      };
+      draw();
     }
     function labelPickerHtml() {
       const opts = ["<option value=\"\">— optional: which label fits you best? —</option>"]
@@ -368,6 +394,17 @@
         const url = location.origin + location.pathname + location.hash;
         try { await navigator.clipboard.writeText(url); toast("Link copied"); } catch { prompt("Copy this link:", url); }
       });
+
+      // Clear local results (this browser only) — does NOT touch server data.
+      if (own) {
+        const clr = document.getElementById("clear-local");
+        clr.hidden = false;
+        clr.addEventListener("click", () => {
+          if (!confirm("Clear your saved result and any in-progress test from THIS browser?\n\nYour anonymous crowd contribution (if you shared) stays on the server and can't be individually removed.")) return;
+          try { localStorage.removeItem("dc_last_result"); localStorage.removeItem(PROGRESS_KEY); } catch {}
+          location.href = "index.html";
+        });
+      }
     }
 
     window.addEventListener("hashchange", () => location.reload());
