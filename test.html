@@ -100,7 +100,11 @@
       if (validStored && stored.bankSig !== currentSig) { renderBankChanged(); return; }
       if (validStored) {
         state = stored;
-        if (!state.answerMode) state.answerMode = answerMode();
+        // Answer STYLE follows the current landing pick even on resume — answers are
+        // a unified 0..100 value, so switching classic<->precision mid-test is safe.
+        // (Test LENGTH stays fixed for the session; it changes the served set.)
+        state.answerMode = answerMode();
+        saveProgress(state);
         restoreServed();
         render();
         return;
