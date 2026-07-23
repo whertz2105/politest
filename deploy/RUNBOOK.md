@@ -22,14 +22,9 @@ Quick facts:
 
 ---
 
-## Step 1 — GitHub repo (owner)
-Create an empty repo, e.g. `github.com/whertz2105/politest`. Then from this project
-directory push the code (Claude has already made the initial commit):
-```bash
-git remote add origin git@github.com:whertz2105/politest.git
-git push -u origin main
-```
-The droplet's existing read-only deploy key can clone org repos. If cloning fails with a
+## Step 1 — GitHub repo — DONE
+`github.com/whertz2105/politest` exists and the code is pushed (branch `main`). The
+droplet's existing read-only deploy key can clone org repos; if cloning fails with a
 permissions error, either make the repo public or add a deploy key (see the handoff §4c).
 
 ## Step 2 — DNS (owner, in Cloudflare)
