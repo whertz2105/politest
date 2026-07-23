@@ -1,7 +1,10 @@
 # DecaCompass: static frontend + a tiny stdlib Node API (server.js) for the
 # crowd-comparison feature. No secrets, no build step, no npm dependencies.
 .DS_Store
-store/          # runtime crowd data (results.jsonl) — never commit takers' results
+
+# runtime crowd data (results.jsonl) — never commit takers' results
+# (gitignore has no inline comments, so this MUST be on its own line)
+store/
 
 # tooling / session state that shouldn't ship with the app
 .claude-flow/
