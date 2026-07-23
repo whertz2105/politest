@@ -12,6 +12,12 @@
     <section class="hero">
       <h1 id="app-title">DecaCompass</h1>
       <p id="app-tagline" class="muted"></p>
+      <div class="mode-picker" role="radiogroup" aria-label="Answer mode">
+        <button class="mode-opt" type="button" data-mode="classic">
+          <b>Classic</b><span class="muted">Five buttons — faster</span></button>
+        <button class="mode-opt" type="button" data-mode="precision">
+          <b>Precision</b><span class="muted">Slider — exact placement</span></button>
+      </div>
       <div class="toggle-line">
         <input type="checkbox" id="quick-mode" style="width:22px;height:22px">
         <label for="quick-mode">Quick mode (100-question subset)</label>
@@ -25,10 +31,10 @@
     </section>
 
     <section class="feature-grid">
-      <div class="card"><h3>18 axes</h3><p class="muted">Not left–right. Eighteen independent dimensions — economy, culture, liberty, foreign policy, environment and more.</p></div>
-      <div class="card"><h3>Honest labels</h3><p class="muted">Archetype matching is full-vector and salience-weighted. Every label lists what you actually disagree with.</p></div>
+      <div class="card"><h3>22 axes</h3><p class="muted">Not left–right. Twenty-two independent dimensions — economy, culture, liberty, state power, foreign policy, environment and more.</p></div>
+      <div class="card"><h3>Honest labels</h3><p class="muted">Archetype matching is full-vector and salience-weighted, with confidence bands and consistency checks. Every label lists what you actually disagree with.</p></div>
       <div class="card"><h3>2D &amp; 3D</h3><p class="muted">Read your scores as bars, pair any two axes as a quadrant, or explore three axes in an interactive cube.</p></div>
-      <div class="card"><h3>Anonymous</h3><p class="muted">No accounts, no analytics, no cookies. When you finish, your 18 scores (no name, no personal data) are stored anonymously so everyone can see how they compare to the crowd. Sharing a result is link-only.</p></div>
+      <div class="card"><h3>Private by default</h3><p class="muted">No accounts, no analytics, no cookies. Your result stays in your browser. Contributing your anonymous scores to the crowd comparison is <b>opt-in</b> on the results page (off by default). Sharing a result is link-only.</p></div>
     </section>
   </main>
 
@@ -54,6 +60,20 @@
       try { localStorage.setItem(MODE_KEY, quick.checked ? "quick" : "full"); } catch {}
       setNote();
     });
+
+    // answer-mode picker
+    const AMODE_KEY = "dc_answer_mode";
+    const modeBtns = [...document.querySelectorAll(".mode-opt")];
+    function applyMode() {
+      let m; try { m = localStorage.getItem(AMODE_KEY); } catch {}
+      if (m !== "precision") m = "classic";
+      modeBtns.forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
+    }
+    modeBtns.forEach((b) => b.addEventListener("click", () => {
+      try { localStorage.setItem(AMODE_KEY, b.dataset.mode); } catch {}
+      applyMode();
+    }));
+    applyMode();
 
     const prog = loadProgress();
     if (prog && Array.isArray(prog.order) && prog.order.length) {

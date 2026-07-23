@@ -79,9 +79,19 @@ NOT touched by `git pull` or the restart — it persists across deploys.**
 ---
 
 ## The API (for reference)
-- `POST /api/results` `{vector}` — store a completed result (called by the test on finish). → `{ok, count}`
-- `POST /api/compare` `{vector}` — read-only: `{count, percentiles, sample, axisOrder}` for the crowd graph. Does **not** store.
-- `GET  /api/stats` — `{count}`.
+- `POST /api/results` `{vector, mode, bank, items}` — store an opt-in completed result. → `{ok, id, count}`
+- `POST /api/label` `{id, label}` — attach an optional self-chosen archetype label to a submitted result.
+- `POST /api/compare` `{vector, bank}` — read-only: `{count, percentiles, sample, axisOrder}` for the crowd graph, **per bank version** (v1/v2 never mixed). Does not store.
+- `GET  /api/stats` — `{count, byBank}`.
+
+Submission is **opt-in** (a checkbox on the results page, default off) and stores only
+the 22 scores, answer mode, bank version, and anonymous per-item answers — no PII, no IP,
+no timestamps. Runs that fail the attention checks are not eligible.
+
+## Reporting tools (run on the droplet as needed; reporting only, never mutate data)
+- `node tools/audit.js` — deploy gate (per-axis health + unit tests); exits nonzero on any flag.
+- `node tools/itemstats.js` — per-item n / mean / sd / corrected item-total correlation; flags `r<0.15` at `n≥100` as pruning candidates.
+- `node tools/centroids.js` — mean vector per self-chosen label, for future archetype recalibration.
 
 If the API is ever down, the site still works: the test, results, figures comparison,
 charts, and 3D all function; only the "Everyone" toggle shows an "unavailable" note.

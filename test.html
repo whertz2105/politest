@@ -13,80 +13,80 @@
       <div class="progress"><span id="progress-text">Loading…</span> <span id="mode-badge" class="muted"></span></div>
       <div class="progress-bar"><i id="progress-fill" style="width:0%"></i></div>
       <div class="q-text" id="q-text"></div>
-      <div class="answers" id="answers"></div>
+      <div id="answer-area"></div>
       <div class="test-nav">
         <button id="back-btn" type="button">← Back</button>
         <button id="restart-btn" type="button" title="Discard answers and reshuffle">Restart</button>
       </div>
-      <p class="muted" style="font-size:0.8rem;margin-top:1rem">Keyboard: 1 Strongly Agree · 2 Agree · 3 Neutral · 4 Disagree · 5 Strongly Disagree</p>
+      <p class="muted" id="kbd-hint" style="font-size:0.8rem;margin-top:1rem"></p>
     </div>
   </main>
 
   <script type="module">
-    import { initShell, loadQuestionData, makeSeed, shuffleWithSeed,
-             saveProgress, loadProgress, clearProgress, encodeVector } from "./js/app.js";
-    import { questionsForMode, computeScores } from "./js/scoring.js";
+    import { initShell, loadQuestionData, makeSeed, shuffleWithSeed, saveProgress, loadProgress,
+             clearProgress, encodeVector, PROGRESS_KEY, PROGRESS_KEY_LEGACY } from "./js/app.js";
+    import { questionsForMode, computeScores, computeAttention, computeConsistency,
+             bootstrapConfidence, migrateAnswerValue, CLASSIC_ANSWERS } from "./js/scoring.js";
 
     initShell("test.html");
 
-    const OPTIONS = [
-      { v: 2, label: "Strongly Agree", key: "1" },
-      { v: 1, label: "Agree", key: "2" },
-      { v: 0, label: "Neutral / Not Sure", key: "3" },
-      { v: -1, label: "Disagree", key: "4" },
-      { v: -2, label: "Strongly Disagree", key: "5" },
-    ];
+    let all = [], served = [], byId = new Map(), state = null;
 
-    let all = [];          // validated questions
-    let served = [];       // mode-filtered
-    let byId = new Map();
-    let state = null;      // { mode, seed, order, pos, answers }
+    function testMode() { try { return localStorage.getItem("dc_mode") === "quick" ? "quick" : "full"; } catch { return "full"; } }
+    function answerMode() { try { return localStorage.getItem("dc_answer_mode") === "precision" ? "precision" : "classic"; } catch { return "classic"; } }
 
-    function currentMode() {
-      try { return localStorage.getItem("dc_mode") === "quick" ? "quick" : "full"; } catch { return "full"; }
+    // Interpolated phrase for the slider readout.
+    function phraseFor(v) {
+      if (v === 50) return "Neutral";
+      const a = (v - 50) / 50, m = Math.abs(a), dir = a > 0 ? "agree" : "disagree";
+      let q;
+      if (m >= 1) q = "Completely"; else if (m >= 0.8) q = "Strongly";
+      else if (m >= 0.5) q = ""; else if (m >= 0.2) q = "Somewhat"; else q = "Slightly";
+      return (q ? q + " " : "") + dir.charAt(0).toUpperCase() + dir.slice(1);
     }
 
-    function startFresh(mode) {
-      served = questionsForMode(all, mode);
-      if (!served.length) { served = all; mode = "full"; }
+    function startFresh(tMode, aMode) {
+      served = questionsForMode(all, tMode);
+      if (!served.length) { served = all; tMode = "full"; }
       const seed = makeSeed();
       const order = shuffleWithSeed(served.map((q) => q.id), seed);
-      state = { mode, seed, order, pos: 0, answers: {} };
+      state = { testMode: tMode, answerMode: aMode, seed, order, pos: 0, answers: {} };
       saveProgress(state);
     }
+    function restoreServed() { served = questionsForMode(all, state.testMode); if (!served.length) served = all; }
 
-    function restoreServed() {
-      served = questionsForMode(all, state.mode);
-      if (!served.length) served = all;
+    // Migrate a v1 (dc_progress_v1, -2..+2 answers) session into v2 once.
+    function migrateOldProgress() {
+      try {
+        if (localStorage.getItem(PROGRESS_KEY)) return;
+        const old = JSON.parse(localStorage.getItem(PROGRESS_KEY_LEGACY) || "null");
+        if (!old || !Array.isArray(old.order)) return;
+        const answers = {};
+        for (const [id, v] of Object.entries(old.answers || {})) answers[id] = migrateAnswerValue(Number(v));
+        saveProgress({ testMode: old.mode || "full", answerMode: answerMode(), seed: old.seed, order: old.order, pos: old.pos || 0, answers });
+        localStorage.removeItem(PROGRESS_KEY_LEGACY);
+      } catch {}
     }
 
     async function boot() {
       let data;
       try { data = await loadQuestionData(); }
       catch (e) {
-        document.getElementById("stage").innerHTML =
-          `<div class="card validation-errors"><h3>Could not load questions</h3><p>${e.message}</p><p class="muted">See the <a href="data.html">Data page</a>.</p></div>`;
+        document.getElementById("stage").innerHTML = `<div class="card validation-errors"><h3>Could not load questions</h3><p>${e.message}</p><p class="muted">See the <a href="data.html">Data page</a>.</p></div>`;
         return;
       }
       all = data.questions;
       byId = new Map(all.map((q) => [q.id, q]));
       if (!all.length) {
-        document.getElementById("stage").innerHTML =
-          `<div class="card validation-errors"><h3>No valid questions</h3><p>questions.json produced no usable items. See the <a href="data.html">Data page</a>.</p></div>`;
+        document.getElementById("stage").innerHTML = `<div class="card validation-errors"><h3>No valid questions</h3><p>See the <a href="data.html">Data page</a>.</p></div>`;
         return;
       }
-
+      migrateOldProgress();
       const params = new URLSearchParams(location.search);
       const stored = loadProgress();
-      const validStored = stored && Array.isArray(stored.order) && stored.order.length &&
-        stored.order.every((id) => byId.has(id));
-
-      if (params.has("fresh") || !validStored) {
-        startFresh(currentMode());
-      } else {
-        state = stored;
-        restoreServed();
-      }
+      const validStored = stored && Array.isArray(stored.order) && stored.order.length && stored.order.every((id) => byId.has(id));
+      if (params.has("fresh") || !validStored) startFresh(testMode(), answerMode());
+      else { state = stored; if (!state.answerMode) state.answerMode = answerMode(); restoreServed(); }
       render();
     }
 
@@ -96,82 +96,118 @@
       const id = state.order[state.pos];
       const q = byId.get(id);
       document.getElementById("progress-text").textContent = `${state.pos + 1} / ${total}`;
-      document.getElementById("mode-badge").textContent = state.mode === "quick" ? "· quick mode" : "";
+      document.getElementById("mode-badge").textContent =
+        `· ${state.answerMode === "precision" ? "precision" : "classic"} mode${state.testMode === "quick" ? " · quick" : ""}`;
       document.getElementById("progress-fill").style.width = `${(state.pos / total) * 100}%`;
       document.getElementById("q-text").textContent = q.text;
-
-      const cur = state.answers[id];
-      const ans = document.getElementById("answers");
-      ans.innerHTML = OPTIONS.map((o) =>
-        `<button type="button" data-v="${o.v}" class="${cur === o.v ? "sel" : ""}">
-           <span>${o.label}</span><span class="k">${o.key}</span></button>`).join("");
-      ans.querySelectorAll("button").forEach((b) =>
-        b.addEventListener("click", () => choose(Number(b.dataset.v))));
-
       document.getElementById("back-btn").disabled = state.pos === 0;
+      if (state.answerMode === "precision") renderSlider(id); else renderClassic(id);
     }
 
-    function choose(v) {
+    // ---- Classic 5-button ----
+    function renderClassic(id) {
+      document.getElementById("kbd-hint").textContent = "Keyboard: 1 Strongly Agree · 2 Agree · 3 Neutral · 4 Disagree · 5 Strongly Disagree · ← Back";
+      const cur = state.answers[id];
+      const area = document.getElementById("answer-area");
+      area.className = "answers";
+      area.innerHTML = CLASSIC_ANSWERS.map((o) =>
+        `<button type="button" data-v="${o.v}" class="${cur === o.v ? "sel" : ""}"><span>${o.label}</span><span class="k">${o.key}</span></button>`).join("");
+      area.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => record(Number(b.dataset.v))));
+    }
+
+    // ---- Precision slider ----
+    let engaged = false;
+    function renderSlider(id) {
+      document.getElementById("kbd-hint").textContent = "Slider: ←/→ ±1 · PgUp/PgDn ±10 · Home/End 0/100 · type a number · Enter = Next";
+      const recorded = state.answers[id];
+      const val = recorded !== undefined ? recorded : 50;
+      engaged = recorded !== undefined;
+      const area = document.getElementById("answer-area");
+      area.className = "";
+      area.innerHTML = `
+        <div class="slider-wrap">
+          <div class="slider-readout" id="sl-readout"><b id="sl-val">${val}</b> <span id="sl-phrase">${phraseFor(val)}</span></div>
+          <input type="range" id="slider" class="slider" min="0" max="100" step="1" value="${val}"
+                 aria-label="Agreement 0 to 100" aria-valuetext="${val}, ${phraseFor(val)}">
+          <div class="slider-ends"><span>Completely disagree</span><span>Completely agree</span></div>
+          <div class="slider-ticks">
+            <span style="left:0%">Strongly disagree</span><span style="left:25%">Disagree</span>
+            <span style="left:50%">Neutral</span><span style="left:75%">Agree</span><span style="left:100%">Strongly agree</span>
+          </div>
+          <div class="slider-controls">
+            <input type="number" id="sl-num" min="0" max="100" step="1" value="${val}" aria-label="Typed value">
+            <button id="neutral-btn" type="button">Neutral / No opinion</button>
+            <button id="next-btn" type="button" class="btn-primary" ${engaged ? "" : "disabled"}>Next →</button>
+          </div>
+        </div>`;
+
+      const slider = area.querySelector("#slider");
+      const num = area.querySelector("#sl-num");
+      const setUI = (v) => {
+        v = Math.max(0, Math.min(100, Math.round(v)));
+        slider.value = v; num.value = v;
+        area.querySelector("#sl-val").textContent = v;
+        area.querySelector("#sl-phrase").textContent = phraseFor(v);
+        slider.setAttribute("aria-valuetext", `${v}, ${phraseFor(v)}`);
+        area.querySelector("#sl-readout").style.left = v + "%";
+        return v;
+      };
+      const engage = (v) => { engaged = true; area.querySelector("#next-btn").disabled = false; setUI(v); };
+      setUI(val); // position readout (does not engage)
+
+      slider.addEventListener("input", () => engage(Number(slider.value)));
+      num.addEventListener("input", () => { if (num.value !== "") engage(Number(num.value)); });
+      area.querySelector("#neutral-btn").addEventListener("click", () => record(50)); // explicit engagement -> record
+      area.querySelector("#next-btn").addEventListener("click", () => { if (engaged) record(Number(slider.value)); });
+    }
+
+    function record(v) {
       const id = state.order[state.pos];
       state.answers[id] = v;
       state.pos += 1;
       saveProgress(state);
       render();
     }
-
-    function back() {
-      if (state.pos === 0) return;
-      state.pos -= 1;
-      saveProgress(state);
-      render();
-    }
+    function back() { if (state.pos === 0) return; state.pos -= 1; saveProgress(state); render(); }
 
     function finish() {
-      const answersById = {};
-      for (const [k, v] of Object.entries(state.answers)) answersById[Number(k)] = v;
-      const scored = computeScores(answersById, served);
+      const answers = {};
+      for (const [k, v] of Object.entries(state.answers)) answers[Number(k)] = v;
+      const scored = computeScores(answers, served);
+      const attention = computeAttention(answers, served);
+      const consistency = computeConsistency(answers, served);
+      const bands = bootstrapConfidence(answers, served, { seed: state.seed >>> 0, iters: 200 });
       const enc = encodeVector(scored.vector);
+      const data = window.__dc_data || {};
       try {
         localStorage.setItem("dc_last_result", JSON.stringify({
-          vector: scored.vector, counts: scored.counts, mode: state.mode, enc,
+          vector: scored.vector, counts: scored.counts, bands, consistency, attention,
+          answers, testMode: state.testMode, answerMode: state.answerMode,
+          bankVersion: data.bankVersion || 1, approximatedAxes: data.approximatedAxes || [], enc,
         }));
       } catch {}
-      submitResult(scored.vector, enc);
       location.href = `results.html#r=${enc}`;
-    }
-
-    // Anonymously contribute this completed result to the crowd dataset, once.
-    // Fire-and-forget; the app works fine if the API is absent (static-only).
-    function submitResult(vector, enc) {
-      let submitted = [];
-      try { submitted = JSON.parse(localStorage.getItem("dc_submitted") || "[]"); } catch {}
-      if (submitted.includes(enc)) return;
-      const body = JSON.stringify({ vector });
-      try {
-        if (navigator.sendBeacon) {
-          navigator.sendBeacon("api/results", new Blob([body], { type: "application/json" }));
-        } else {
-          fetch("api/results", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
-        }
-        submitted.push(enc);
-        localStorage.setItem("dc_submitted", JSON.stringify(submitted.slice(-50)));
-      } catch { /* ignore — crowd feature is optional */ }
     }
 
     document.getElementById("back-btn").addEventListener("click", back);
     document.getElementById("restart-btn").addEventListener("click", () => {
       if (Object.keys(state.answers).length && !confirm("Discard your answers and restart?")) return;
-      clearProgress();
-      startFresh(currentMode());
-      render();
+      clearProgress(); startFresh(testMode(), answerMode()); render();
     });
     window.addEventListener("keydown", (e) => {
-      if (e.target.matches("input,textarea,select")) return;
-      const o = OPTIONS.find((x) => x.key === e.key);
-      if (o) { e.preventDefault(); if (state && state.pos < state.order.length) choose(o.v); }
-      else if (e.key === "Backspace") { e.preventDefault(); back(); }
+      if (e.target.matches("input[type=number], textarea, select")) return;
+      if (state && state.answerMode === "classic" && !e.target.matches("input")) {
+        const o = CLASSIC_ANSWERS.find((x) => x.key === e.key);
+        if (o) { e.preventDefault(); if (state.pos < state.order.length) record(o.v); return; }
+      }
+      if (state && state.answerMode === "precision" && e.key === "Enter" && engaged) {
+        const s = document.getElementById("slider"); if (s) { e.preventDefault(); record(Number(s.value)); return; }
+      }
+      if (e.key === "Backspace" && !e.target.matches("input")) { e.preventDefault(); back(); }
     });
 
+    // expose bank version to finish() without re-fetching
+    loadQuestionData().then((d) => { window.__dc_data = d; }).catch(() => {});
     boot();
   </script>
 </body>

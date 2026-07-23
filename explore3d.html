@@ -19,7 +19,7 @@
       <label>Preset
         <select id="preset">
           <option value="">— custom —</option>
-          <option value="auth,dem,trust">Power</option>
+          <option value="auth_pw,dem_fr,trust_pol">Power</option>
           <option value="natl,imm,rel">Identity</option>
           <option value="mkt,wel,trd">Economy</option>
           <option value="soc,spe,jus">Culture war</option>
@@ -77,7 +77,7 @@
     function zeroVector() { const v = {}; AXIS_KEYS.forEach((k) => v[k] = 0); return v; }
 
     let trio = (hp.ax && hp.ax.split(",").filter((k) => axisByKey(k)).length === 3)
-      ? hp.ax.split(",") : ["auth", "dem", "trust"];
+      ? hp.ax.split(",") : ["auth_pw", "dem_fr", "trust_pol"];
     let camState = null;
     if (hp.cam) {
       const n = hp.cam.split(",").map(Number);

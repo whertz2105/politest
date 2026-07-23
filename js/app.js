@@ -1,7 +1,7 @@
 // app.js — shared shell used by every page. Deliberately free of any 3D / Three.js
 // import so the core flow (test, results) stays dependency-free.
 import { APP_NAME, AXIS_KEYS } from "./axes.js";
-import { validateQuestions } from "./scoring.js";
+import { validateQuestions, migrateQuestions } from "./scoring.js";
 
 // ---------------------------------------------------------------------------
 // Theme
@@ -68,8 +68,11 @@ export async function loadQuestionData() {
   } catch (e) {
     throw new Error("questions.json is not valid JSON: " + e.message);
   }
-  const { questions, errors, warnings } = validateQuestions(raw);
-  _cache = { raw, questions, errors, warnings };
+  // Migrate legacy fused axis keys (auth/dem/trust/meth) BEFORE validating, so a
+  // v1 bank loads cleanly against the 22-axis system.
+  const mig = migrateQuestions(raw);
+  const { questions, errors, warnings } = validateQuestions(mig.questions);
+  _cache = { raw, questions, errors, warnings, bankVersion: mig.bankVersion, approximatedAxes: mig.approximatedAxes };
   return _cache;
 }
 
@@ -110,7 +113,10 @@ export function shuffleWithSeed(array, seed) {
 // ---------------------------------------------------------------------------
 // Test progress persistence
 // ---------------------------------------------------------------------------
-export const PROGRESS_KEY = "dc_progress_v1";
+// Bumped to v2: unified 0..100 answer format + stored answer mode. The legacy key
+// is read once for migration (see test.html) then discarded.
+export const PROGRESS_KEY = "dc_progress_v2";
+export const PROGRESS_KEY_LEGACY = "dc_progress_v1";
 
 export function saveProgress(state) {
   try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(state)); } catch { /* ignore */ }
@@ -126,10 +132,11 @@ export function clearProgress() {
 }
 
 // ---------------------------------------------------------------------------
-// Shareable results codec: version byte + 18 signed score bytes -> base64url.
-// Order is AXIS_KEYS (fixed by axes.js). Bump ENCODE_VERSION if that changes.
+// Shareable results codec: version byte + N signed score bytes -> base64url.
+// Order/length is AXIS_KEYS (fixed by axes.js). v2 = 22 axes (was 18); old v1
+// links no longer decode (version + length guard), never silently misread.
 // ---------------------------------------------------------------------------
-export const ENCODE_VERSION = 1;
+export const ENCODE_VERSION = 2;
 
 export function encodeVector(vector) {
   const bytes = new Uint8Array(1 + AXIS_KEYS.length);

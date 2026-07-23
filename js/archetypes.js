@@ -1,6 +1,6 @@
 // archetypes.js — ideological archetypes and the salience-weighted matcher.
 //
-// Each archetype has an 18-dim `v` (vector, scores -100..100) and an 18-dim `s`
+// Each archetype has a 22-dim `v` (vector, scores -100..100) and a 22-dim `s`
 // (salience, 0..1, marking DEFINITIONAL axes). Similarity is a salience-weighted
 // mean absolute difference, so an archetype is only "matched" when the axes that
 // DEFINE it agree — not merely when unrelated axes happen to line up.
@@ -8,20 +8,28 @@
 // This design exists to prevent one specific failure: conflating
 // "distrust + restricted governance" with "distrust + popular sovereignty".
 // Sharing distrust of institutions must NOT by itself produce a populist match.
-import { AXIS_KEYS, axisLabel } from "./axes.js";
+//
+// Axes are the 22-axis v2 set. Archetype specs below still use the four legacy
+// fused keys (auth/dem/trust/meth) for brevity; the builder maps each to its
+// PRIMARY split axis (auth->auth_pw, dem->dem_fr, trust->trust_pol,
+// meth->meth_scope), leaving the sibling split axes (auth_pat, dem_tc, trust_sys,
+// meth_means) at baseline salience so v1-bank users are matched consistently.
+import { AXIS_KEYS, axisLabel, legacyToNew } from "./axes.js";
 
 // Baseline salience applied to every axis an archetype does not explicitly mark.
 // Small but nonzero so matching is genuinely full-vector, not partial-vector.
-export const BASELINE_SALIENCE = 0.15;
+export const BASELINE_SALIENCE = 0.10;
 
 // Build an archetype from a sparse spec: { key: [value, salience], ... }.
+// Legacy fused keys are remapped to their primary split axis.
 function A(name, spec) {
   const v = {}, s = {};
   for (const k of AXIS_KEYS) { v[k] = 0; s[k] = BASELINE_SALIENCE; }
   for (const k of Object.keys(spec)) {
+    const nk = legacyToNew(k);
     const [val, sal] = spec[k];
-    v[k] = val;
-    s[k] = sal;
+    v[nk] = val;
+    s[nk] = sal;
   }
   return { name, v, s };
 }
@@ -109,12 +117,12 @@ export const ARCHETYPES = [
   // axes. Distrust of institutions is common but NOT sufficient (low salience),
   // so "distrust + restricted governance" can never read as populism.
   A("National Populist", {
-    natl: [92, 0.95], imm: [86, 0.9], dem: [-70, 1.0], trd: [65, 0.5],
-    soc: [55, 0.35], trust: [-70, 0.2], sec: [45, 0.2], fp: [-30, 0.2],
+    natl: [92, 1.0], imm: [86, 1.0], dem: [-72, 1.0], trd: [65, 0.5],
+    soc: [55, 0.35], trust: [-70, 0.2],
   }),
   A("Left-Populist", {
-    mkt: [-80, 1.0], wel: [-80, 0.9], dem: [-85, 1.0], meth: [55, 0.4],
-    env: [-48, 0.35], trust: [-72, 0.2], fp: [-40, 0.2],
+    mkt: [-80, 1.0], wel: [-80, 1.0], dem: [-85, 1.0], meth: [55, 0.4],
+    env: [-48, 0.35], trust: [-72, 0.2],
   }),
   A("Technocrat", {
     dem: [75, 0.85], trust: [80, 0.85], tech: [80, 0.8], meth: [-20, 0.3],

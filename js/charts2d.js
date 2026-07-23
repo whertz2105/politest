@@ -5,34 +5,68 @@ import { escapeHtml } from "./app.js";
 // ---------------------------------------------------------------------------
 // 18-row horizontal bar readout (built as accessible HTML + inline SVG bars).
 // ---------------------------------------------------------------------------
-export function renderBarReadout(container, vector, counts) {
+// opts: { counts, bands (bootstrap {lo,hi,spansZero}), consistency ({axisWarn}),
+//         percentiles ({key:0..100}), approximated ([keys]) } — all optional.
+export function renderBarReadout(container, vector, opts = {}) {
+  const { counts, bands, consistency, percentiles, approximated } = opts;
+  const pctX = (v) => Math.max(0, Math.min(100, (v + 100) / 2));
+  const sign = (v) => (v > 0 ? "+" : "") + v.toFixed(1);
+
   const rows = AXES.map((a) => {
-    const score = Math.round(vector[a.key] || 0);
-    const n = counts ? counts[a.key] : undefined;
-    // position: center is 0; -100..100 -> 0..100%
-    const pct = (score + 100) / 2; // 0..100
-    const from = Math.min(50, pct);
-    const width = Math.abs(pct - 50);
+    const k = a.key;
+    const score = Math.round((Number(vector[k]) || 0) * 10) / 10;
+    const n = counts ? counts[k] : undefined;
+    const awaiting = n === 0;
     const dir = score >= 0 ? "pos" : "neg";
-    return `
-      <div class="bar-row">
-        <div class="bar-head">
-          <span class="bar-axis">${escapeHtml(a.label)}</span>
-          ${n !== undefined ? `<span class="bar-count" title="items loading this axis">${n} item${n === 1 ? "" : "s"}</span>` : ""}
-          <span class="bar-score ${dir}">${score > 0 ? "+" : ""}${score}</span>
-        </div>
-        <div class="bar-track" role="img" aria-label="${escapeHtml(a.label)}: ${score}, ${score >= 0 ? escapeHtml(a.posLabel) : escapeHtml(a.negLabel)}">
-          <span class="pole neg">${escapeHtml(a.negLabel)}</span>
-          <svg class="bar-svg" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
-            <line x1="50" y1="0" x2="50" y2="12" class="bar-mid"/>
-            <rect x="${from}" y="2" width="${width}" height="8" rx="1" class="bar-fill ${dir}"/>
-          </svg>
-          <span class="pole pos">${escapeHtml(a.posLabel)}</span>
-        </div>
-      </div>`;
+
+    if (awaiting) {
+      return `<div class="bar-row awaiting">
+        <div class="bar-head"><span class="bar-axis">${escapeHtml(a.label)}</span><span class="bar-count">awaiting items</span></div>
+        <div class="bar-track"><span class="pole neg">${escapeHtml(a.negLabel)}</span>
+          <svg class="bar-svg" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true"><line x1="50" y1="0" x2="50" y2="12" class="bar-mid"/></svg>
+          <span class="pole pos">${escapeHtml(a.posLabel)}</span></div></div>`;
+    }
+
+    const band = bands && bands.lo ? { lo: bands.lo[k], hi: bands.hi[k] } : null;
+    const spansZero = bands && bands.spansZero ? bands.spansZero[k] : false;
+    const warn = consistency && consistency.axisWarn && consistency.axisWarn[k];
+    const pctVal = percentiles && percentiles[k] != null ? percentiles[k] : null;
+    const approx = approximated && approximated.includes(k);
+
+    const from = Math.min(50, pctX(score));
+    const width = Math.abs(pctX(score) - 50);
+    const scoreHtml = spansZero
+      ? `<span class="bar-score leans" title="confidence band spans zero — sign uncertain">leans ${escapeHtml(score >= 0 ? a.posLabel : a.negLabel)} <span class="muted">(${sign(score)})</span></span>`
+      : `<span class="bar-score ${dir}">${sign(score)}</span>`;
+    const whisker = band && band.lo !== band.hi
+      ? `<line x1="${pctX(band.lo)}" y1="6" x2="${pctX(band.hi)}" y2="6" class="ci-line"/>
+         <line x1="${pctX(band.lo)}" y1="2.5" x2="${pctX(band.lo)}" y2="9.5" class="ci-cap"/>
+         <line x1="${pctX(band.hi)}" y1="2.5" x2="${pctX(band.hi)}" y2="9.5" class="ci-cap"/>` : "";
+
+    return `<div class="bar-row${spansZero ? " uncertain" : ""}">
+      <div class="bar-head">
+        <span class="bar-axis">${escapeHtml(a.label)}</span>
+        ${approx ? `<span class="tag approx" title="v1 bank: this fused axis was split and approximated">v1 approx</span>` : ""}
+        ${warn ? `<span class="tag warn" title="answers on this axis were internally inconsistent">⚠ reliability</span>` : ""}
+        ${pctVal !== null ? `<span class="bar-count" title="percentile vs the crowd">${ordinal(pctVal)} pct</span>`
+          : (n !== undefined ? `<span class="bar-count">${n} item${n === 1 ? "" : "s"}</span>` : "")}
+        ${scoreHtml}
+      </div>
+      <div class="bar-track" role="img" aria-label="${escapeHtml(a.label)}: ${score}">
+        <span class="pole neg">${escapeHtml(a.negLabel)}</span>
+        <svg class="bar-svg" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="50" y1="0" x2="50" y2="12" class="bar-mid"/>
+          <rect x="${from}" y="3.5" width="${width}" height="5" rx="1" class="bar-fill ${dir}"/>
+          ${whisker}
+        </svg>
+        <span class="pole pos">${escapeHtml(a.posLabel)}</span>
+      </div>
+    </div>`;
   }).join("");
   container.innerHTML = `<div class="bar-readout">${rows}</div>`;
 }
+
+function ordinal(n) { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
 
 // ---------------------------------------------------------------------------
 // Quadrant chart (inline SVG string). xKey on horizontal, yKey on vertical

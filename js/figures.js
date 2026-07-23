@@ -1,5 +1,5 @@
 // figures.js — historical-figure reference points for the comparison graph.
-// Vectors are the SAME 18-axis space as the user's result. Missing axes default 0.
+// Vectors are the SAME 22-axis space as the user's result. Missing axes default 0.
 // The dataset (data/figures.json) is authored/edited by the site owner; treat it as
 // untrusted and validate like questions.json.
 import { AXIS_KEYS, isAxisKey } from "./axes.js";
@@ -33,12 +33,13 @@ export function validateFigures(raw) {
         if (!Number.isFinite(w) || w < -100 || w > 100) errors.push(`${where}: axis "${k}" = ${f.vector[k]} out of range (-100..100).`);
       }
     }
-    figures.push({ name: f.name, v: normalizeVector(f.vector), note: typeof f.note === "string" ? f.note : "", placeholder: !!f.placeholder });
+    const note = typeof f.blurb === "string" ? f.blurb : (typeof f.note === "string" ? f.note : "");
+    figures.push({ name: f.name, v: normalizeVector(f.vector), note, era: typeof f.era === "string" ? f.era : "", placeholder: !!f.placeholder });
   });
   return { figures, errors };
 }
 
-// Plain (unweighted) similarity over all 18 axes: 1 - meanAbsDiff/200, as %.
+// Plain (unweighted) similarity over all 22 axes: 1 - meanAbsDiff/200, as %.
 export function figureProximity(userVec, figureV) {
   let sum = 0;
   for (const k of AXIS_KEYS) sum += Math.abs((userVec[k] || 0) - (figureV[k] || 0));
@@ -47,7 +48,7 @@ export function figureProximity(userVec, figureV) {
 
 export function nearestFigures(userVec, figures, n = 5) {
   return figures
-    .map((f) => ({ name: f.name, note: f.note, proximity: figureProximity(userVec, f.v) }))
+    .map((f) => ({ name: f.name, note: f.note, era: f.era, proximity: figureProximity(userVec, f.v) }))
     .sort((a, b) => b.proximity - a.proximity)
     .slice(0, n);
 }

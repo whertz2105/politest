@@ -20,10 +20,14 @@
         <button id="copy-link" class="btn">Copy share link</button>
         <a class="btn" id="explore-3d" href="explore3d.html">Explore in 3D →</a>
         <a class="btn" href="test.html?fresh=1">Retake</a>
+        <span class="muted" id="run-meta" style="align-self:center"></span>
       </div>
 
+      <div id="banners"></div>
+
       <section>
-        <h2>Your 18 axes</h2>
+        <h2>Your 22 axes</h2>
+        <p class="muted" id="bars-note" style="font-size:0.85rem"></p>
         <div id="bars"></div>
       </section>
 
@@ -32,11 +36,8 @@
         <div id="arch-panel" class="card"></div>
         <details class="card">
           <summary>Single-axis similarity (not an ideology match)</summary>
-          <p class="muted" style="font-size:0.85rem">This ranks archetypes by one axis only. It is <b>not</b> an ideology match — use the full-vector result above for that.</p>
-          <div class="picker">
-            <label for="single-axis">Axis:</label>
-            <select id="single-axis"></select>
-          </div>
+          <p class="muted" style="font-size:0.85rem">Ranks archetypes by one axis only. <b>Not</b> an ideology match.</p>
+          <div class="picker"><label for="single-axis">Axis:</label><select id="single-axis"></select></div>
           <ul class="arch-list" id="single-list"></ul>
         </details>
       </section>
@@ -57,18 +58,18 @@
         <div id="cmp-detail" class="card"></div>
       </section>
 
+      <section id="contribute-section" hidden>
+        <h2>Contribute to the crowd</h2>
+        <div class="card" id="contribute"></div>
+      </section>
+
       <section>
         <h2>Charts</h2>
         <p class="muted">Six default pairings, plus build your own.</p>
         <div class="chart-gallery" id="gallery"></div>
         <div class="card">
           <h3>Build your own</h3>
-          <div class="picker">
-            <select id="px"></select>
-            <span>×</span>
-            <select id="py"></select>
-            <button id="add-chart" class="btn">Add chart</button>
-          </div>
+          <div class="picker"><select id="px"></select><span>×</span><select id="py"></select><button id="add-chart" class="btn">Add chart</button></div>
           <div class="chart-gallery" id="custom-gallery" style="margin-top:1rem"></div>
         </div>
       </section>
@@ -80,34 +81,35 @@
     import { initShell, loadQuestionData, vectorFromHash, encodeVector, escapeHtml } from "./js/app.js";
     import { AXES, AXIS_KEYS, axisByKey, axisLabel } from "./js/axes.js";
     import { computeScores, questionsForMode } from "./js/scoring.js";
-    import { renderBarReadout, quadrantCard, downloadSvgAsPng } from "./js/charts2d.js";
+    import { renderBarReadout, quadrantSVG, quadrantCard, downloadSvgAsPng } from "./js/charts2d.js";
     import { ARCHETYPES, matchArchetypes, singleAxisMatch } from "./js/archetypes.js";
     import { validateFigures, nearestFigures } from "./js/figures.js";
 
     initShell("results.html");
     const toast = (m) => { const t = document.getElementById("toast"); t.textContent = m; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1600); };
+    const DEFAULT_PAIRS = [["soc","meth_scope"],["mkt","auth_pw"],["natl","dem_fr"],["rel","fp"],["trust_pol","fed"],["imm","sec"]];
 
-    const DEFAULT_PAIRS = [["soc","meth"],["mkt","auth"],["natl","dem"],["rel","fp"],["trust","fed"],["imm","sec"]];
+    let last = null;           // full local result object (own runs only)
+    let crowd = null, crowdError = null;   // /api/compare payload
+    let bankVersion = 1, approximated = [];
 
     function resolveVector() {
-      // Priority: URL fragment (shareable, read-only) -> last local result.
       const fromHash = vectorFromHash();
+      let stored = null;
+      try { stored = JSON.parse(localStorage.getItem("dc_last_result") || "null"); } catch {}
+      // Ignore pre-v2 local results (18-axis, old fused keys) — never render a
+      // stale format as mostly-zero. Such users simply see the "take the test" state.
+      if (stored && (!stored.vector || !("auth_pw" in stored.vector))) stored = null;
       if (fromHash) {
-        let counts;
-        try {
-          const last = JSON.parse(localStorage.getItem("dc_last_result") || "null");
-          if (last && encodeVector(last.vector) === encodeVector(fromHash)) counts = last.counts;
-        } catch {}
-        return { vector: fromHash, counts };
+        const own = stored && stored.enc && stored.enc === (location.hash.match(/[#&]r=([^&]+)/) || [])[1];
+        if (own) { last = stored; return { vector: fromHash, own: true }; }
+        return { vector: fromHash, own: false };
       }
-      try {
-        const last = JSON.parse(localStorage.getItem("dc_last_result") || "null");
-        if (last && last.vector) {
-          // reflect into the URL so the page is shareable/refresh-safe
-          history.replaceState(null, "", `#r=${last.enc || encodeVector(last.vector)}`);
-          return { vector: last.vector, counts: last.counts };
-        }
-      } catch {}
+      if (stored && stored.vector) {
+        last = stored;
+        history.replaceState(null, "", `#r=${stored.enc || encodeVector(stored.vector)}`);
+        return { vector: stored.vector, own: true };
+      }
       return null;
     }
 
@@ -116,43 +118,55 @@
       if (selected) sel.value = selected;
     }
 
-    function galleryCard(vector, xKey, yKey) {
-      const card = quadrantCard(vector, xKey, yKey, { archetypes: ARCHETYPES });
-      const btn = document.createElement("button");
-      btn.className = "btn"; btn.textContent = "Download PNG";
-      btn.style.marginTop = "0.4rem"; btn.style.width = "100%";
-      btn.addEventListener("click", () => {
-        const svg = card.querySelector("svg");
-        downloadSvgAsPng(svg, `decacompass-${xKey}-${yKey}.png`);
-      });
-      card.appendChild(btn);
-      return card;
+    async function loadCrowd(vector) {
+      try {
+        const res = await fetch("api/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vector, bank: bankVersion }) });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        crowd = await res.json();
+      } catch (e) { crowdError = e; }
     }
 
+    // ---- validity banners ----
+    function renderBanners(attention, consistency) {
+      const el = document.getElementById("banners");
+      let html = "";
+      if (attention && attention.failed) {
+        html += `<div class="card banner-bad"><b>Low attention detected.</b> ${attention.failures} of ${attention.total} attention checks were missed, so interpret these results with caution. This run is <b>not eligible</b> to join the crowd dataset.</div>`;
+      }
+      if (consistency && consistency.overallPct !== null && consistency.count) {
+        const cls = consistency.overallPct >= 75 ? "banner-ok" : "banner-warn";
+        html += `<div class="card ${cls}"><b>Consistency ${consistency.overallPct}%</b> across ${consistency.count} check pair${consistency.count === 1 ? "" : "s"}. ${consistency.overallPct >= 75 ? "Your answers were internally consistent." : "Some paired items were answered inconsistently — flagged axes are marked below."}</div>`;
+      }
+      if (bankVersion === 1 && approximated.length) {
+        html += `<div class="card banner-info"><b>v1 question bank.</b> Four axes were split in v2; on this bank they are approximated from their fused parent (marked <span class="tag approx">v1 approx</span>). Their siblings show “awaiting items”.</div>`;
+      }
+      el.innerHTML = html;
+    }
+
+    // ---- archetypes (with co-equal top two) ----
     function renderArchetypes(vector) {
       const matches = matchArchetypes(vector);
       const panel = document.getElementById("arch-panel");
-      const top = matches[0];
-      const fmt = (m) => `${m.similarity.toFixed(0)}%`;
-      const disag = (m) => m.disagreements.length
-        ? `<div class="muted" style="font-size:0.85rem">differs on: ${m.disagreements.map((d) => d.label).join(", ")}</div>` : "";
+      const top = matches[0], second = matches[1];
+      const pct = (m) => `${m.similarity.toFixed(0)}%`;
+      const disag = (m) => m.disagreements.length ? `<div class="muted" style="font-size:0.85rem">differs on: ${m.disagreements.map((d) => d.label).join(", ")}</div>` : "";
 
       let head;
       if (top.tier === "None") {
         const three = matches.slice(0, 3);
         head = `<p><b>No strong archetype match</b> — closest regions:</p>
-          <ul class="arch-list">${three.map((m) => `
-            <li><span><span class="arch-name" style="font-size:1rem">${m.name}</span> <span class="tier ${m.tier}">${m.tier}</span>${disag(m)}</span><span class="sim">${fmt(m)}</span></li>`).join("")}</ul>`;
+          <ul class="arch-list">${three.map((m) => `<li><span><span class="arch-name" style="font-size:1rem">${m.name}</span> <span class="tier ${m.tier}">${m.tier}</span>${disag(m)}</span><span class="sim">${pct(m)}</span></li>`).join("")}</ul>`;
+      } else if (top.similarity - second.similarity <= 3) {
+        head = `<div class="arch-top"><span class="arch-name">Between ${escapeHtml(top.name)} &amp; ${escapeHtml(second.name)}</span>
+            <span class="tier ${top.tier}">${top.tier}</span><span class="sim">${pct(top)} / ${pct(second)}</span></div>
+          <p class="muted" style="font-size:0.85rem">These two are within 3 points — you sit between them.</p>${disag(top)}`;
       } else {
-        head = `<div class="arch-top"><span class="arch-name">${top.name}</span>
-            <span class="tier ${top.tier}">${top.tier}</span><span class="sim">${fmt(top)} match</span></div>
-          ${disag(top)}`;
+        head = `<div class="arch-top"><span class="arch-name">${escapeHtml(top.name)}</span>
+            <span class="tier ${top.tier}">${top.tier}</span><span class="sim">${pct(top)} match</span></div>${disag(top)}`;
       }
       const rest = matches.slice(top.tier === "None" ? 3 : 1, top.tier === "None" ? 8 : 6);
-      panel.innerHTML = head +
-        `<h4 style="margin:1rem 0 0.3rem">Other close matches</h4>
-         <ul class="arch-list">${rest.map((m) => `
-           <li><span>${m.name} <span class="tier ${m.tier}">${m.tier}</span></span><span class="sim">${fmt(m)}</span></li>`).join("")}</ul>`;
+      panel.innerHTML = head + `<h4 style="margin:1rem 0 0.3rem">Other close matches</h4>
+        <ul class="arch-list">${rest.map((m) => `<li><span>${escapeHtml(m.name)} <span class="tier ${m.tier}">${m.tier}</span></span><span class="sim">${pct(m)}</span></li>`).join("")}</ul>`;
     }
 
     function renderSingleAxis(vector) {
@@ -160,150 +174,176 @@
       fillAxisSelect(sel, "mkt");
       const list = document.getElementById("single-list");
       const draw = () => {
-        const ranked = singleAxisMatch(vector, sel.value).slice(0, 6);
-        list.innerHTML = ranked.map((r) =>
-          `<li><span>${r.name}</span><span class="sim">${r.proximity.toFixed(0)}% on ${axisLabel(sel.value)}</span></li>`).join("");
+        list.innerHTML = singleAxisMatch(vector, sel.value).slice(0, 6).map((r) =>
+          `<li><span>${escapeHtml(r.name)}</span><span class="sim">${r.proximity.toFixed(0)}% on ${escapeHtml(axisLabel(sel.value))}</span></li>`).join("");
       };
-      sel.addEventListener("change", draw);
-      draw();
+      sel.addEventListener("change", draw); draw();
     }
 
-    // ---- Compare section (historical figures / crowd) ----
-    let cmpMode = "figures";
-    let figures = [];
-    let crowd = null;          // { count, percentiles, sample, axisOrder }
-    let crowdError = null, crowdLoaded = false;
-
+    // ---- Compare (figures / crowd) ----
+    let cmpMode = "figures", figures = [];
     async function loadFigures() {
-      try {
-        const res = await fetch("data/figures.json", { cache: "no-cache" });
-        if (!res.ok) return;
-        figures = validateFigures(await res.json()).figures;
-      } catch { /* figures optional */ }
+      try { const res = await fetch("data/figures.json", { cache: "no-cache" }); if (res.ok) figures = validateFigures(await res.json()).figures; } catch {}
     }
-
-    async function loadCrowd(vector) {
-      if (crowdLoaded) return;
-      crowdLoaded = true;
-      try {
-        const res = await fetch("api/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vector }) });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        crowd = await res.json();
-      } catch (e) { crowdError = e; }
-    }
-
     function renderCompare(vector) {
       const x = document.getElementById("cx2").value, y = document.getElementById("cy2").value;
-      const card = document.getElementById("cmp-card");
-      const detail = document.getElementById("cmp-detail");
-      const meta = document.getElementById("cmp-meta");
+      const card = document.getElementById("cmp-card"), detail = document.getElementById("cmp-detail"), meta = document.getElementById("cmp-meta");
       const ax = axisByKey(x), ay = axisByKey(y);
-      const cap = (extra) => `<figcaption>${escapeHtml(ax.label)} × ${escapeHtml(ay.label)}${extra || ""}</figcaption>`;
+      const cap = (e) => `<figcaption>${escapeHtml(ax.label)} × ${escapeHtml(ay.label)}${e || ""}</figcaption>`;
 
       if (cmpMode === "figures") {
         meta.textContent = figures.length ? `${figures.length} figures` : "no figures loaded";
         card.innerHTML = quadrantSVG(vector, x, y, { figures }) + cap(" — you vs figures");
-        if (!figures.length) {
-          detail.innerHTML = `<p class="muted">No historical figures defined yet. Add them to <code>data/figures.json</code> (schema: <code>{ "name", "vector": { axisKey: score }, "note"? }</code>).</p>`;
-          return;
-        }
+        if (!figures.length) { detail.innerHTML = `<p class="muted">No figures loaded.</p>`; return; }
         const near = nearestFigures(vector, figures, 6);
         detail.innerHTML = `<h4 style="margin-top:0">Closest historical figures</h4>
-          <p class="muted" style="font-size:0.82rem">Full-vector similarity across all 18 axes (not just the two plotted).</p>
-          <ul class="arch-list">${near.map((f) => `<li><span>${escapeHtml(f.name)}${f.note ? ` <span class="muted" style="font-size:0.76rem">${escapeHtml(f.note)}</span>` : ""}</span><span class="sim">${f.proximity.toFixed(0)}%</span></li>`).join("")}</ul>`;
+          <p class="muted" style="font-size:0.82rem">Full-vector similarity across all 22 axes.</p>
+          <ul class="arch-list">${near.map((f) => `<li><span>${escapeHtml(f.name)}${f.era ? ` <span class="muted" style="font-size:0.76rem">${escapeHtml(f.era)}</span>` : ""}</span><span class="sim">${f.proximity.toFixed(0)}%</span></li>`).join("")}</ul>`;
         return;
       }
-
-      // crowd mode
       if (crowdError || !crowd) {
         meta.textContent = "";
         card.innerHTML = quadrantSVG(vector, x, y, {}) + cap();
-        detail.innerHTML = `<p class="muted">Crowd comparison is unavailable here — it needs the live <code>/api</code> backend, which runs on the deployed site (not from a plain static or <code>file://</code> view).</p>`;
+        detail.innerHTML = `<p class="muted">Crowd comparison needs the live <code>/api</code> backend (deployed site only).</p>`;
         return;
       }
       if (crowd.count === 0) {
         meta.textContent = "0 takers yet";
         card.innerHTML = quadrantSVG(vector, x, y, {}) + cap();
-        detail.innerHTML = `<p class="muted">You're the first — no one else has completed the test yet.</p>`;
+        detail.innerHTML = `<p class="muted">No one else has completed the test on this bank version yet.</p>`;
         return;
       }
       const ix = crowd.axisOrder.indexOf(x), iy = crowd.axisOrder.indexOf(y);
       const cloud = (crowd.sample || []).map((a) => [a[ix], a[iy]]);
       const shown = crowd.sample ? crowd.sample.length : 0;
-      meta.textContent = `${crowd.count} taker${crowd.count === 1 ? "" : "s"}${shown < crowd.count ? ` (cloud shows ${shown})` : ""}`;
+      meta.textContent = `${crowd.count} taker${crowd.count === 1 ? "" : "s"} (v${bankVersion} bank)${shown < crowd.count ? ` · cloud shows ${shown}` : ""}`;
       card.innerHTML = quadrantSVG(vector, x, y, { cloud }) + cap(" — you vs everyone");
-      const pct = crowd.percentiles || {};
-      const line = (k) => {
-        const a = axisByKey(k), p = pct[k];
-        if (p === undefined) return "";
-        return `<li><span>${escapeHtml(a.label)}</span><span class="sim">higher than ${p}% · leans ${p >= 50 ? escapeHtml(a.posLabel) : escapeHtml(a.negLabel)}</span></li>`;
-      };
-      detail.innerHTML = `<h4 style="margin-top:0">Where you fall vs everyone</h4>
-        <p class="muted" style="font-size:0.82rem">Your score is higher than this % of all ${crowd.count} takers, per axis.</p>
+      const p = crowd.percentiles || {};
+      const line = (k) => { const a = axisByKey(k); if (p[k] == null) return ""; return `<li><span>${escapeHtml(a.label)}</span><span class="sim">higher than ${p[k]}% · leans ${p[k] >= 50 ? escapeHtml(a.posLabel) : escapeHtml(a.negLabel)}</span></li>`; };
+      const gate = crowd.count >= 30 ? "" : `<p class="muted" style="font-size:0.8rem">Percentiles firm up at n≥30 (currently ${crowd.count}).</p>`;
+      detail.innerHTML = `<h4 style="margin-top:0">Where you fall vs everyone</h4>${gate}
         <ul class="arch-list">${line(x)}${line(y)}</ul>
-        <details><summary>All 18 axes</summary><ul class="arch-list">${AXIS_KEYS.map(line).join("")}</ul></details>`;
+        <details><summary>All 22 axes</summary><ul class="arch-list">${AXIS_KEYS.map(line).join("")}</ul></details>`;
     }
-
     function setupCompare(vector) {
       fillAxisSelect(document.getElementById("cx2"), "mkt");
       fillAxisSelect(document.getElementById("cy2"), "soc");
       document.getElementById("cx2").addEventListener("change", () => renderCompare(vector));
       document.getElementById("cy2").addEventListener("change", () => renderCompare(vector));
-      document.getElementById("cmp-toggle").addEventListener("click", async (e) => {
-        const b = e.target.closest("button[data-mode]");
-        if (!b) return;
+      document.getElementById("cmp-toggle").addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-mode]"); if (!b) return;
         cmpMode = b.dataset.mode;
         document.querySelectorAll("#cmp-toggle button").forEach((x) => x.classList.toggle("btn-primary", x.dataset.mode === cmpMode));
-        if (cmpMode === "crowd") await loadCrowd(vector);
         renderCompare(vector);
       });
       renderCompare(vector);
+    }
+
+    // ---- opt-in crowd submission (own runs only) ----
+    function setupContribute(vector) {
+      if (!last || !last.answers) return; // shared link -> no items to submit
+      document.getElementById("contribute-section").hidden = false;
+      const el = document.getElementById("contribute");
+      const eligible = !(last.attention && last.attention.failed);
+      let already = false;
+      try { already = (JSON.parse(localStorage.getItem("dc_submitted") || "[]")).includes(last.enc); } catch {}
+
+      if (!eligible) { el.innerHTML = `<p class="muted">This run isn't eligible to join the crowd dataset because it failed the attention checks.</p>`; return; }
+      if (already) { el.innerHTML = `<p class="muted">✓ Your anonymous result has been contributed. Thank you!</p>` + labelPickerHtml(); wireLabel(el); return; }
+
+      el.innerHTML = `
+        <label style="display:flex;gap:0.6rem;align-items:flex-start">
+          <input type="checkbox" id="opt-in" style="width:22px;height:22px;margin-top:2px">
+          <span>Share my <b>anonymous</b> result to power the crowd comparison.
+            <span class="muted" style="display:block;font-size:0.82rem">Stored: your 22 scores, answer mode, bank version, and per-item answers (0–100). No name, no IP, no time-of-day.</span></span>
+        </label>
+        <div class="btn-row" style="margin-top:0.8rem"><button id="submit-crowd" class="btn btn-primary" disabled>Contribute</button></div>`;
+      const cb = el.querySelector("#opt-in"), btn = el.querySelector("#submit-crowd");
+      cb.addEventListener("change", () => { btn.disabled = !cb.checked; });
+      btn.addEventListener("click", async () => {
+        btn.disabled = true; btn.textContent = "Contributing…";
+        try {
+          const res = await fetch("api/results", { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ vector, mode: last.answerMode, bank: bankVersion, items: last.answers }) });
+          const out = await res.json();
+          try { const s = JSON.parse(localStorage.getItem("dc_submitted") || "[]"); s.push(last.enc); localStorage.setItem("dc_submitted", JSON.stringify(s.slice(-50))); } catch {}
+          window.__dc_submit_id = out.id;
+          el.innerHTML = `<p class="muted">✓ Contributed (you're #${out.count}). Thank you!</p>` + labelPickerHtml();
+          wireLabel(el);
+        } catch (e) { btn.disabled = false; btn.textContent = "Contribute"; toast("Couldn't reach the server."); }
+      });
+    }
+    function labelPickerHtml() {
+      const opts = ["<option value=\"\">— optional: which label fits you best? —</option>"]
+        .concat(ARCHETYPES.map((a) => `<option value="${escapeHtml(a.name)}">${escapeHtml(a.name)}</option>`))
+        .concat(`<option value="none">None of these</option>`);
+      return `<div class="picker" style="margin-top:0.6rem"><select id="self-label">${opts.join("")}</select><span class="muted" id="label-note"></span></div>`;
+    }
+    function wireLabel(el) {
+      const sel = el.querySelector("#self-label"); if (!sel) return;
+      sel.addEventListener("change", async () => {
+        if (!sel.value || window.__dc_submit_id == null) { return; }
+        try {
+          await fetch("api/label", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: window.__dc_submit_id, label: sel.value }) });
+          el.querySelector("#label-note").textContent = "saved";
+        } catch { el.querySelector("#label-note").textContent = "couldn't save"; }
+      });
+    }
+
+    function galleryCard(vector, x, y) {
+      const card = quadrantCard(vector, x, y, { archetypes: ARCHETYPES });
+      const btn = document.createElement("button");
+      btn.className = "btn"; btn.textContent = "Download PNG"; btn.style.marginTop = "0.4rem"; btn.style.width = "100%";
+      btn.addEventListener("click", () => downloadSvgAsPng(card.querySelector("svg"), `decacompass-${x}-${y}.png`));
+      card.appendChild(btn); return card;
     }
 
     async function boot() {
       const resolved = resolveVector();
       if (!resolved) { document.getElementById("empty").hidden = false; return; }
       document.getElementById("content").hidden = false;
-      const { vector } = resolved;
-      let counts = resolved.counts;
+      const { vector, own } = resolved;
 
-      // If counts unknown (shared link), approximate from the full question set.
-      if (!counts) {
-        try {
-          const data = await loadQuestionData();
-          const s = computeScores({}, questionsForMode(data.questions, "full"));
-          counts = s.counts;
-        } catch { counts = undefined; }
-      }
+      let data = null;
+      try { data = await loadQuestionData(); } catch {}
+      bankVersion = (last && last.bankVersion) || (data && data.bankVersion) || 1;
+      approximated = (last && last.approximatedAxes) || (data && data.approximatedAxes) || [];
+      let counts = (last && last.counts) || (data ? computeScores({}, questionsForMode(data.questions, "full")).counts : undefined);
 
-      renderBarReadout(document.getElementById("bars"), vector, counts);
+      await loadCrowd(vector);
+      const percentiles = crowd && crowd.count >= 30 ? crowd.percentiles : null;
+
+      document.getElementById("run-meta").textContent =
+        (own && last ? `mode: ${last.answerMode || "classic"}` : "shared result") + ` · v${bankVersion} bank`;
+      document.getElementById("bars-note").textContent = own
+        ? "Whiskers show 95% confidence bands; axes whose band spans zero are shown as “leans”." + (percentiles ? " Percentiles are vs the crowd." : "")
+        : "Shared result — validity detail (confidence bands, consistency) is only available to the person who took it.";
+
+      renderBanners(last && last.attention, last && last.consistency);
+      renderBarReadout(document.getElementById("bars"), vector, {
+        counts, bands: last && last.bands, consistency: last && last.consistency, percentiles, approximated,
+      });
       renderArchetypes(vector);
       renderSingleAxis(vector);
 
-      // default gallery
       const gallery = document.getElementById("gallery");
       DEFAULT_PAIRS.forEach(([x, y]) => gallery.appendChild(galleryCard(vector, x, y)));
-
-      // build-your-own
       fillAxisSelect(document.getElementById("px"), "mkt");
       fillAxisSelect(document.getElementById("py"), "soc");
       document.getElementById("add-chart").addEventListener("click", () => {
-        const x = document.getElementById("px").value;
-        const y = document.getElementById("py").value;
+        const x = document.getElementById("px").value, y = document.getElementById("py").value;
         if (x === y) { toast("Pick two different axes."); return; }
         document.getElementById("custom-gallery").prepend(galleryCard(vector, x, y));
       });
 
-      // compare section (figures + crowd)
       await loadFigures();
       setupCompare(vector);
+      if (own) setupContribute(vector);
 
-      // share link
       document.getElementById("explore-3d").href = `explore3d.html${location.hash}`;
       document.getElementById("copy-link").addEventListener("click", async () => {
         const url = location.origin + location.pathname + location.hash;
-        try { await navigator.clipboard.writeText(url); toast("Link copied"); }
-        catch { prompt("Copy this link:", url); }
+        try { await navigator.clipboard.writeText(url); toast("Link copied"); } catch { prompt("Copy this link:", url); }
       });
     }
 
