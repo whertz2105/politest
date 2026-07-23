@@ -8,8 +8,8 @@ export const APP_NAME = "DecaCompass";
 export const APP_TAGLINE = "A 22-axis political compass.";
 
 // Display hints only; scoring never assumes a fixed count.
-export const FULL_TEST_SIZE = 250;
-export const QUICK_TEST_SIZE = 100;
+export const FULL_TEST_SIZE = 400;
+export const QUICK_TEST_SIZE = 116;
 
 // 22 axes. `key` is the stable identifier used everywhere (JSON weights, URL
 // encoding order, storage). A POSITIVE score always leans toward `posLabel`, a

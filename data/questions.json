@@ -1,1926 +1,400 @@
-[
-  {
-    "id": 1,
-    "text": "Free markets allocate resources more efficiently than governments ever could.",
-    "axes": {
-      "mkt": 2
-    },
-    "core": true
-  },
-  {
-    "id": 2,
-    "text": "Most state-owned enterprises should be sold off to private owners.",
-    "axes": {
-      "mkt": 2
-    }
-  },
-  {
-    "id": 3,
-    "text": "Businesses create prosperity best when regulation is kept light.",
-    "axes": {
-      "mkt": 2
-    }
-  },
-  {
-    "id": 4,
-    "text": "Price controls usually do more harm than good.",
-    "axes": {
-      "mkt": 2
-    }
-  },
-  {
-    "id": 5,
-    "text": "Cutting business red tape unleashes economic growth.",
-    "axes": {
-      "mkt": 2
-    }
-  },
-  {
-    "id": 6,
-    "text": "The state should own and operate major industries like energy and rail.",
-    "axes": {
-      "mkt": -2
-    },
-    "core": true
-  },
-  {
-    "id": 7,
-    "text": "Government should actively direct investment toward strategic sectors.",
-    "axes": {
-      "mkt": -2
-    }
-  },
-  {
-    "id": 8,
-    "text": "Essential utilities are too important to be left to private profit.",
-    "axes": {
-      "mkt": -2
-    }
-  },
-  {
-    "id": 9,
-    "text": "A planned economy can serve ordinary people better than the market.",
-    "axes": {
-      "mkt": -2
-    }
-  },
-  {
-    "id": 10,
-    "text": "Markets need firm government management to work fairly.",
-    "axes": {
-      "mkt": -2
-    }
-  },
-  {
-    "id": 11,
-    "text": "Welfare benefits should be minimal and strictly temporary.",
-    "axes": {
-      "wel": 2
-    },
-    "core": true
-  },
-  {
-    "id": 12,
-    "text": "People have grown far too dependent on government handouts.",
-    "axes": {
-      "wel": 2
-    }
-  },
-  {
-    "id": 13,
-    "text": "Able-bodied adults should work rather than collect benefits.",
-    "axes": {
-      "wel": 2
-    }
-  },
-  {
-    "id": 14,
-    "text": "Generous welfare discourages people from finding jobs.",
-    "axes": {
-      "wel": 2
-    }
-  },
-  {
-    "id": 15,
-    "text": "Charity and family, not the state, should catch those who fall.",
-    "axes": {
-      "wel": 2
-    }
-  },
-  {
-    "id": 16,
-    "text": "Everyone deserves a generous government safety net.",
-    "axes": {
-      "wel": -2
-    },
-    "core": true
-  },
-  {
-    "id": 17,
-    "text": "The state should guarantee every citizen a basic income.",
-    "axes": {
-      "wel": -2
-    }
-  },
-  {
-    "id": 18,
-    "text": "No one should go without healthcare because they cannot pay.",
-    "axes": {
-      "wel": -2
-    }
-  },
-  {
-    "id": 19,
-    "text": "A strong welfare state is the mark of a decent society.",
-    "axes": {
-      "wel": -2
-    }
-  },
-  {
-    "id": 20,
-    "text": "Unemployment benefits should be enough to live on with dignity.",
-    "axes": {
-      "wel": -2
-    }
-  },
-  {
-    "id": 21,
-    "text": "We should impose tariffs to protect our domestic industries.",
-    "axes": {
-      "trd": 2
-    },
-    "core": true
-  },
-  {
-    "id": 22,
-    "text": "Trade deals have hollowed out our manufacturing heartland.",
-    "axes": {
-      "trd": 2
-    }
-  },
-  {
-    "id": 23,
-    "text": "Buying domestic should be prioritized over cheap foreign imports.",
-    "axes": {
-      "trd": 2
-    }
-  },
-  {
-    "id": 24,
-    "text": "Strategic industries deserve protection from foreign competition.",
-    "axes": {
-      "trd": 2
-    }
-  },
-  {
-    "id": 25,
-    "text": "Globalized trade has cost ordinary workers their livelihoods.",
-    "axes": {
-      "trd": 2
-    }
-  },
-  {
-    "id": 26,
-    "text": "Free trade between nations benefits everyone in the long run.",
-    "axes": {
-      "trd": -2
-    },
-    "core": true
-  },
-  {
-    "id": 27,
-    "text": "Tariffs mostly just raise prices for ordinary consumers.",
-    "axes": {
-      "trd": -2
-    }
-  },
-  {
-    "id": 28,
-    "text": "We should tear down barriers to international commerce.",
-    "axes": {
-      "trd": -2
-    }
-  },
-  {
-    "id": 29,
-    "text": "Open markets bring cheaper goods and wider choice.",
-    "axes": {
-      "trd": -2
-    }
-  },
-  {
-    "id": 30,
-    "text": "Protectionism breeds inefficiency and invites retaliation.",
-    "axes": {
-      "trd": -2
-    }
-  },
-  {
-    "id": 31,
-    "text": "Traditional family values are the foundation of a healthy society.",
-    "axes": {
-      "soc": 2
-    },
-    "core": true
-  },
-  {
-    "id": 32,
-    "text": "We have abandoned too many of our cultural traditions.",
-    "axes": {
-      "soc": 2
-    }
-  },
-  {
-    "id": 33,
-    "text": "Society is strongest when it honors long-standing customs.",
-    "axes": {
-      "soc": 2
-    }
-  },
-  {
-    "id": 34,
-    "text": "Recent changes to social norms have gone much too far.",
-    "axes": {
-      "soc": 2
-    }
-  },
-  {
-    "id": 35,
-    "text": "Marriage and family should be understood in their traditional form.",
-    "axes": {
-      "soc": 2
-    }
-  },
-  {
-    "id": 36,
-    "text": "Society should embrace evolving norms around gender and identity.",
-    "axes": {
-      "soc": -2
-    },
-    "core": true
-  },
-  {
-    "id": 37,
-    "text": "Progress means letting go of outdated social conventions.",
-    "axes": {
-      "soc": -2
-    }
-  },
-  {
-    "id": 38,
-    "text": "Diverse family structures deserve equal respect and recognition.",
-    "axes": {
-      "soc": -2
-    }
-  },
-  {
-    "id": 39,
-    "text": "Cultural change is healthy and should be welcomed.",
-    "axes": {
-      "soc": -2
-    }
-  },
-  {
-    "id": 40,
-    "text": "People should be free to define their identity on their own terms.",
-    "axes": {
-      "soc": -2
-    }
-  },
-  {
-    "id": 41,
-    "text": "Religious values should help guide our public policy.",
-    "axes": {
-      "rel": 2
-    },
-    "core": true
-  },
-  {
-    "id": 42,
-    "text": "Faith has a rightful place in our public institutions.",
-    "axes": {
-      "rel": 2
-    }
-  },
-  {
-    "id": 43,
-    "text": "Schools should make room for prayer and religious observance.",
-    "axes": {
-      "rel": 2
-    }
-  },
-  {
-    "id": 44,
-    "text": "Our laws should reflect our nation's religious heritage.",
-    "axes": {
-      "rel": 2
-    }
-  },
-  {
-    "id": 45,
-    "text": "Political leaders should be guided by their faith.",
-    "axes": {
-      "rel": 2
-    }
-  },
-  {
-    "id": 46,
-    "text": "Government should be strictly secular and neutral on religion.",
-    "axes": {
-      "rel": -2
-    },
-    "core": true
-  },
-  {
-    "id": 47,
-    "text": "Religion should be kept entirely out of lawmaking.",
-    "axes": {
-      "rel": -2
-    }
-  },
-  {
-    "id": 48,
-    "text": "Public life is better when it stays free of religious influence.",
-    "axes": {
-      "rel": -2
-    }
-  },
-  {
-    "id": 49,
-    "text": "No religion should receive special standing from the state.",
-    "axes": {
-      "rel": -2
-    }
-  },
-  {
-    "id": 50,
-    "text": "Personal faith should have no bearing on public policy.",
-    "axes": {
-      "rel": -2
-    }
-  },
-  {
-    "id": 51,
-    "text": "The government needs strong powers to maintain order.",
-    "axes": {
-      "auth": 2
-    },
-    "core": true
-  },
-  {
-    "id": 52,
-    "text": "Individual freedoms must sometimes yield to social stability.",
-    "axes": {
-      "auth": 2
-    }
-  },
-  {
-    "id": 53,
-    "text": "A firm hand from the state keeps society from unraveling.",
-    "axes": {
-      "auth": 2
-    }
-  },
-  {
-    "id": 54,
-    "text": "Order and security matter more than personal autonomy.",
-    "axes": {
-      "auth": 2
-    }
-  },
-  {
-    "id": 55,
-    "text": "Citizens have a duty to defer to lawful authority.",
-    "axes": {
-      "auth": 2
-    }
-  },
-  {
-    "id": 56,
-    "text": "Individual liberty should almost always outweigh state power.",
-    "axes": {
-      "auth": -2
-    },
-    "core": true
-  },
-  {
-    "id": 57,
-    "text": "People should be free to live as they choose without interference.",
-    "axes": {
-      "auth": -2
-    }
-  },
-  {
-    "id": 58,
-    "text": "The state has no business dictating how we run our lives.",
-    "axes": {
-      "auth": -2
-    }
-  },
-  {
-    "id": 59,
-    "text": "Personal autonomy is more important than social conformity.",
-    "axes": {
-      "auth": -2
-    }
-  },
-  {
-    "id": 60,
-    "text": "Government should stay out of citizens' private choices.",
-    "axes": {
-      "auth": -2
-    }
-  },
-  {
-    "id": 61,
-    "text": "The state should monitor communications to prevent terrorism.",
-    "axes": {
-      "sec": 2
-    },
-    "core": true
-  },
-  {
-    "id": 62,
-    "text": "Surveillance cameras help make our streets safer.",
-    "axes": {
-      "sec": 2
-    }
-  },
-  {
-    "id": 63,
-    "text": "Security agencies need broad powers to keep us safe.",
-    "axes": {
-      "sec": 2
-    }
-  },
-  {
-    "id": 64,
-    "text": "Giving up some privacy is worth greater security.",
-    "axes": {
-      "sec": 2
-    }
-  },
-  {
-    "id": 65,
-    "text": "Authorities should be able to access encrypted data when needed.",
-    "axes": {
-      "sec": 2
-    }
-  },
-  {
-    "id": 66,
-    "text": "Mass surveillance is a serious threat to a free society.",
-    "axes": {
-      "sec": -2
-    },
-    "core": true
-  },
-  {
-    "id": 67,
-    "text": "People have a right to privacy that the state must not breach.",
-    "axes": {
-      "sec": -2
-    }
-  },
-  {
-    "id": 68,
-    "text": "Strong encryption should be protected, not weakened.",
-    "axes": {
-      "sec": -2
-    }
-  },
-  {
-    "id": 69,
-    "text": "Security must never come at the cost of our civil liberties.",
-    "axes": {
-      "sec": -2
-    }
-  },
-  {
-    "id": 70,
-    "text": "Governments spy on their own citizens far more than they should.",
-    "axes": {
-      "sec": -2
-    }
-  },
-  {
-    "id": 71,
-    "text": "Hate speech should be banned by law.",
-    "axes": {
-      "spe": 2
-    },
-    "core": true
-  },
-  {
-    "id": 72,
-    "text": "Some ideas are too harmful to be given a public platform.",
-    "axes": {
-      "spe": 2
-    }
-  },
-  {
-    "id": 73,
-    "text": "Government should regulate dangerous misinformation.",
-    "axes": {
-      "spe": 2
-    }
-  },
-  {
-    "id": 74,
-    "text": "Society has a duty to silence open bigotry.",
-    "axes": {
-      "spe": 2
-    }
-  },
-  {
-    "id": 75,
-    "text": "Deeply offensive expression can be legitimately restricted.",
-    "axes": {
-      "spe": 2
-    }
-  },
-  {
-    "id": 76,
-    "text": "Even offensive speech deserves legal protection.",
-    "axes": {
-      "spe": -2
-    },
-    "core": true
-  },
-  {
-    "id": 77,
-    "text": "The answer to bad speech is more speech, not censorship.",
-    "axes": {
-      "spe": -2
-    }
-  },
-  {
-    "id": 78,
-    "text": "Free expression must include ideas we find repugnant.",
-    "axes": {
-      "spe": -2
-    }
-  },
-  {
-    "id": 79,
-    "text": "No one has a right not to be offended.",
-    "axes": {
-      "spe": -2
-    }
-  },
-  {
-    "id": 80,
-    "text": "Governments should never decide which opinions are allowed.",
-    "axes": {
-      "spe": -2
-    }
-  },
-  {
-    "id": 81,
-    "text": "Criminals deserve harsh punishment to deter crime.",
-    "axes": {
-      "jus": 2
-    },
-    "core": true
-  },
-  {
-    "id": 82,
-    "text": "Longer prison sentences make society safer.",
-    "axes": {
-      "jus": 2
-    }
-  },
-  {
-    "id": 83,
-    "text": "Justice means making offenders pay for what they did.",
-    "axes": {
-      "jus": 2
-    }
-  },
-  {
-    "id": 84,
-    "text": "We are far too soft on crime.",
-    "axes": {
-      "jus": 2
-    }
-  },
-  {
-    "id": 85,
-    "text": "Some crimes warrant severe, exemplary punishment.",
-    "axes": {
-      "jus": 2
-    }
-  },
-  {
-    "id": 86,
-    "text": "Prisons should focus on rehabilitation, not punishment.",
-    "axes": {
-      "jus": -2
-    },
-    "core": true
-  },
-  {
-    "id": 87,
-    "text": "We should address the causes of crime, not just lock people up.",
-    "axes": {
-      "jus": -2
-    }
-  },
-  {
-    "id": 88,
-    "text": "Most offenders can be reformed and reintegrated into society.",
-    "axes": {
-      "jus": -2
-    }
-  },
-  {
-    "id": 89,
-    "text": "Long sentences do little to make communities safer.",
-    "axes": {
-      "jus": -2
-    }
-  },
-  {
-    "id": 90,
-    "text": "A justice system should aim to heal, not merely to punish.",
-    "axes": {
-      "jus": -2
-    }
-  },
-  {
-    "id": 91,
-    "text": "Major decisions are best left to experts, not popular vote.",
-    "axes": {
-      "dem": 2
-    },
-    "core": true
-  },
-  {
-    "id": 92,
-    "text": "Too much direct democracy leads to reckless choices.",
-    "axes": {
-      "dem": 2
-    }
-  },
-  {
-    "id": 93,
-    "text": "Some questions are too complex to put to a referendum.",
-    "axes": {
-      "dem": 2
-    }
-  },
-  {
-    "id": 94,
-    "text": "Guardrails should limit what popular majorities can do.",
-    "axes": {
-      "dem": 2
-    }
-  },
-  {
-    "id": 95,
-    "text": "A stable state needs checks on the passions of the crowd.",
-    "axes": {
-      "dem": 2
-    }
-  },
-  {
-    "id": 96,
-    "text": "Ordinary citizens should decide big questions through referendums.",
-    "axes": {
-      "dem": -2
-    },
-    "core": true
-  },
-  {
-    "id": 97,
-    "text": "Power should rest directly with the people, not with elites.",
-    "axes": {
-      "dem": -2
-    }
-  },
-  {
-    "id": 98,
-    "text": "The public can be trusted to govern itself.",
-    "axes": {
-      "dem": -2
-    }
-  },
-  {
-    "id": 99,
-    "text": "More decisions should be put directly to a popular vote.",
-    "axes": {
-      "dem": -2
-    }
-  },
-  {
-    "id": 100,
-    "text": "Democracy means letting the majority have its way.",
-    "axes": {
-      "dem": -2
-    }
-  },
-  {
-    "id": 101,
-    "text": "Our public institutions generally serve the common good.",
-    "axes": {
-      "trust": 2
-    },
-    "core": true
-  },
-  {
-    "id": 102,
-    "text": "We should trust the judgment of experts and official agencies.",
-    "axes": {
-      "trust": 2
-    }
-  },
-  {
-    "id": 103,
-    "text": "The civil service does its job honestly and competently.",
-    "axes": {
-      "trust": 2
-    }
-  },
-  {
-    "id": 104,
-    "text": "Most public officials are genuinely trying to do the right thing.",
-    "axes": {
-      "trust": 2
-    }
-  },
-  {
-    "id": 105,
-    "text": "Institutions like the courts deserve our confidence.",
-    "axes": {
-      "trust": 2
-    }
-  },
-  {
-    "id": 106,
-    "text": "Government institutions cannot be trusted to tell the truth.",
-    "axes": {
-      "trust": -2
-    },
-    "core": true
-  },
-  {
-    "id": 107,
-    "text": "The establishment mainly serves its own interests.",
-    "axes": {
-      "trust": -2
-    }
-  },
-  {
-    "id": 108,
-    "text": "Official experts are too often wrong or compromised.",
-    "axes": {
-      "trust": -2
-    }
-  },
-  {
-    "id": 109,
-    "text": "Public institutions have lost any right to our trust.",
-    "axes": {
-      "trust": -2
-    }
-  },
-  {
-    "id": 110,
-    "text": "Those in power routinely deceive the public.",
-    "axes": {
-      "trust": -2
-    }
-  },
-  {
-    "id": 111,
-    "text": "Our system needs to be torn down and rebuilt from scratch.",
-    "axes": {
-      "meth": 2
-    },
-    "core": true
-  },
-  {
-    "id": 112,
-    "text": "Only radical change can fix what is truly broken.",
-    "axes": {
-      "meth": 2
-    }
-  },
-  {
-    "id": 113,
-    "text": "Incremental tweaks will never deliver real justice.",
-    "axes": {
-      "meth": 2
-    }
-  },
-  {
-    "id": 114,
-    "text": "We need bold, sweeping transformation, not cautious tinkering.",
-    "axes": {
-      "meth": 2
-    }
-  },
-  {
-    "id": 115,
-    "text": "The status quo is beyond saving through gradual reform.",
-    "axes": {
-      "meth": 2
-    }
-  },
-  {
-    "id": 116,
-    "text": "Change should come gradually, through careful reform.",
-    "axes": {
-      "meth": -2
-    },
-    "core": true
-  },
-  {
-    "id": 117,
-    "text": "Sweeping revolutions usually cause more harm than good.",
-    "axes": {
-      "meth": -2
-    }
-  },
-  {
-    "id": 118,
-    "text": "Steady, practical improvement beats grand upheaval.",
-    "axes": {
-      "meth": -2
-    }
-  },
-  {
-    "id": 119,
-    "text": "We should reform our institutions, not tear them down.",
-    "axes": {
-      "meth": -2
-    }
-  },
-  {
-    "id": 120,
-    "text": "Lasting progress is built one step at a time.",
-    "axes": {
-      "meth": -2
-    }
-  },
-  {
-    "id": 121,
-    "text": "The national government should set uniform policy across the country.",
-    "axes": {
-      "fed": 2
-    }
-  },
-  {
-    "id": 122,
-    "text": "Central government is best placed to solve our biggest problems.",
-    "axes": {
-      "fed": 2
-    }
-  },
-  {
-    "id": 123,
-    "text": "A strong central state prevents a patchwork of unequal rules.",
-    "axes": {
-      "fed": 2
-    }
-  },
-  {
-    "id": 124,
-    "text": "National standards should override local variation.",
-    "axes": {
-      "fed": 2
-    }
-  },
-  {
-    "id": 125,
-    "text": "Power is better concentrated at the national level.",
-    "axes": {
-      "fed": 2
-    }
-  },
-  {
-    "id": 126,
-    "text": "Most decisions should be made by local and regional governments.",
-    "axes": {
-      "fed": -2
-    }
-  },
-  {
-    "id": 127,
-    "text": "Power should be devolved as close to communities as possible.",
-    "axes": {
-      "fed": -2
-    }
-  },
-  {
-    "id": 128,
-    "text": "Local authorities understand their people's needs best.",
-    "axes": {
-      "fed": -2
-    }
-  },
-  {
-    "id": 129,
-    "text": "Central government should hand more power back to the regions.",
-    "axes": {
-      "fed": -2
-    }
-  },
-  {
-    "id": 130,
-    "text": "Communities, not distant capitals, should run their own affairs.",
-    "axes": {
-      "fed": -2
-    }
-  },
-  {
-    "id": 131,
-    "text": "We should put our own nation's interests first.",
-    "axes": {
-      "natl": 2
-    },
-    "core": true
-  },
-  {
-    "id": 132,
-    "text": "National sovereignty matters more than global cooperation.",
-    "axes": {
-      "natl": 2
-    }
-  },
-  {
-    "id": 133,
-    "text": "Patriotism and national pride hold a country together.",
-    "axes": {
-      "natl": 2
-    }
-  },
-  {
-    "id": 134,
-    "text": "Our first duty is to our own citizens, not to the world.",
-    "axes": {
-      "natl": 2
-    }
-  },
-  {
-    "id": 135,
-    "text": "We should reclaim powers we have handed to international bodies.",
-    "axes": {
-      "natl": 2
-    }
-  },
-  {
-    "id": 136,
-    "text": "We are global citizens with obligations beyond our borders.",
-    "axes": {
-      "natl": -2
-    },
-    "core": true
-  },
-  {
-    "id": 137,
-    "text": "International cooperation should take priority over national pride.",
-    "axes": {
-      "natl": -2
-    }
-  },
-  {
-    "id": 138,
-    "text": "National borders matter less than our shared humanity.",
-    "axes": {
-      "natl": -2
-    }
-  },
-  {
-    "id": 139,
-    "text": "We should pool sovereignty to solve global problems together.",
-    "axes": {
-      "natl": -2
-    }
-  },
-  {
-    "id": 140,
-    "text": "Narrow nationalism is a real danger in the modern world.",
-    "axes": {
-      "natl": -2
-    }
-  },
-  {
-    "id": 141,
-    "text": "Immigration levels should be significantly reduced.",
-    "axes": {
-      "imm": 2
-    },
-    "core": true
-  },
-  {
-    "id": 142,
-    "text": "Our borders should be tightly controlled.",
-    "axes": {
-      "imm": 2
-    }
-  },
-  {
-    "id": 143,
-    "text": "Newcomers should be expected to fully assimilate.",
-    "axes": {
-      "imm": 2
-    }
-  },
-  {
-    "id": 144,
-    "text": "We admit far more immigrants than we can absorb.",
-    "axes": {
-      "imm": 2
-    }
-  },
-  {
-    "id": 145,
-    "text": "Illegal border crossings should be firmly stopped.",
-    "axes": {
-      "imm": 2
-    }
-  },
-  {
-    "id": 146,
-    "text": "We should welcome immigrants and make it easier to come.",
-    "axes": {
-      "imm": -2
-    },
-    "core": true
-  },
-  {
-    "id": 147,
-    "text": "Open immigration enriches our society and our economy.",
-    "axes": {
-      "imm": -2
-    }
-  },
-  {
-    "id": 148,
-    "text": "We have a duty to offer refuge to those fleeing danger.",
-    "axes": {
-      "imm": -2
-    }
-  },
-  {
-    "id": 149,
-    "text": "Immigrants strengthen the communities they join.",
-    "axes": {
-      "imm": -2
-    }
-  },
-  {
-    "id": 150,
-    "text": "Paths to citizenship should be broad and accessible.",
-    "axes": {
-      "imm": -2
-    }
-  },
-  {
-    "id": 151,
-    "text": "Our military should intervene to stop atrocities abroad.",
-    "axes": {
-      "fp": 2
-    },
-    "core": true
-  },
-  {
-    "id": 152,
-    "text": "A strong nation must be willing to project power overseas.",
-    "axes": {
-      "fp": 2
-    }
-  },
-  {
-    "id": 153,
-    "text": "We should maintain a large, active military presence worldwide.",
-    "axes": {
-      "fp": 2
-    }
-  },
-  {
-    "id": 154,
-    "text": "Sometimes force is the only way to defend our values abroad.",
-    "axes": {
-      "fp": 2
-    }
-  },
-  {
-    "id": 155,
-    "text": "We must confront hostile regimes before they can threaten us.",
-    "axes": {
-      "fp": 2
-    }
-  },
-  {
-    "id": 156,
-    "text": "We should avoid foreign wars and focus on problems at home.",
-    "axes": {
-      "fp": -2
-    },
-    "core": true
-  },
-  {
-    "id": 157,
-    "text": "Military intervention abroad usually backfires.",
-    "axes": {
-      "fp": -2
-    }
-  },
-  {
-    "id": 158,
-    "text": "We should bring our troops home and stay out of others' conflicts.",
-    "axes": {
-      "fp": -2
-    }
-  },
-  {
-    "id": 159,
-    "text": "Diplomacy, not force, should drive our foreign policy.",
-    "axes": {
-      "fp": -2
-    }
-  },
-  {
-    "id": 160,
-    "text": "Endless overseas commitments drain us and endanger us.",
-    "axes": {
-      "fp": -2
-    }
-  },
-  {
-    "id": 161,
-    "text": "Technological progress will solve most of our problems.",
-    "axes": {
-      "tech": 2
-    }
-  },
-  {
-    "id": 162,
-    "text": "We should embrace new technologies like AI quickly.",
-    "axes": {
-      "tech": 2
-    }
-  },
-  {
-    "id": 163,
-    "text": "Innovation should be allowed to move fast, not held back.",
-    "axes": {
-      "tech": 2
-    }
-  },
-  {
-    "id": 164,
-    "text": "The benefits of new technology outweigh the risks.",
-    "axes": {
-      "tech": 2
-    }
-  },
-  {
-    "id": 165,
-    "text": "Automation and AI will make life better for almost everyone.",
-    "axes": {
-      "tech": 2
-    }
-  },
-  {
-    "id": 166,
-    "text": "We should be cautious and slow with powerful new technologies.",
-    "axes": {
-      "tech": -2
-    }
-  },
-  {
-    "id": 167,
-    "text": "New technology often causes harm before we understand it.",
-    "axes": {
-      "tech": -2
-    }
-  },
-  {
-    "id": 168,
-    "text": "Powerful innovations like AI need strict oversight.",
-    "axes": {
-      "tech": -2
-    }
-  },
-  {
-    "id": 169,
-    "text": "We should not deploy technologies we cannot fully control.",
-    "axes": {
-      "tech": -2
-    }
-  },
-  {
-    "id": 170,
-    "text": "Rapid technological change threatens jobs and communities.",
-    "axes": {
-      "tech": -2
-    }
-  },
-  {
-    "id": 171,
-    "text": "Economic growth should take priority over environmental rules.",
-    "axes": {
-      "env": 2
-    }
-  },
-  {
-    "id": 172,
-    "text": "We cannot sacrifice jobs for strict green regulations.",
-    "axes": {
-      "env": 2
-    }
-  },
-  {
-    "id": 173,
-    "text": "Environmental fears are too often used to hold back prosperity.",
-    "axes": {
-      "env": 2
-    }
-  },
-  {
-    "id": 174,
-    "text": "Cheap, reliable energy matters more than emissions targets.",
-    "axes": {
-      "env": 2
-    }
-  },
-  {
-    "id": 175,
-    "text": "Development should not be blocked by every environmental concern.",
-    "axes": {
-      "env": 2
-    }
-  },
-  {
-    "id": 176,
-    "text": "Protecting the environment matters more than economic growth.",
-    "axes": {
-      "env": -2
-    }
-  },
-  {
-    "id": 177,
-    "text": "We must cut emissions even if it slows the economy.",
-    "axes": {
-      "env": -2
-    }
-  },
-  {
-    "id": 178,
-    "text": "Nature has a value that no economic gain can justify destroying.",
-    "axes": {
-      "env": -2
-    }
-  },
-  {
-    "id": 179,
-    "text": "We should transition off fossil fuels as fast as possible.",
-    "axes": {
-      "env": -2
-    }
-  },
-  {
-    "id": 180,
-    "text": "Future generations depend on the environmental choices we make now.",
-    "axes": {
-      "env": -2
-    }
-  },
-  {
-    "id": 181,
-    "text": "Environmental rules should never be allowed to strangle free enterprise.",
-    "axes": {
-      "mkt": 1,
-      "env": 1
-    },
-    "core": true
-  },
-  {
-    "id": 182,
-    "text": "Government should regulate markets firmly to protect the planet.",
-    "axes": {
-      "mkt": -1,
-      "env": -1
-    },
-    "core": true
-  },
-  {
-    "id": 183,
-    "text": "A smaller state means lower taxes and leaner welfare, and that is for the best.",
-    "axes": {
-      "mkt": 1,
-      "wel": 1
-    },
-    "core": true
-  },
-  {
-    "id": 184,
-    "text": "The government should run key services and guarantee people's basic needs.",
-    "axes": {
-      "mkt": -1,
-      "wel": -1
-    },
-    "core": true
-  },
-  {
-    "id": 185,
-    "text": "Our traditions are rooted in faith, and both deserve public respect.",
-    "axes": {
-      "soc": 1,
-      "rel": 1
-    },
-    "core": true
-  },
-  {
-    "id": 186,
-    "text": "A modern society should be both secular and socially progressive.",
-    "axes": {
-      "soc": -1,
-      "rel": -1
-    },
-    "core": true
-  },
-  {
-    "id": 187,
-    "text": "Mass immigration erodes our shared national culture.",
-    "axes": {
-      "soc": 1,
-      "imm": 1
-    },
-    "core": true
-  },
-  {
-    "id": 188,
-    "text": "An open society is culturally richer for the immigrants it welcomes.",
-    "axes": {
-      "soc": -1,
-      "imm": -1
-    },
-    "core": true
-  },
-  {
-    "id": 189,
-    "text": "Putting our nation first means controlling who is allowed in.",
-    "axes": {
-      "natl": 1,
-      "imm": 1
-    },
-    "core": true
-  },
-  {
-    "id": 190,
-    "text": "Openness to the world means welcoming migrants, not shutting them out.",
-    "axes": {
-      "natl": -1,
-      "imm": -1
-    },
-    "core": true
-  },
-  {
-    "id": 191,
-    "text": "We should protect our own industries and our own nation first.",
-    "axes": {
-      "natl": 1,
-      "trd": 1
-    },
-    "core": true
-  },
-  {
-    "id": 192,
-    "text": "Global free trade and global cooperation go hand in hand.",
-    "axes": {
-      "natl": -1,
-      "trd": -1
-    },
-    "core": true
-  },
-  {
-    "id": 193,
-    "text": "A great nation must be willing to project strength on the world stage.",
-    "axes": {
-      "natl": 1,
-      "fp": 1
-    },
-    "core": true
-  },
-  {
-    "id": 194,
-    "text": "We should be humble abroad and cooperate rather than dominate.",
-    "axes": {
-      "natl": -1,
-      "fp": -1
-    },
-    "core": true
-  },
-  {
-    "id": 195,
-    "text": "The state should have broad powers to watch and police its citizens.",
-    "axes": {
-      "auth": 1,
-      "sec": 1
-    },
-    "core": true
-  },
-  {
-    "id": 196,
-    "text": "Freedom means limiting both state power and state surveillance.",
-    "axes": {
-      "auth": -1,
-      "sec": -1
-    },
-    "core": true
-  },
-  {
-    "id": 197,
-    "text": "Order requires strict laws and tough punishment for offenders.",
-    "axes": {
-      "auth": 1,
-      "jus": 1
-    },
-    "core": true
-  },
-  {
-    "id": 198,
-    "text": "A free society treats even wrongdoers with restraint and dignity.",
-    "axes": {
-      "auth": -1,
-      "jus": -1
-    },
-    "core": true
-  },
-  {
-    "id": 199,
-    "text": "The state may restrict what people say to preserve public order.",
-    "axes": {
-      "auth": 1,
-      "spe": 1
-    },
-    "core": true
-  },
-  {
-    "id": 200,
-    "text": "Liberty means the state cannot police what we say.",
-    "axes": {
-      "auth": -1,
-      "spe": -1
-    },
-    "core": true
-  },
-  {
-    "id": 201,
-    "text": "Authorities should be able to remove online content that threatens security.",
-    "axes": {
-      "sec": 1,
-      "spe": 1
-    },
-    "core": true
-  },
-  {
-    "id": 202,
-    "text": "Neither our privacy nor our speech should be surrendered to the state.",
-    "axes": {
-      "sec": -1,
-      "spe": -1
-    },
-    "core": true
-  },
-  {
-    "id": 203,
-    "text": "Insults and blasphemy against religion should not be permitted.",
-    "axes": {
-      "rel": 1,
-      "spe": 1
-    },
-    "core": true
-  },
-  {
-    "id": 204,
-    "text": "People must be free to mock or criticize any religion.",
-    "axes": {
-      "rel": -1,
-      "spe": -1
-    },
-    "core": true
-  },
-  {
-    "id": 205,
-    "text": "We should trust our institutions and let qualified experts govern.",
-    "axes": {
-      "dem": 1,
-      "trust": 1
-    },
-    "core": true
-  },
-  {
-    "id": 206,
-    "text": "Power belongs with ordinary people, not with a distrusted elite.",
-    "axes": {
-      "dem": -1,
-      "trust": -1
-    },
-    "core": true
-  },
-  {
-    "id": 207,
-    "text": "Sweeping change should wait for careful, guarded deliberation.",
-    "axes": {
-      "dem": 1,
-      "meth": -1
-    },
-    "core": true
-  },
-  {
-    "id": 208,
-    "text": "The people should rise up and demand radical change now.",
-    "axes": {
-      "dem": -1,
-      "meth": 1
-    },
-    "core": true
-  },
-  {
-    "id": 209,
-    "text": "Our corrupt institutions must be swept away entirely.",
-    "axes": {
-      "meth": 1,
-      "trust": -1
-    },
-    "core": true
-  },
-  {
-    "id": 210,
-    "text": "We should patiently reform the institutions we can still trust.",
-    "axes": {
-      "meth": -1,
-      "trust": 1
-    },
-    "core": true
-  },
-  {
-    "id": 211,
-    "text": "A strong central national government keeps the country united.",
-    "axes": {
-      "fed": 1,
-      "natl": 1
-    },
-    "core": true
-  },
-  {
-    "id": 212,
-    "text": "Power should flow down to local communities and outward to the world.",
-    "axes": {
-      "fed": -1,
-      "natl": -1
-    },
-    "core": true
-  },
-  {
-    "id": 213,
-    "text": "National leaders should set binding policy for everyone.",
-    "axes": {
-      "fed": 1,
-      "dem": 1
-    },
-    "core": true
-  },
-  {
-    "id": 214,
-    "text": "Local communities should directly govern their own affairs.",
-    "axes": {
-      "fed": -1,
-      "dem": -1
-    },
-    "core": true
-  },
-  {
-    "id": 215,
-    "text": "We must fight threats abroad and surveil dangers at home.",
-    "axes": {
-      "fp": 1,
-      "sec": 1
-    },
-    "core": true
-  },
-  {
-    "id": 216,
-    "text": "We should end foreign wars and stop spying on our own people.",
-    "axes": {
-      "fp": -1,
-      "sec": -1
-    },
-    "core": true
-  },
-  {
-    "id": 217,
-    "text": "Technology and industry should drive growth without heavy green limits.",
-    "axes": {
-      "tech": 1,
-      "env": 1,
-      "mkt": 1
-    },
-    "core": true
-  },
-  {
-    "id": 218,
-    "text": "We should slow down risky technology and put the planet first.",
-    "axes": {
-      "tech": -1,
-      "env": -1,
-      "mkt": -1
-    },
-    "core": true
-  },
-  {
-    "id": 219,
-    "text": "Automation will grow the economy and shrink the need for welfare.",
-    "axes": {
-      "tech": 1,
-      "wel": 1
-    },
-    "core": true
-  },
-  {
-    "id": 220,
-    "text": "As machines take jobs, the state must expand support for workers.",
-    "axes": {
-      "tech": -1,
-      "wel": -1
-    },
-    "core": true
-  },
-  {
-    "id": 221,
-    "text": "Governments should tightly regulate powerful new technologies.",
-    "axes": {
-      "tech": -1,
-      "auth": 1
-    },
-    "core": true
-  },
-  {
-    "id": 222,
-    "text": "Innovators should be free from heavy-handed government control.",
-    "axes": {
-      "tech": 1,
-      "auth": -1
-    },
-    "core": true
-  },
-  {
-    "id": 223,
-    "text": "Newcomers place too heavy a strain on public services and welfare.",
-    "axes": {
-      "imm": 1,
-      "wel": 1
-    },
-    "core": true
-  },
-  {
-    "id": 224,
-    "text": "We should extend the welfare state to support new arrivals.",
-    "axes": {
-      "imm": -1,
-      "wel": -1
-    },
-    "core": true
-  },
-  {
-    "id": 225,
-    "text": "Restoring traditional discipline means getting tough on crime.",
-    "axes": {
-      "jus": 1,
-      "soc": 1
-    },
-    "core": true
-  },
-  {
-    "id": 226,
-    "text": "A progressive society should rehabilitate offenders, not punish them.",
-    "axes": {
-      "jus": -1,
-      "soc": -1
-    },
-    "core": true
-  },
-  {
-    "id": 227,
-    "text": "We should not wreck our own economy for global climate agreements.",
-    "axes": {
-      "env": 1,
-      "natl": 1,
-      "mkt": 1
-    },
-    "core": true
-  },
-  {
-    "id": 228,
-    "text": "Climate change demands that all nations act together across borders.",
-    "axes": {
-      "env": -1,
-      "natl": -1,
-      "mkt": -1
-    },
-    "core": true
-  },
-  {
-    "id": 229,
-    "text": "Open, deregulated markets and free trade lift everyone.",
-    "axes": {
-      "trd": -1,
-      "mkt": 1
-    },
-    "core": true
-  },
-  {
-    "id": 230,
-    "text": "The state should shield strategic industries with tariffs and subsidies.",
-    "axes": {
-      "trd": 1,
-      "mkt": -1
-    },
-    "core": true
-  },
-  {
-    "id": 231,
-    "text": "The media spread misinformation and should be reined in.",
-    "axes": {
-      "spe": 1,
-      "trust": -1
-    },
-    "core": true
-  },
-  {
-    "id": 232,
-    "text": "A free press we can trust is essential to democracy.",
-    "axes": {
-      "spe": -1,
-      "trust": 1
-    },
-    "core": true
-  },
-  {
-    "id": 233,
-    "text": "The state should uphold and enforce religious moral standards.",
-    "axes": {
-      "rel": 1,
-      "auth": 1
-    },
-    "core": true
-  },
-  {
-    "id": 234,
-    "text": "People should be free from the authority of both church and state.",
-    "axes": {
-      "rel": -1,
-      "auth": -1
-    },
-    "core": true
-  },
-  {
-    "id": 235,
-    "text": "Dangerous populist rhetoric should sometimes be restricted.",
-    "axes": {
-      "dem": 1,
-      "spe": 1
-    },
-    "core": true
-  },
-  {
-    "id": 236,
-    "text": "The people must be free to speak their minds and to rule themselves.",
-    "axes": {
-      "dem": -1,
-      "spe": -1
-    },
-    "core": true
-  },
-  {
-    "id": 237,
-    "text": "The national government should guarantee the same welfare in every region.",
-    "axes": {
-      "fed": 1,
-      "wel": -1
-    },
-    "core": true
-  },
-  {
-    "id": 238,
-    "text": "Local communities, not the central state, should run their own welfare.",
-    "axes": {
-      "fed": -1,
-      "wel": 1
-    },
-    "core": true
-  },
-  {
-    "id": 239,
-    "text": "We need a revolution to overturn capitalism itself.",
-    "axes": {
-      "meth": 1,
-      "mkt": -1
-    },
-    "core": true
-  },
-  {
-    "id": 240,
-    "text": "Gradual, market-friendly reform is the responsible path forward.",
-    "axes": {
-      "meth": -1,
-      "mkt": 1
-    },
-    "core": true
-  },
-  {
-    "id": 241,
-    "text": "We should trust our security agencies to act firmly abroad.",
-    "axes": {
-      "fp": 1,
-      "trust": 1
-    },
-    "core": true
-  },
-  {
-    "id": 242,
-    "text": "Foreign adventures are driven by elites we have no reason to trust.",
-    "axes": {
-      "fp": -1,
-      "trust": -1
-    },
-    "core": true
-  },
-  {
-    "id": 243,
-    "text": "We should conserve our heritage and change it only slowly.",
-    "axes": {
-      "soc": 1,
-      "meth": -1
-    },
-    "core": true
-  },
-  {
-    "id": 244,
-    "text": "We need radical cultural transformation, and we need it soon.",
-    "axes": {
-      "soc": -1,
-      "meth": 1
-    },
-    "core": true
-  },
-  {
-    "id": 245,
-    "text": "We should intervene at the source to stop waves of migration.",
-    "axes": {
-      "fp": 1,
-      "imm": 1
-    },
-    "core": true
-  },
-  {
-    "id": 246,
-    "text": "We should welcome refugees rather than bomb the countries they flee.",
-    "axes": {
-      "fp": -1,
-      "imm": -1
-    },
-    "core": true
-  },
-  {
-    "id": 247,
-    "text": "We should trust intelligence agencies with strong surveillance powers.",
-    "axes": {
-      "sec": 1,
-      "trust": 1
-    },
-    "core": true
-  },
-  {
-    "id": 248,
-    "text": "Spy agencies abuse both our trust and our privacy.",
-    "axes": {
-      "sec": -1,
-      "trust": -1
-    },
-    "core": true
-  },
-  {
-    "id": 249,
-    "text": "Immigration is eroding our religious heritage.",
-    "axes": {
-      "rel": 1,
-      "imm": 1
-    },
-    "core": true
-  },
-  {
-    "id": 250,
-    "text": "A secular nation should welcome people of every faith and none.",
-    "axes": {
-      "rel": -1,
-      "imm": -1
-    },
-    "core": true
-  }
-]
+[{"id":1,"text":"Prices for most goods and services should be set by markets rather than by government.","axes":{"mkt":2},"sev":2,"core":true,"pair":"P01"},
+{"id":2,"text":"The government should own and operate key industries such as energy and rail.","axes":{"mkt":-2},"sev":2,"core":true},
+{"id":3,"text":"Government regulation of business generally does more harm than good.","axes":{"mkt":2},"sev":2,"core":true},
+{"id":4,"text":"Antitrust enforcement against large corporations should be expanded.","axes":{"mkt":-1},"sev":1,"core":true},
+{"id":5,"text":"There should be no legally mandated minimum wage.","axes":{"mkt":2},"sev":3,"core":true},
+{"id":6,"text":"Utilities such as water and electricity should be publicly owned.","axes":{"mkt":-2},"sev":2,"core":true},
+{"id":7,"text":"Private companies deliver most services more efficiently than government agencies.","axes":{"mkt":1},"sev":1},
+{"id":8,"text":"The state should subsidize strategically important industries.","axes":{"mkt":-1,"trd":1},"sev":1},
+{"id":9,"text":"Rent prices should be capped by law in high-cost cities.","axes":{"mkt":-2},"sev":2},
+{"id":10,"text":"Occupational licensing requirements should be reduced.","axes":{"mkt":1},"sev":1},
+{"id":11,"text":"A maximum legal limit should be placed on personal wealth.","axes":{"mkt":-2},"sev":3},
+{"id":12,"text":"Corporate taxes should be lowered to encourage investment.","axes":{"mkt":2},"sev":2},
+{"id":13,"text":"Banks should face stricter government oversight.","axes":{"mkt":-1},"sev":1},
+{"id":14,"text":"Land is best allocated when it can be bought and sold like any other commodity.","axes":{"mkt":1},"sev":1},
+{"id":15,"text":"The government should guarantee a universal basic income.","axes":{"wel":-2},"sev":3,"core":true},
+{"id":16,"text":"Welfare benefits for those able to work should be conditional on work or job-seeking.","axes":{"wel":1},"sev":1,"core":true},
+{"id":17,"text":"Healthcare should be provided through a single government program covering everyone.","axes":{"wel":-2},"sev":3,"core":true},
+{"id":18,"text":"Public assistance programs make long-term dependence more likely.","axes":{"wel":2},"sev":2,"core":true},
+{"id":19,"text":"Tuition at public universities should be free.","axes":{"wel":-1},"sev":1,"core":true},
+{"id":20,"text":"Individuals, not government, hold primary responsibility for their own economic security.","axes":{"wel":2},"sev":2,"core":true},
+{"id":21,"text":"Eligibility requirements for public assistance should be stricter than they are now.","axes":{"wel":2},"sev":2},
+{"id":22,"text":"Government should provide free childcare for working parents.","axes":{"wel":-1},"sev":1},
+{"id":23,"text":"Social Security benefits should be expanded.","axes":{"wel":-1},"sev":1},
+{"id":24,"text":"Charities and community organizations handle poverty relief better than government programs.","axes":{"wel":1},"sev":1},
+{"id":25,"text":"No one should go without basic necessities, regardless of whether they work.","axes":{"wel":-2},"sev":2},
+{"id":26,"text":"Unemployment benefits should be time-limited.","axes":{"wel":1},"sev":1},
+{"id":27,"text":"The federal government should guarantee housing for all citizens.","axes":{"wel":-2},"sev":3},
+{"id":28,"text":"Applicants for public assistance should be required to pass drug tests.","axes":{"wel":1,"jus":1},"sev":1},
+{"id":29,"text":"Tariffs on imported goods are an appropriate way to sustain domestic industries.","axes":{"trd":2},"sev":2,"core":true},
+{"id":30,"text":"Free trade agreements benefit the country overall.","axes":{"trd":-2},"sev":2,"core":true},
+{"id":31,"text":"Goods vital to national security should be manufactured domestically even at higher cost.","axes":{"trd":1,"natl":1},"sev":1,"core":true},
+{"id":32,"text":"Consumers benefit when companies can buy from the cheapest supplier worldwide.","axes":{"trd":-1},"sev":1,"core":true},
+{"id":33,"text":"Companies that move production overseas should face financial penalties.","axes":{"trd":2},"sev":3,"core":true},
+{"id":34,"text":"Trade restrictions raise prices more than they help workers.","axes":{"trd":-2},"sev":2},
+{"id":35,"text":"Domestic-content requirements should apply to all government purchases.","axes":{"trd":1},"sev":1},
+{"id":36,"text":"International supply chains make the economy more resilient, not less.","axes":{"trd":-1},"sev":1},
+{"id":37,"text":"A country should aim to produce most of what it consumes.","axes":{"trd":2,"natl":1},"sev":2},
+{"id":38,"text":"Trade policy should favor exporters even if imported goods become more expensive.","axes":{"trd":1},"sev":1},
+{"id":39,"text":"Membership in international trade organizations serves the national interest.","axes":{"trd":-1,"natl":-1},"sev":1},
+{"id":40,"text":"Foreign competition improves the quality of domestic products.","axes":{"trd":-1},"sev":1},
+{"id":41,"text":"Critical medicines and minerals should be sourced domestically regardless of cost.","axes":{"trd":1},"sev":1},
+{"id":42,"text":"Tariffs are taxes paid mainly by domestic consumers.","axes":{"trd":-2},"sev":2},
+{"id":43,"text":"Society benefits when marriage is defined as between one man and one woman.","axes":{"soc":2},"sev":3,"core":true},
+{"id":44,"text":"A person's gender identity can differ from their biological sex.","axes":{"soc":-2},"sev":2,"core":true},
+{"id":45,"text":"Traditional gender roles reflect real differences between men and women.","axes":{"soc":2},"sev":2,"core":true},
+{"id":46,"text":"Children develop best when raised by a mother and a father.","axes":{"soc":1},"sev":1,"core":true},
+{"id":47,"text":"Recreational drug use by adults is a private matter that should not be a crime.","axes":{"soc":-1,"auth_pat":-1},"sev":1,"core":true},
+{"id":48,"text":"Popular culture has changed for the worse over the past several decades.","axes":{"soc":1},"sev":1,"core":true},
+{"id":49,"text":"Prostitution between consenting adults should be legal.","axes":{"soc":-1,"auth_pat":-1},"sev":1},
+{"id":50,"text":"Same-sex couples should be able to adopt children on the same terms as other couples.","axes":{"soc":-2},"sev":2},
+{"id":51,"text":"Abortion should be prohibited in most or all circumstances.","axes":{"soc":2},"sev":3},
+{"id":52,"text":"Pornography should be more difficult to access than it is now.","axes":{"soc":1,"spe":1},"sev":1},
+{"id":53,"text":"Casual attitudes toward sex have harmed society.","axes":{"soc":1},"sev":1},
+{"id":54,"text":"People should be able to use whichever pronouns they choose without social penalty.","axes":{"soc":-1},"sev":1},
+{"id":55,"text":"Divorce should be harder to obtain than it currently is.","axes":{"soc":1},"sev":1},
+{"id":56,"text":"Physician-assisted death should be legal for terminally ill adults.","axes":{"soc":-1},"sev":1},
+{"id":57,"text":"Religious values should inform public policy.","axes":{"rel":2},"sev":2,"core":true,"pair":"P04"},
+{"id":58,"text":"Government and religion should remain strictly separate.","axes":{"rel":-2},"sev":3,"core":true,"pair":"P04"},
+{"id":59,"text":"Public schools should be permitted to include prayer in school activities.","axes":{"rel":1},"sev":1,"core":true},
+{"id":60,"text":"Religious displays should be allowed on government property.","axes":{"rel":1},"sev":1,"core":true},
+{"id":61,"text":"A shared religious foundation makes a society stronger.","axes":{"rel":2},"sev":2,"core":true},
+{"id":62,"text":"Religious organizations should be eligible to deliver public services with government funding.","axes":{"rel":1},"sev":1,"core":true},
+{"id":63,"text":"Morality does not depend on religious belief.","axes":{"rel":-2},"sev":2},
+{"id":64,"text":"Clergy and religious institutions should stay out of political debates.","axes":{"rel":-1},"sev":1},
+{"id":65,"text":"Religious exemptions from generally applicable laws should be broad.","axes":{"rel":1},"sev":1},
+{"id":66,"text":"A public official's religious beliefs are irrelevant to their fitness for office.","axes":{"rel":-1},"sev":1},
+{"id":67,"text":"Declining religious practice has weakened the country's moral fabric.","axes":{"rel":2},"sev":2},
+{"id":68,"text":"Tax exemptions for religious organizations should be ended.","axes":{"rel":-2},"sev":3},
+{"id":69,"text":"Faith-based schools should receive public funding on equal terms with secular schools.","axes":{"rel":1},"sev":1},
+{"id":70,"text":"Laws should be justified without reference to any religion.","axes":{"rel":-1},"sev":1},
+{"id":71,"text":"When public order and individual freedom conflict, public order should prevail.","axes":{"auth_pw":2},"sev":2,"core":true},
+{"id":72,"text":"The government should not be able to tell adults what risks they may take with their own bodies.","axes":{"auth_pat":-2},"sev":2,"core":true,"pair":"P09"},
+{"id":73,"text":"Emergencies justify temporary suspension of ordinary civil liberties.","axes":{"auth_pw":1},"sev":1,"core":true},
+{"id":74,"text":"Seatbelt and helmet laws are appropriate uses of government power.","axes":{"auth_pat":1},"sev":1,"core":true},
+{"id":75,"text":"People should be free to make choices others consider immoral, so long as no one else is harmed.","axes":{"auth_pat":-2},"sev":2,"core":true},
+{"id":76,"text":"Curfews are an acceptable tool for maintaining public safety.","axes":{"auth_pw":1},"sev":1,"core":true},
+{"id":77,"text":"Private gun ownership should face few restrictions.","axes":{"auth_pat":-1},"sev":1},
+{"id":78,"text":"The state may require vaccination during a public health emergency.","axes":{"auth_pat":2},"sev":3},
+{"id":79,"text":"What consenting adults do in private is not the government's business.","axes":{"auth_pat":-1},"sev":1},
+{"id":80,"text":"Strong leadership sometimes matters more than strict adherence to procedure.","axes":{"auth_pw":1},"sev":1},
+{"id":81,"text":"Government should have the power to ban organizations it deems dangerous.","axes":{"auth_pw":2},"sev":3},
+{"id":82,"text":"Civil disobedience is sometimes justified.","axes":{"auth_pw":-1,"meth_means":1},"sev":1},
+{"id":83,"text":"A national identification card should be required for all citizens.","axes":{"auth_pw":1,"sec":1},"sev":1},
+{"id":84,"text":"Certain individual rights should not be subject to majority vote.","axes":{"auth_pw":-1},"sev":1},
+{"id":85,"text":"Government monitoring of communications is acceptable if it prevents serious crime.","axes":{"sec":2},"sev":3,"core":true},
+{"id":86,"text":"Privacy from government observation is a right that should rarely be overridden.","axes":{"sec":-2},"sev":2,"core":true},
+{"id":87,"text":"Law enforcement should be able to access encrypted messages with a warrant.","axes":{"sec":1},"sev":1,"core":true},
+{"id":88,"text":"Widespread camera surveillance of public spaces makes cities safer.","axes":{"sec":1},"sev":1,"core":true},
+{"id":89,"text":"Government surveillance poses little risk to law-abiding people.","axes":{"sec":2},"sev":3,"core":true},
+{"id":90,"text":"Companies should be barred from collecting personal data without explicit consent.","axes":{"sec":-1},"sev":1},
+{"id":91,"text":"Police should not use facial recognition technology.","axes":{"sec":-2},"sev":2},
+{"id":92,"text":"Airport-style security screening is a reasonable price for safety.","axes":{"sec":1},"sev":1},
+{"id":93,"text":"Government should never maintain lists of citizens based on their beliefs.","axes":{"sec":-1},"sev":1},
+{"id":94,"text":"Intelligence agencies need broad latitude to operate in secret.","axes":{"sec":2},"sev":3},
+{"id":95,"text":"Anonymous use of the internet should remain possible.","axes":{"sec":-2},"sev":2},
+{"id":96,"text":"Financial transactions should be traceable by authorities to combat crime.","axes":{"sec":1},"sev":1},
+{"id":97,"text":"Employees who leak classified government programs should be prosecuted.","axes":{"sec":1,"trust_sys":1},"sev":1},
+{"id":98,"text":"Strong encryption available to everyone benefits society more than it costs.","axes":{"sec":-1,"tech":1},"sev":1},
+{"id":99,"text":"Speech that demeans religious or ethnic groups should be against the law.","axes":{"spe":2},"sev":3,"core":true},
+{"id":100,"text":"Offensive and even hateful speech should remain legal.","axes":{"spe":-2},"sev":3,"core":true},
+{"id":101,"text":"Social media platforms should be required to remove false information.","axes":{"spe":1},"sev":1,"core":true},
+{"id":102,"text":"The government should never determine what counts as misinformation.","axes":{"spe":-2},"sev":2,"core":true},
+{"id":103,"text":"Burning the national flag should be a protected form of expression.","axes":{"spe":-1,"natl":-1},"sev":1,"core":true},
+{"id":104,"text":"Speech that glorifies violence should be restricted, not only speech that directly incites it.","axes":{"spe":1},"sev":1},
+{"id":105,"text":"Universities should be able to bar speakers whose views offend parts of the student body.","axes":{"spe":1},"sev":1},
+{"id":106,"text":"The remedy for harmful speech is more speech, not restriction.","axes":{"spe":-2},"sev":2},
+{"id":107,"text":"Advertising designed to manipulate emotions should be regulated.","axes":{"spe":1},"sev":1},
+{"id":108,"text":"Obscenity laws should be enforced more strictly.","axes":{"spe":1,"soc":1},"sev":1},
+{"id":109,"text":"Anonymous political speech deserves the same protection as attributed speech.","axes":{"spe":-1},"sev":1},
+{"id":110,"text":"Defamation should be easier to prove in court than it currently is.","axes":{"spe":1},"sev":1},
+{"id":111,"text":"Blasphemy should carry no legal consequence.","axes":{"spe":-1,"rel":-1},"sev":1},
+{"id":112,"text":"Political dissent must remain legal even when it undermines public confidence in government.","axes":{"spe":-1},"sev":1},
+{"id":113,"text":"The primary purpose of prison is punishment.","axes":{"jus":2},"sev":2,"core":true,"pair":"P03"},
+{"id":114,"text":"Most prisoners can be rehabilitated and returned to society.","axes":{"jus":-2},"sev":2,"core":true},
+{"id":115,"text":"The death penalty is an appropriate punishment for the worst crimes.","axes":{"jus":2},"sev":3,"core":true},
+{"id":116,"text":"Mandatory minimum sentences should be abolished.","axes":{"jus":-1},"sev":1,"core":true},
+{"id":117,"text":"Harsh sentences deter crime.","axes":{"jus":1},"sev":1,"core":true},
+{"id":118,"text":"Drug addiction should be treated as a health issue rather than a criminal one.","axes":{"jus":-2},"sev":2,"core":true},
+{"id":119,"text":"People who complete their sentences should regain full civil rights, including voting.","axes":{"jus":-1,"dem_fr":-1},"sev":1},
+{"id":120,"text":"Police should have greater latitude to stop and search people in high-crime areas.","axes":{"jus":1,"sec":1},"sev":1},
+{"id":121,"text":"Juveniles who commit serious crimes should be tried as adults.","axes":{"jus":1},"sev":1},
+{"id":122,"text":"Prison conditions in this country are too harsh.","axes":{"jus":-1},"sev":1},
+{"id":123,"text":"Life sentences for repeat offenders under three-strikes laws are just.","axes":{"jus":2},"sev":3},
+{"id":124,"text":"Long-term solitary confinement should be banned.","axes":{"jus":-1},"sev":1},
+{"id":125,"text":"Restorative justice programs should replace incarceration for some offenses.","axes":{"jus":-2},"sev":3},
+{"id":126,"text":"It is better that some guilty people go free than that innocent people are imprisoned.","axes":{"jus":-1},"sev":1},
+{"id":127,"text":"Voting should require demonstrating basic knowledge of how government works.","axes":{"dem_fr":2},"sev":2,"core":true,"pair":"P07"},
+{"id":128,"text":"Every adult citizen should have an equal vote regardless of education or knowledge.","axes":{"dem_fr":-2},"sev":2,"core":true,"pair":"P07"},
+{"id":129,"text":"Important national questions should be decided by public referendum.","axes":{"dem_tc":-2},"sev":2,"core":true},
+{"id":130,"text":"Judges should be appointed rather than elected.","axes":{"dem_tc":1},"sev":1,"core":true},
+{"id":131,"text":"Complex policy decisions are better made by qualified experts than by popular vote.","axes":{"dem_tc":2},"sev":3,"core":true},
+{"id":132,"text":"The voting age should be lowered.","axes":{"dem_fr":-1},"sev":1,"core":true},
+{"id":133,"text":"Constitutional limits should override the will of the majority.","axes":{"dem_tc":1},"sev":1},
+{"id":134,"text":"People convicted of serious crimes should permanently lose the right to vote.","axes":{"dem_fr":1,"jus":1},"sev":1},
+{"id":135,"text":"Voting should be mandatory.","axes":{"dem_fr":-1,"auth_pat":1},"sev":1},
+{"id":136,"text":"Longer terms of office would let leaders govern with less regard for short-term opinion.","axes":{"dem_tc":1},"sev":1},
+{"id":137,"text":"Randomly selected citizens' assemblies should help decide major public issues.","axes":{"dem_tc":-2},"sev":3},
+{"id":138,"text":"National leaders should be chosen by direct popular vote without intermediary institutions.","axes":{"dem_tc":-1},"sev":1},
+{"id":139,"text":"Some public offices should require professional qualifications, as many private jobs do.","axes":{"dem_tc":2},"sev":2},
+{"id":140,"text":"The country would be governed better if fewer, better-informed people voted.","axes":{"dem_fr":2},"sev":3},
+{"id":141,"text":"Elections in this country are generally administered fairly.","axes":{"trust_sys":2},"sev":2,"core":true,"pair":"P10"},
+{"id":142,"text":"Public officials mostly serve themselves rather than the public.","axes":{"trust_pol":-2},"sev":2,"core":true},
+{"id":143,"text":"The court system usually reaches just outcomes.","axes":{"trust_sys":1},"sev":1,"core":true},
+{"id":144,"text":"Mainstream news organizations report accurately more often than not.","axes":{"trust_pol":1},"sev":1,"core":true},
+{"id":145,"text":"Official government statistics can generally be believed.","axes":{"trust_sys":1},"sev":1,"core":true},
+{"id":146,"text":"A small group of powerful people effectively controls the government regardless of elections.","axes":{"trust_pol":-2},"sev":3,"core":true},
+{"id":147,"text":"The political system is capable of reforming itself through normal processes.","axes":{"trust_sys":2,"meth_means":-1},"sev":2},
+{"id":148,"text":"Scientific institutions can be trusted to follow evidence rather than politics.","axes":{"trust_sys":1},"sev":1},
+{"id":149,"text":"Most civil servants are competent professionals.","axes":{"trust_sys":1},"sev":1},
+{"id":150,"text":"The two-party system serves the country adequately.","axes":{"trust_pol":1},"sev":1},
+{"id":151,"text":"Regulatory agencies mostly serve the industries they are supposed to oversee.","axes":{"trust_sys":-1},"sev":1},
+{"id":152,"text":"Official accounts of major events frequently conceal the truth.","axes":{"trust_sys":-2},"sev":3},
+{"id":153,"text":"Political donations effectively buy policy outcomes.","axes":{"trust_pol":-1},"sev":1},
+{"id":154,"text":"Society's problems require sweeping change rather than gradual reform.","axes":{"meth_scope":2},"sev":2,"core":true},
+{"id":155,"text":"Gradual reform through existing institutions is the most reliable path to improvement.","axes":{"meth_means":-2},"sev":2,"core":true},
+{"id":156,"text":"Sometimes a system must be dismantled before something better can be built.","axes":{"meth_scope":2},"sev":3,"core":true},
+{"id":157,"text":"Revolutions usually produce worse outcomes than the systems they replace.","axes":{"meth_means":-2},"sev":2,"core":true},
+{"id":158,"text":"Compromise with political opponents is usually a mistake.","axes":{"meth_means":1},"sev":1,"core":true},
+{"id":159,"text":"Stability is worth preserving even at the cost of slower progress.","axes":{"meth_scope":-1},"sev":1},
+{"id":160,"text":"If constitutional processes block necessary change, extraordinary measures can be justified.","axes":{"meth_means":2},"sev":3},
+{"id":161,"text":"Political violence is never acceptable in this country.","axes":{"meth_means":-2},"sev":3},
+{"id":162,"text":"The founding structures of American government need fundamental redesign.","axes":{"meth_scope":1},"sev":1},
+{"id":163,"text":"It is wiser to repair institutions than to replace them.","axes":{"meth_scope":-1},"sev":1},
+{"id":164,"text":"Urgent problems justify bypassing slow deliberative processes.","axes":{"meth_means":1},"sev":1},
+{"id":165,"text":"Radical ideas deserve serious consideration even when they unsettle people.","axes":{"meth_scope":1},"sev":1},
+{"id":166,"text":"Working within the system produces more lasting results than working against it.","axes":{"meth_means":-1},"sev":1},
+{"id":167,"text":"National problems require national solutions set at the federal level.","axes":{"fed":2},"sev":3,"core":true},
+{"id":168,"text":"Decisions should be made at the most local level capable of handling them.","axes":{"fed":-2},"sev":3,"core":true},
+{"id":169,"text":"States should set their own policies on most contested social issues.","axes":{"fed":-2},"sev":2,"core":true},
+{"id":170,"text":"Federal standards should override conflicting state laws.","axes":{"fed":2},"sev":2,"core":true},
+{"id":171,"text":"Education policy is best set by local school boards rather than the federal government.","axes":{"fed":-1},"sev":1,"core":true},
+{"id":172,"text":"Fifty different sets of state rules is an inefficient way to run a modern country.","axes":{"fed":1},"sev":1},
+{"id":173,"text":"The federal government has taken on responsibilities that belong to the states.","axes":{"fed":-2},"sev":2},
+{"id":174,"text":"Civil rights protections must be uniform nationwide rather than left to the states.","axes":{"fed":1},"sev":1},
+{"id":175,"text":"States should be able to opt out of federal programs.","axes":{"fed":-1},"sev":1},
+{"id":176,"text":"Local police should operate independently of federal oversight.","axes":{"fed":-1},"sev":1},
+{"id":177,"text":"National licensing standards should replace state-by-state professional licensing.","axes":{"fed":1},"sev":1},
+{"id":178,"text":"The constitutional division of power currently tilts too far toward the states.","axes":{"fed":1},"sev":1},
+{"id":179,"text":"Cities and counties should have more autonomy from their state governments.","axes":{"fed":-1},"sev":1},
+{"id":180,"text":"Interstate infrastructure justifies a strong federal role in planning and funding.","axes":{"fed":1},"sev":1},
+{"id":181,"text":"When national interests and international cooperation conflict, national interests should come first.","axes":{"natl":2},"sev":2,"core":true,"pair":"P05"},
+{"id":182,"text":"Being a citizen of the world matters as much as being a citizen of one's country.","axes":{"natl":-2},"sev":2,"core":true},
+{"id":183,"text":"National sovereignty should never be ceded to international organizations.","axes":{"natl":2},"sev":3,"core":true},
+{"id":184,"text":"International law should bind all countries, including this one.","axes":{"natl":-2},"sev":2,"core":true},
+{"id":185,"text":"Pride in one's country is a virtue.","axes":{"natl":1},"sev":1,"core":true},
+{"id":186,"text":"Patriotism too easily becomes an excuse for ignoring a country's faults.","axes":{"natl":-1},"sev":1,"core":true},
+{"id":187,"text":"The United Nations does more good than harm.","axes":{"natl":-1},"sev":1},
+{"id":188,"text":"A shared national identity matters more than the sum of separate group identities.","axes":{"natl":1},"sev":1},
+{"id":189,"text":"Foreign aid spending should be cut substantially.","axes":{"natl":1},"sev":1},
+{"id":190,"text":"Humanity's long-term future lies in cooperation that transcends nations.","axes":{"natl":-2},"sev":2},
+{"id":191,"text":"The national anthem and flag deserve formal respect in public life.","axes":{"natl":1},"sev":1},
+{"id":192,"text":"Multinational institutions should be able to sanction countries that violate agreed rules.","axes":{"natl":-1},"sev":1},
+{"id":193,"text":"History education should emphasize what unites the nation rather than its failings.","axes":{"natl":1,"soc":1},"sev":1},
+{"id":194,"text":"A world government would be a desirable long-term goal.","axes":{"natl":-2},"sev":3},
+{"id":195,"text":"Overall immigration levels should be reduced.","axes":{"imm":2},"sev":2,"core":true,"pair":"P02"},
+{"id":196,"text":"Immigration strengthens the country more than it strains it.","axes":{"imm":-2},"sev":2,"core":true},
+{"id":197,"text":"People residing in the country unlawfully should be deported.","axes":{"imm":2},"sev":3,"core":true},
+{"id":198,"text":"Long-term residents who entered unlawfully should have a path to citizenship.","axes":{"imm":-2},"sev":2,"core":true},
+{"id":199,"text":"Immigrants should be required to learn English.","axes":{"imm":1},"sev":1,"core":true},
+{"id":200,"text":"Refugee admissions should be expanded.","axes":{"imm":-2},"sev":3,"core":true},
+{"id":201,"text":"Skilled-worker immigration benefits the economy.","axes":{"imm":-1},"sev":1},
+{"id":202,"text":"Immigration policy should favor applicants from culturally similar countries.","axes":{"imm":1},"sev":1},
+{"id":203,"text":"Children born here to parents residing unlawfully should not receive automatic citizenship.","axes":{"imm":2},"sev":3},
+{"id":204,"text":"Diversity of national origins makes communities stronger.","axes":{"imm":-1},"sev":1},
+{"id":205,"text":"Employers who hire unauthorized workers should face severe penalties.","axes":{"imm":1},"sev":1},
+{"id":206,"text":"Border enforcement matters more than expanding legal immigration pathways.","axes":{"imm":1},"sev":1},
+{"id":207,"text":"Immigration detention should be used only as a last resort.","axes":{"imm":-1},"sev":1},
+{"id":208,"text":"Concern about rapid demographic change is legitimate.","axes":{"imm":1},"sev":1},
+{"id":209,"text":"The military should be used to advance the country's interests abroad, not only to defend its territory.","axes":{"fp":2},"sev":2,"core":true},
+{"id":210,"text":"The country should avoid foreign wars unless directly attacked.","axes":{"fp":-2},"sev":3,"core":true,"pair":"P06"},
+{"id":211,"text":"Maintaining the world's strongest military is essential.","axes":{"fp":1,"natl":1},"sev":1,"core":true},
+{"id":212,"text":"Overseas military bases should be substantially reduced.","axes":{"fp":-2},"sev":3,"core":true},
+{"id":213,"text":"Promoting democracy abroad is a legitimate goal of foreign policy.","axes":{"fp":1},"sev":1,"core":true},
+{"id":214,"text":"Other countries' internal affairs are not this country's business.","axes":{"fp":-2},"sev":2},
+{"id":215,"text":"Military alliances such as NATO serve the national interest.","axes":{"fp":1,"natl":-1},"sev":1},
+{"id":216,"text":"Military spending should be cut.","axes":{"fp":-1},"sev":1},
+{"id":217,"text":"Economic sanctions are an appropriate tool against hostile governments.","axes":{"fp":1},"sev":1},
+{"id":218,"text":"Wars of choice in recent decades have made the country less safe.","axes":{"fp":-1},"sev":1},
+{"id":219,"text":"When this country withdraws from a region, worse actors tend to fill the vacuum.","axes":{"fp":2},"sev":2},
+{"id":220,"text":"Defense commitments to allies should be honored even at high cost.","axes":{"fp":1},"sev":1},
+{"id":221,"text":"Diplomacy should nearly always be exhausted before force is considered.","axes":{"fp":-1},"sev":1},
+{"id":222,"text":"The country should be willing to act militarily without allies when necessary.","axes":{"fp":1,"natl":1},"sev":1},
+{"id":223,"text":"New technologies should be adopted quickly; problems can be corrected as they arise.","axes":{"tech":2},"sev":3,"core":true},
+{"id":224,"text":"New technologies should be restricted until they are proven safe.","axes":{"tech":-2},"sev":3,"core":true},
+{"id":225,"text":"Artificial intelligence will do more good than harm.","axes":{"tech":1},"sev":1,"core":true},
+{"id":226,"text":"Genetically modified crops are safe and beneficial.","axes":{"tech":1},"sev":1,"core":true},
+{"id":227,"text":"Genetic engineering of human embryos should remain prohibited even if it could prevent disease.","axes":{"tech":-2},"sev":3,"core":true},
+{"id":228,"text":"The benefits of automation outweigh the jobs it displaces.","axes":{"tech":1},"sev":1},
+{"id":229,"text":"Social media has damaged society more than it has helped.","axes":{"tech":-1},"sev":1},
+{"id":230,"text":"Nuclear power generation should be expanded.","axes":{"tech":1},"sev":1},
+{"id":231,"text":"Space exploration deserves major public and private investment.","axes":{"tech":1},"sev":1},
+{"id":232,"text":"Some technologies are too dangerous to develop at all.","axes":{"tech":-2},"sev":3},
+{"id":233,"text":"Technological progress is the main driver of human improvement.","axes":{"tech":2},"sev":2},
+{"id":234,"text":"Children's access to smartphones and social platforms should be sharply limited.","axes":{"tech":-1,"soc":1},"sev":1},
+{"id":235,"text":"Self-driving vehicles should be permitted on public roads now.","axes":{"tech":1},"sev":1},
+{"id":236,"text":"Regulators should slow innovation in fast-moving fields until laws catch up.","axes":{"tech":-1},"sev":1},
+{"id":237,"text":"Economic growth should take priority over environmental restrictions.","axes":{"env":2},"sev":3,"core":true,"pair":"P08"},
+{"id":238,"text":"Protecting the environment is worth accepting slower economic growth.","axes":{"env":-2},"sev":2,"core":true,"pair":"P08"},
+{"id":239,"text":"Climate change is among the most serious problems facing the country.","axes":{"env":-2},"sev":2,"core":true},
+{"id":240,"text":"Environmental regulations cost more jobs than they are worth.","axes":{"env":2},"sev":2,"core":true},
+{"id":241,"text":"Fossil fuel production should expand to keep energy affordable.","axes":{"env":2},"sev":3,"core":true},
+{"id":242,"text":"A tax on carbon emissions should be implemented.","axes":{"env":-1},"sev":1},
+{"id":243,"text":"Predictions of environmental catastrophe have repeatedly proven exaggerated.","axes":{"env":1},"sev":1},
+{"id":244,"text":"Endangered-species protections should yield when they block needed development.","axes":{"env":1},"sev":1},
+{"id":245,"text":"Meat consumption should be reduced for environmental reasons.","axes":{"env":-1},"sev":1},
+{"id":246,"text":"Public lands should be opened to more mining, drilling, and logging.","axes":{"env":1},"sev":1},
+{"id":247,"text":"The country should aim for net-zero carbon emissions by mid-century.","axes":{"env":-2},"sev":3},
+{"id":248,"text":"Environmental quality has improved over recent decades, and markets deserve much of the credit.","axes":{"env":1,"mkt":1},"sev":1},
+{"id":249,"text":"The environmental interests of future generations should constrain today's consumption.","axes":{"env":-1},"sev":1},
+{"id":250,"text":"International climate agreements burden this country unfairly.","axes":{"env":1,"natl":1},"sev":1},
+{"id":251,"text":"Government should set prices for essential goods and services.","axes":{"mkt":-2},"sev":2,"pair":"P01"},
+{"id":252,"text":"Major employers should be required to include worker representatives on their boards.","axes":{"mkt":-1},"sev":2},
+{"id":253,"text":"Inheritance above a certain amount should be taxed heavily.","axes":{"mkt":-1},"sev":2},
+{"id":254,"text":"The economy works best when government's role is limited to enforcing contracts and property rights.","axes":{"mkt":2},"sev":3},
+{"id":255,"text":"Assistance to the poor is a duty of government, not merely an option.","axes":{"wel":-1},"sev":1},
+{"id":256,"text":"Able-bodied adults should not receive long-term government support.","axes":{"wel":2},"sev":2},
+{"id":257,"text":"A family's access to healthcare should not depend on its income.","axes":{"wel":-2},"sev":2},
+{"id":258,"text":"Private savings, not public programs, should fund retirement.","axes":{"wel":2},"sev":3},
+{"id":259,"text":"Consumers should be able to buy foreign goods without added import taxes.","axes":{"trd":-1},"sev":1},
+{"id":260,"text":"Protecting domestic manufacturing justifies higher consumer prices.","axes":{"trd":2},"sev":2},
+{"id":261,"text":"Trade with rival nations should be restricted even when it is profitable.","axes":{"trd":1,"natl":1},"sev":2},
+{"id":262,"text":"Reducing trade barriers has benefited this country over the past half century.","axes":{"trd":-1},"sev":1},
+{"id":263,"text":"Society was right to expand the definition of marriage.","axes":{"soc":-2},"sev":2},
+{"id":264,"text":"Communities benefit when most people follow long-established customs.","axes":{"soc":1},"sev":1},
+{"id":265,"text":"Raising children within marriage should be encouraged over other arrangements.","axes":{"soc":1},"sev":2},
+{"id":266,"text":"Cultural change over recent decades has been mostly for the better.","axes":{"soc":-1},"sev":1},
+{"id":267,"text":"Public life would be better with less religious influence.","axes":{"rel":-1},"sev":1},
+{"id":268,"text":"Public officials should be able to cite their faith when explaining their votes.","axes":{"rel":1},"sev":1},
+{"id":269,"text":"Religious instruction should be available within public school hours for families that want it.","axes":{"rel":1},"sev":2},
+{"id":270,"text":"National mottos and oaths should not reference God.","axes":{"rel":-1},"sev":2},
+{"id":271,"text":"Police should need a warrant to track a person's location over time.","axes":{"sec":-1},"sev":1},
+{"id":272,"text":"Collecting bulk data on citizens is acceptable if it is rarely examined.","axes":{"sec":2},"sev":3},
+{"id":273,"text":"Security agencies should disclose their surveillance programs to the public.","axes":{"sec":-1},"sev":2},
+{"id":274,"text":"Cash should remain available as a form of untraceable payment.","axes":{"sec":-1},"sev":2},
+{"id":275,"text":"People should face legal consequences for publicly denying well-documented historical atrocities.","axes":{"spe":2},"sev":3},
+{"id":276,"text":"Even speech most people find repugnant should be answered with argument, not law.","axes":{"spe":-1},"sev":1},
+{"id":277,"text":"Platforms, not government, should decide what content they host.","axes":{"spe":-1},"sev":1},
+{"id":278,"text":"Threatening or harassing individuals online should be prosecuted more aggressively.","axes":{"spe":1},"sev":1},
+{"id":279,"text":"The primary purpose of prison is rehabilitation.","axes":{"jus":-2},"sev":2,"pair":"P03"},
+{"id":280,"text":"Sentences in this country are generally too lenient.","axes":{"jus":2},"sev":2},
+{"id":281,"text":"Nonviolent offenders should rarely be incarcerated.","axes":{"jus":-1},"sev":2},
+{"id":282,"text":"Public safety justifies detaining defendants before trial when they appear dangerous.","axes":{"jus":1},"sev":2},
+{"id":283,"text":"A single national policy on abortion is preferable to state-by-state variation.","axes":{"fed":1},"sev":2},
+{"id":284,"text":"State governments understand local needs better than the federal government does.","axes":{"fed":-1},"sev":1},
+{"id":285,"text":"Federal minimum standards should apply to elections in every state.","axes":{"fed":1},"sev":2},
+{"id":286,"text":"States should be free to experiment with policies the federal government opposes.","axes":{"fed":-1},"sev":1},
+{"id":287,"text":"International cooperation should take precedence over national advantage when they conflict.","axes":{"natl":-2},"sev":2,"pair":"P05"},
+{"id":288,"text":"This country owes more to its own citizens than to people elsewhere.","axes":{"natl":1},"sev":1},
+{"id":289,"text":"National symbols deserve legal protection from desecration.","axes":{"natl":2,"spe":1},"sev":3},
+{"id":290,"text":"Decisions of international courts should carry weight in this country's own courts.","axes":{"natl":-1},"sev":2},
+{"id":291,"text":"It is healthy for citizens to feel their country is special.","axes":{"natl":1},"sev":1},
+{"id":292,"text":"Current immigration levels should be maintained or increased.","axes":{"imm":-2},"sev":2,"pair":"P02"},
+{"id":293,"text":"Legal immigration should be selected primarily by skills and qualifications.","axes":{"imm":1},"sev":1},
+{"id":294,"text":"Communities should have a say in how many newcomers settle there.","axes":{"imm":1},"sev":2},
+{"id":295,"text":"Children brought here unlawfully by their parents should be able to stay.","axes":{"imm":-1},"sev":1},
+{"id":296,"text":"Military force is sometimes warranted even when the country has not been attacked.","axes":{"fp":2},"sev":2,"pair":"P06"},
+{"id":297,"text":"This country should reduce security guarantees to wealthy allies who can defend themselves.","axes":{"fp":-1},"sev":2},
+{"id":298,"text":"Standing aside during foreign atrocities is sometimes the right choice.","axes":{"fp":-1},"sev":2},
+{"id":299,"text":"A forward military presence abroad prevents wars rather than provoking them.","axes":{"fp":1},"sev":1},
+{"id":300,"text":"On balance, the internet era has improved daily life.","axes":{"tech":1},"sev":1},
+{"id":301,"text":"Companies should be liable for harms caused by algorithms they deploy.","axes":{"tech":-1},"sev":1},
+{"id":302,"text":"Human enhancement technologies should be available to those who want them.","axes":{"tech":2},"sev":3},
+{"id":303,"text":"Progress that cannot be reversed should not be rushed.","axes":{"tech":-1},"sev":1},
+{"id":304,"text":"Environmental rules should be relaxed when energy prices rise sharply.","axes":{"env":1},"sev":1},
+{"id":305,"text":"This generation is obligated to leave the natural world in better condition than it found it.","axes":{"env":-1},"sev":1},
+{"id":306,"text":"Wilderness should be preserved even where development would be profitable.","axes":{"env":-2},"sev":2},
+{"id":307,"text":"Affordable energy today matters more than emissions targets decades away.","axes":{"env":2},"sev":2},
+{"id":308,"text":"Government may restrict personal behavior that harms only the person doing it.","axes":{"auth_pat":2},"sev":2,"core":true,"pair":"P09"},
+{"id":309,"text":"Adults should be free to buy unhealthy products without taxes designed to discourage them.","axes":{"auth_pat":-1},"sev":1},
+{"id":310,"text":"Gambling should be legal for adults.","axes":{"auth_pat":-1},"sev":1},
+{"id":311,"text":"The state should promote healthy lifestyles through mandates rather than only through information.","axes":{"auth_pat":1},"sev":2},
+{"id":312,"text":"Adults should have the final say over refusing medical treatment, even against doctors' advice.","axes":{"auth_pat":-1},"sev":2},
+{"id":313,"text":"Age limits on alcohol should be strictly enforced.","axes":{"auth_pat":1},"sev":1},
+{"id":314,"text":"Government warnings and taxes on tobacco have been appropriate.","axes":{"auth_pat":1},"sev":1},
+{"id":315,"text":"What adults eat, drink, and smoke is not the government's concern.","axes":{"auth_pat":-2},"sev":2,"core":true},
+{"id":316,"text":"Motorcyclists should be free to ride without helmets at their own risk.","axes":{"auth_pat":-1},"sev":2},
+{"id":317,"text":"The state should be able to require treatment for people with severe addictions.","axes":{"auth_pat":2},"sev":3},
+{"id":318,"text":"Laws should discourage vices even among consenting adults.","axes":{"auth_pat":2},"sev":3},
+{"id":319,"text":"Personal risk-taking such as extreme sports needs no government oversight.","axes":{"auth_pat":-1},"sev":1},
+{"id":320,"text":"The executive should be able to act quickly without waiting for legislative approval in urgent matters.","axes":{"auth_pw":1},"sev":2},
+{"id":321,"text":"Courts should be able to strike down actions of elected leaders.","axes":{"auth_pw":-1},"sev":1},
+{"id":322,"text":"Emergency powers should always carry automatic expiration dates.","axes":{"auth_pw":-1},"sev":1},
+{"id":323,"text":"A government that cannot act decisively is worse than one that occasionally overreaches.","axes":{"auth_pw":1},"sev":2},
+{"id":324,"text":"Property may be taken for public use when fair compensation is paid.","axes":{"auth_pw":1},"sev":1},
+{"id":325,"text":"There should be strict constitutional limits on what any government may do.","axes":{"auth_pw":-2},"sev":2,"core":true},
+{"id":326,"text":"Wartime justifies government control of industry and labor.","axes":{"auth_pw":2},"sev":3,"core":true},
+{"id":327,"text":"The military should never be deployed against citizens on home soil.","axes":{"auth_pw":-2},"sev":3},
+{"id":328,"text":"Secret government programs are sometimes necessary.","axes":{"auth_pw":1},"sev":1},
+{"id":329,"text":"Citizens should be able to sue the government on equal terms with suing anyone else.","axes":{"auth_pw":-1},"sev":1},
+{"id":330,"text":"Concentrated government power is dangerous no matter who holds it.","axes":{"auth_pw":-2},"sev":2},
+{"id":331,"text":"Citizenship alone should be sufficient qualification to vote.","axes":{"dem_fr":-2},"sev":2,"core":true},
+{"id":332,"text":"Voters should be required to show government-issued identification.","axes":{"dem_fr":1},"sev":1},
+{"id":333,"text":"People who receive most of their income from government programs should still be able to vote on those programs.","axes":{"dem_fr":-1},"sev":2},
+{"id":334,"text":"Long-term residents who are not citizens should be able to vote in local elections.","axes":{"dem_fr":-2},"sev":3},
+{"id":335,"text":"The right to vote should expand over time, not contract.","axes":{"dem_fr":-1},"sev":1},
+{"id":336,"text":"Passing the citizenship test given to immigrants would be a reasonable requirement for voting.","axes":{"dem_fr":2},"sev":3},
+{"id":337,"text":"Sixteen-year-olds who work and pay taxes should be able to vote.","axes":{"dem_fr":-1},"sev":2},
+{"id":338,"text":"Property or taxpaying requirements for voting belong in the past.","axes":{"dem_fr":-1},"sev":1},
+{"id":339,"text":"Voting is a privilege to be earned rather than a right held automatically.","axes":{"dem_fr":2},"sev":3,"core":true},
+{"id":340,"text":"People with severe cognitive impairment should not vote.","axes":{"dem_fr":1},"sev":2},
+{"id":341,"text":"Efforts to make voting easier, such as automatic registration, should continue.","axes":{"dem_fr":-1},"sev":1},
+{"id":342,"text":"Election outcomes would be better with fewer, more committed voters than with maximum turnout.","axes":{"dem_fr":2},"sev":3},
+{"id":343,"text":"Central banks should set monetary policy independent of elected officials.","axes":{"dem_tc":1},"sev":1},
+{"id":344,"text":"Major infrastructure decisions should be settled by engineers and planners rather than by ballot.","axes":{"dem_tc":2},"sev":2,"core":true},
+{"id":345,"text":"Public opinion should guide policy even when experts disagree with it.","axes":{"dem_tc":-2},"sev":2,"core":true},
+{"id":346,"text":"Unelected officials hold too much power over daily life.","axes":{"dem_tc":-1},"sev":1},
+{"id":347,"text":"Regulatory details are best left to specialists rather than legislators.","axes":{"dem_tc":1},"sev":1},
+{"id":348,"text":"Juries of ordinary citizens are better judges of guilt than panels of professionals.","axes":{"dem_tc":-1},"sev":2},
+{"id":349,"text":"National ballot initiatives should be available, as they are in many states.","axes":{"dem_tc":-1},"sev":1},
+{"id":350,"text":"Credentials matter more than popularity in choosing who runs public agencies.","axes":{"dem_tc":1},"sev":1},
+{"id":351,"text":"When scientific consensus and majority opinion conflict, policy should follow the science.","axes":{"dem_tc":2},"sev":2},
+{"id":352,"text":"Ordinary citizens understand their own interests better than experts do.","axes":{"dem_tc":-2},"sev":2},
+{"id":353,"text":"Most elected officials genuinely try to do what is right.","axes":{"trust_pol":2},"sev":2,"core":true},
+{"id":354,"text":"Journalists mostly try to get the facts right.","axes":{"trust_pol":1},"sev":1},
+{"id":355,"text":"Campaign promises are made to be broken.","axes":{"trust_pol":-1},"sev":1},
+{"id":356,"text":"The news media report what powerful interests want reported.","axes":{"trust_pol":-2},"sev":2},
+{"id":357,"text":"Politicians who change positions usually do so from conviction rather than convenience.","axes":{"trust_pol":1},"sev":2},
+{"id":358,"text":"Congress is more capable than it is given credit for.","axes":{"trust_pol":1},"sev":2},
+{"id":359,"text":"The major political parties offer meaningfully different choices.","axes":{"trust_pol":1},"sev":1},
+{"id":360,"text":"Lobbying is a legitimate part of representative government.","axes":{"trust_pol":1},"sev":1},
+{"id":361,"text":"The political class lives by different rules than everyone else.","axes":{"trust_pol":-2},"sev":2,"core":true},
+{"id":362,"text":"Media coverage of politics is driven more by audience than by truth.","axes":{"trust_pol":-1},"sev":1},
+{"id":363,"text":"Public criticism keeps politicians reasonably honest.","axes":{"trust_pol":1},"sev":1},
+{"id":364,"text":"Term limits are needed because incumbents cannot be trusted to leave.","axes":{"trust_pol":-1},"sev":1},
+{"id":365,"text":"On the whole, people who run for office are no worse than the general population.","axes":{"trust_pol":1},"sev":1},
+{"id":366,"text":"Election results in this country cannot be trusted.","axes":{"trust_sys":-2},"sev":3,"pair":"P10"},
+{"id":367,"text":"The census and official statistics are maintained honestly.","axes":{"trust_sys":1},"sev":1},
+{"id":368,"text":"Public health agencies give sound guidance most of the time.","axes":{"trust_sys":1},"sev":1,"core":true},
+{"id":369,"text":"Courts apply the law equally to rich and poor.","axes":{"trust_sys":1},"sev":2},
+{"id":370,"text":"The tax system is enforced more strictly against ordinary people than against the wealthy.","axes":{"trust_sys":-1},"sev":1},
+{"id":371,"text":"Bureaucracies serve procedures rather than people.","axes":{"trust_sys":-1},"sev":1},
+{"id":372,"text":"Official inquiries into government failures usually reach the truth.","axes":{"trust_sys":1},"sev":2},
+{"id":373,"text":"Institutions that investigate themselves rarely find fault.","axes":{"trust_sys":-1},"sev":1},
+{"id":374,"text":"Government databases and records are frequently wrong.","axes":{"trust_sys":-1},"sev":2},
+{"id":375,"text":"Inspectors general and auditors keep agencies honest.","axes":{"trust_sys":1},"sev":1},
+{"id":376,"text":"The basic structure of American society is sound.","axes":{"meth_scope":-2},"sev":2,"core":true},
+{"id":377,"text":"Deep problems require redesigning institutions, not just better management.","axes":{"meth_scope":1},"sev":1},
+{"id":378,"text":"Most calls for transformation underestimate what would be lost.","axes":{"meth_scope":-1},"sev":1},
+{"id":379,"text":"The country needs changes on the scale of the New Deal or the founding era.","axes":{"meth_scope":2},"sev":2,"core":true},
+{"id":380,"text":"Tinkering at the edges cannot fix what is wrong.","axes":{"meth_scope":2},"sev":2,"core":true},
+{"id":381,"text":"Preserving what works matters more than pursuing what might work better.","axes":{"meth_scope":-1},"sev":1},
+{"id":382,"text":"Every generation should reexamine its institutions from the ground up.","axes":{"meth_scope":1},"sev":2},
+{"id":383,"text":"The saying, if it is not broken do not fix it, applies well to government.","axes":{"meth_scope":-1},"sev":1},
+{"id":384,"text":"Ambitious reform agendas usually cause more disruption than improvement.","axes":{"meth_scope":-2},"sev":2},
+{"id":385,"text":"The gap between how things are and how they should be is vast.","axes":{"meth_scope":1},"sev":1},
+{"id":386,"text":"Constitutional amendments should be easier to pass than they are.","axes":{"meth_scope":1},"sev":2},
+{"id":387,"text":"Settled arrangements deserve a strong presumption in their favor.","axes":{"meth_scope":-1},"sev":1},
+{"id":388,"text":"Ends, however worthy, do not justify unlawful means.","axes":{"meth_means":-2},"sev":2,"core":true},
+{"id":389,"text":"Breaking an unjust law openly and accepting the penalty is honorable.","axes":{"meth_means":1},"sev":1},
+{"id":390,"text":"Institutions should be changed only through the procedures they themselves provide.","axes":{"meth_means":-2},"sev":2},
+{"id":391,"text":"Mass strikes that halt the economy are a legitimate political tool.","axes":{"meth_means":1},"sev":2},
+{"id":392,"text":"Blocking roads or occupying buildings is acceptable protest.","axes":{"meth_means":1},"sev":2},
+{"id":393,"text":"Court orders must be obeyed even by those who believe them wrong.","axes":{"meth_means":-1},"sev":1},
+{"id":394,"text":"History's great advances required breaking the rules of their time.","axes":{"meth_means":2},"sev":2,"core":true},
+{"id":395,"text":"The peaceful transfer of power matters more than any policy outcome.","axes":{"meth_means":-2},"sev":3},
+{"id":396,"text":"Sabotage of property, without harm to people, can be justified in extreme causes.","axes":{"meth_means":2},"sev":3},
+{"id":397,"text":"Norms that are not written into law still deserve obedience.","axes":{"meth_means":-1},"sev":1},
+{"id":398,"text":"To show you are reading carefully, select Completely disagree for this statement.","type":"attention","expect":0},
+{"id":399,"text":"For this statement, please select Completely agree.","type":"attention","expect":100},
+{"id":400,"text":"This item checks attention; please select Completely agree.","type":"attention","expect":100}]
