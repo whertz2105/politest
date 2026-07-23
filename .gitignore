@@ -1,6 +1,11 @@
-# DecaCompass is a static app with no server, no secrets, no build step.
-# Nothing sensitive should ever be committed, but keep the usual noise out.
+# DecaCompass: static frontend + a tiny stdlib Node API (server.js) for the
+# crowd-comparison feature. No secrets, no build step, no npm dependencies.
 .DS_Store
+store/          # runtime crowd data (results.jsonl) — never commit takers' results
+
+# tooling / session state that shouldn't ship with the app
+.claude-flow/
+.claude/
 *.log
 node_modules/
 .env

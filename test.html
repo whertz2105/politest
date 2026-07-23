@@ -136,7 +136,26 @@
           vector: scored.vector, counts: scored.counts, mode: state.mode, enc,
         }));
       } catch {}
+      submitResult(scored.vector, enc);
       location.href = `results.html#r=${enc}`;
+    }
+
+    // Anonymously contribute this completed result to the crowd dataset, once.
+    // Fire-and-forget; the app works fine if the API is absent (static-only).
+    function submitResult(vector, enc) {
+      let submitted = [];
+      try { submitted = JSON.parse(localStorage.getItem("dc_submitted") || "[]"); } catch {}
+      if (submitted.includes(enc)) return;
+      const body = JSON.stringify({ vector });
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon("api/results", new Blob([body], { type: "application/json" }));
+        } else {
+          fetch("api/results", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+        }
+        submitted.push(enc);
+        localStorage.setItem("dc_submitted", JSON.stringify(submitted.slice(-50)));
+      } catch { /* ignore — crowd feature is optional */ }
     }
 
     document.getElementById("back-btn").addEventListener("click", back);

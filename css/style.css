@@ -134,6 +134,9 @@ code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; 
 .you-dot { fill: var(--accent); }
 .you-halo { fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.5; }
 .arch-dot { fill: var(--fg-dim); opacity: 0.55; }
+.cloud-dot { fill: var(--accent-2); opacity: 0.18; }
+.fig-dot { fill: var(--pos); stroke: var(--bg); stroke-width: 0.8; }
+.fig-lbl { fill: var(--fg); font-size: 10px; }
 .pole-lbl { fill: var(--fg-dim); font-size: 11px; }
 .pole-lbl.top, .pole-lbl.bot { text-anchor: middle; }
 .pole-lbl.left { text-anchor: end; }

@@ -1,50 +1,56 @@
 # Deploy runbook — DecaCompass at `politest.profileher.com`
 
-DecaCompass is a **static** site (HTML/CSS/JS/JSON + Three.js from cdnjs). There is
-**no Node process, no systemd unit, and no loopback port** — Caddy serves the files
-directly. This is simpler than the generic handoff template, which assumes a Node app.
+DecaCompass is a **static frontend + a tiny Node API**. The pages/JS/CSS/JSON are
+served directly by Caddy; a small standard-library Node service (`server.js`, no npm
+dependencies) runs on loopback `:3200` and powers the **crowd-comparison** feature
+(storing each completed result and reporting how a result compares to everyone). This
+matches the handoff's Node-service pattern (systemd unit + Caddy reverse-proxy), but
+only the `/api/*` paths hit Node — everything else is static.
 
-Nothing here touches ProfileHer. We only **add** one subdomain and **append** one
-Caddy block. Ports 3000/3100/3200 are irrelevant to us — we use none.
+Nothing here touches ProfileHer. We **add** one subdomain, **append** one Caddy block,
+and add one systemd unit named `politest`. We use port **3200** (free per the handoff);
+ProfileHer's 3000/3100 are untouched.
 
 Quick facts:
-- Droplet: `134.122.115.115`, apps in `/opt/<name>`, service user `profileher`
-- Our path on the droplet: **`/opt/politest`**
-- Our hostname: **`politest.profileher.com`**
-- Caddy config: `/etc/caddy/Caddyfile` (append-only) · reload with `sudo systemctl reload caddy`
+- Droplet: `134.122.115.115`, apps in `/opt/<name>`, service user `profileher`, Node 20 present
+- Our path: **`/opt/politest`** · service **`politest`** · loopback port **3200**
+- Crowd data (durable): **`/opt/politest/store/results.jsonl`** (append-only; gitignored; survives restarts)
+- Caddy config: `/etc/caddy/Caddyfile` (append-only) · reload `sudo systemctl reload caddy`
 
----
-
-## Division of labor
-- **Claude (done):** app code + `deploy/politest.Caddyfile` + this runbook, all in the repo.
-- **Owner (you):** create the GitHub repo, add the Cloudflare DNS record, run the droplet
-  commands below. Claude cannot SSH to the droplet, edit Cloudflare, or create the repo.
+Privacy note: completed results are stored **anonymously** — only the 18 axis scores, no
+names, accounts, or PII. The landing page discloses this.
 
 ---
 
 ## Step 1 — GitHub repo — DONE
 `github.com/whertz2105/politest` exists and the code is pushed (branch `main`). The
-droplet's existing read-only deploy key can clone org repos; if cloning fails with a
-permissions error, either make the repo public or add a deploy key (see the handoff §4c).
+droplet's read-only deploy key can clone org repos; if cloning fails on permissions,
+make the repo public or add a deploy key (handoff §4c).
 
 ## Step 2 — DNS (owner, in Cloudflare)
 Add an **A record**: `politest` → `134.122.115.115`.
-
-DecaCompass is a plain request/response static site (no SSE/WebSockets), so **orange
-cloud (proxied) is fine** — you get Cloudflare caching + DDoS protection for free. The
-Caddy block sends `Cache-Control: no-cache` on the app files so deploys aren't masked by
-stale caches; if you ever still see an old version after a deploy, purge the Cloudflare
-cache (or toggle Development Mode briefly).
+Plain request/response app (the API is short JSON calls, no streaming), so **orange
+cloud (proxied) is fine**. The Caddy block sends `Cache-Control: no-cache` on app files;
+if a deploy ever looks stale, purge the Cloudflare cache.
 
 ## Step 3 — Get the code on the droplet (owner)
 ```bash
 sudo git clone git@github.com:whertz2105/politest.git /opt/politest
+sudo mkdir -p /opt/politest/store                      # durable crowd store lives here
 sudo chown -R profileher:profileher /opt/politest
 ```
-No `npm install` — there are no dependencies. Directories are world-readable (755/644)
-after clone, so the Caddy user can serve them.
+No `npm install` — the API uses only the Node standard library.
 
-## Step 4 — Add the Caddy route (owner)
+## Step 4 — Install & start the API service (owner)
+```bash
+sudo cp /opt/politest/deploy/politest.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now politest
+journalctl -u politest -f          # expect: "DecaCompass API on http://127.0.0.1:3200"
+curl -s http://127.0.0.1:3200/api/stats     # {"count":0} before anyone has taken it
+```
+
+## Step 5 — Add the Caddy route (owner)
 ```bash
 sudo bash -c 'cat /opt/politest/deploy/politest.Caddyfile >> /etc/caddy/Caddyfile'
 sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
@@ -53,42 +59,44 @@ sudo systemctl reload caddy
 ⚠️ **Append only.** Never edit or remove the existing `profileher.com`,
 `www.profileher.com`, or `staging.profileher.com` blocks.
 
-## Step 5 — Verify
+## Step 6 — Verify
 ```bash
-curl -I https://politest.profileher.com            # expect: HTTP/2 200
-curl -sI https://politest.profileher.com/data/questions.json | grep -i cache-control
+curl -I https://politest.profileher.com                      # HTTP/2 200 (static)
+curl -s https://politest.profileher.com/api/stats            # {"count":N}
 ```
-The HTTPS cert issues automatically once DNS resolves to the droplet (ports 80/443 are
-already open). First load may take a few seconds while Caddy fetches the cert.
+Then open `https://politest.profileher.com`, take the test, and on the results page open
+**Compare** → toggle **Historical figures** / **Everyone who took this test**. Also
+click through the 3D explorer and data page.
 
-Then open `https://politest.profileher.com` in a browser and confirm: the landing page,
-the test flow, results (bars + charts + archetype match), the 3D explorer, and the data
-page all work.
-
-## Step 6 — Future deploys (owner)
+## Step 7 — Future deploys (owner)
 ```bash
-cd /opt/politest && git pull            # that's it — static files, no restart needed
+cd /opt/politest && git pull && sudo systemctl restart politest
 ```
-(If Cloudflare shows a stale version, purge its cache.)
+Static changes don't strictly need the restart, but restarting picks up any `server.js`
+change and is harmless. **The crowd store in `/opt/politest/store/` is gitignored and is
+NOT touched by `git pull` or the restart — it persists across deploys.**
 
 ---
 
+## The API (for reference)
+- `POST /api/results` `{vector}` — store a completed result (called by the test on finish). → `{ok, count}`
+- `POST /api/compare` `{vector}` — read-only: `{count, percentiles, sample, axisOrder}` for the crowd graph. Does **not** store.
+- `GET  /api/stats` — `{count}`.
+
+If the API is ever down, the site still works: the test, results, figures comparison,
+charts, and 3D all function; only the "Everyone" toggle shows an "unavailable" note.
+
+## Historical figures
+Reference points live in `data/figures.json` (schema `{ "name", "vector": { axisKey: score }, "note"? }`;
+scores −100..100; missing axes default 0). The file currently holds **placeholder**
+figures (flagged `"placeholder": true`) — replace their vectors with your own points and
+`git pull` on the droplet. No restart needed (it's a static file).
+
 ## Optional: path-based instead of a subdomain (`profileher.com/politest`)
-Not recommended (the app uses root-relative loading that assumes it owns its host), but
-possible. Inside the existing `profileher.com { … }` block, **before** ProfileHer's
-handler, add:
-```
-handle_path /politest/* {
-	root * /opt/politest
-	file_server
-}
-```
-DecaCompass links between pages with relative URLs (`test.html`, `css/style.css`, …), so
-`handle_path` (which strips the prefix) mostly works — but a bare `/politest` with no
-trailing slash won't resolve relative assets correctly, and shared `#r=` links must carry
-the `/politest/` path. The subdomain avoids all of this. **Prefer the subdomain.**
+Not recommended (root-relative asset loading + the `#r=` share links assume the app owns
+its host). Prefer the subdomain. If you must, see the handoff §7 and also route
+`/politest/api/*` to `127.0.0.1:3200`.
 
 ## Rename note
-The public app name is the constant `APP_NAME` in `js/axes.js` (currently "DecaCompass").
-The subdomain slug `politest` and the app name are independent — changing one doesn't
-require changing the other.
+Public app name = `APP_NAME` in `js/axes.js` ("DecaCompass"). The subdomain slug
+`politest`, the service name, and the app name are independent.

@@ -1,0 +1,8 @@
+[
+  { "name": "Margaret Thatcher", "placeholder": true, "note": "PLACEHOLDER — replace with your own points", "vector": { "mkt": 80, "wel": 70, "trd": -40, "soc": 40, "rel": 20, "auth": 20, "jus": 50, "dem": 20, "natl": 55, "imm": 30, "fp": 50, "env": 40, "meth": 20 } },
+  { "name": "Karl Marx", "placeholder": true, "note": "PLACEHOLDER — replace with your own points", "vector": { "mkt": -95, "wel": -90, "meth": 90, "soc": -40, "rel": -80, "auth": 0, "trust": -70, "natl": -60, "dem": 10, "env": -20 } },
+  { "name": "Milton Friedman", "placeholder": true, "note": "PLACEHOLDER — replace with your own points", "vector": { "mkt": 95, "wel": 80, "trd": -80, "auth": -60, "sec": -40, "spe": -50, "tech": 50, "env": 40, "fp": -20, "imm": -20 } },
+  { "name": "Franklin D. Roosevelt", "placeholder": true, "note": "PLACEHOLDER — replace with your own points", "vector": { "mkt": -40, "wel": -70, "fed": 70, "fp": 60, "natl": 30, "dem": 10, "meth": 40, "env": 30, "trust": 50, "auth": 20 } },
+  { "name": "Mahatma Gandhi", "placeholder": true, "note": "PLACEHOLDER — replace with your own points", "vector": { "fp": -90, "meth": 30, "auth": -60, "natl": 40, "rel": 40, "mkt": -30, "env": -70, "tech": -40, "jus": -50 } },
+  { "name": "Winston Churchill", "placeholder": true, "note": "PLACEHOLDER — replace with your own points", "vector": { "natl": 70, "fp": 80, "soc": 60, "auth": 40, "mkt": 40, "imm": 40, "env": 40, "trust": 50, "dem": 20, "sec": 40 } }
+]

@@ -71,6 +71,24 @@ export function quadrantSVG(vector, xKey, yKey, opts = {}) {
     }).join("");
   }
 
+  // crowd cloud: many translucent dots (drawn behind everything else).
+  // opts.cloud is an array of [xScore, yScore] pairs already projected to the axes.
+  let cloudMarks = "";
+  if (opts.cloud && opts.cloud.length) {
+    cloudMarks = opts.cloud.map((p) =>
+      `<circle cx="${toX(p[0])}" cy="${toY(p[1])}" r="2.5" class="cloud-dot"/>`).join("");
+  }
+
+  // labeled figure markers (historical figures).
+  let figMarks = "";
+  if (opts.figures && opts.figures.length) {
+    figMarks = opts.figures.map((f) => {
+      const x = toX(f.v[xKey] || 0), y = toY(f.v[yKey] || 0);
+      return `<g class="fig"><circle cx="${x}" cy="${y}" r="4" class="fig-dot"><title>${escapeHtml(f.name)}</title></circle>` +
+        `<text x="${x + 6}" y="${y - 4}" class="fig-lbl">${escapeHtml(f.name)}</text></g>`;
+    }).join("");
+  }
+
   return `
   <svg class="quad-chart" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img"
        aria-label="${escapeHtml(ax.label)} vs ${escapeHtml(ay.label)}">
@@ -79,7 +97,9 @@ export function quadrantSVG(vector, xKey, yKey, opts = {}) {
     <line x1="${midX}" y1="${cy}" x2="${midX}" y2="${cy + plot}" class="quad-axis"/>
     <line x1="${cx}" y1="${midY}" x2="${cx + plot}" y2="${midY}" class="quad-axis"/>
     <rect x="${cx}" y="${cy}" width="${plot}" height="${plot}" class="quad-frame"/>
+    ${cloudMarks}
     ${archMarks}
+    ${figMarks}
     <circle cx="${px}" cy="${py}" r="6" class="you-dot"/>
     <circle cx="${px}" cy="${py}" r="11" class="you-halo"/>
     <!-- pole labels -->

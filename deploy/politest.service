@@ -1,0 +1,31 @@
+# systemd unit for the DecaCompass crowd-comparison API.
+# Install: sudo cp /opt/politest/deploy/politest.service /etc/systemd/system/
+#          sudo systemctl daemon-reload && sudo systemctl enable --now politest
+#          journalctl -u politest -f      # confirm it started
+[Unit]
+Description=DecaCompass API (crowd comparison)
+After=network.target
+
+[Service]
+Type=simple
+User=profileher
+Group=profileher
+WorkingDirectory=/opt/politest
+ExecStart=/usr/bin/node server.js
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3200
+Environment=STORE_FILE=/opt/politest/store/results.jsonl
+Restart=on-failure
+RestartSec=3
+
+# Hardening. ProtectSystem=strict makes the FS read-only except ReadWritePaths,
+# which is where the append-only crowd store lives.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/politest/store
+
+[Install]
+WantedBy=multi-user.target

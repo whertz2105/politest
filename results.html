@@ -42,6 +42,22 @@
       </section>
 
       <section>
+        <h2>Compare</h2>
+        <div class="btn-row" id="cmp-toggle">
+          <button class="btn btn-primary" type="button" data-mode="figures">Historical figures</button>
+          <button class="btn" type="button" data-mode="crowd">Everyone who took this test</button>
+        </div>
+        <div class="picker" style="margin:0.7rem 0">
+          <select id="cx2"></select><span>×</span><select id="cy2"></select>
+          <span class="muted" id="cmp-meta"></span>
+        </div>
+        <div class="chart-gallery" style="grid-template-columns:1fr;max-width:520px">
+          <figure class="chart-card" id="cmp-card"></figure>
+        </div>
+        <div id="cmp-detail" class="card"></div>
+      </section>
+
+      <section>
         <h2>Charts</h2>
         <p class="muted">Six default pairings, plus build your own.</p>
         <div class="chart-gallery" id="gallery"></div>
@@ -61,11 +77,12 @@
   <div class="toast" id="toast"></div>
 
   <script type="module">
-    import { initShell, loadQuestionData, vectorFromHash, encodeVector } from "./js/app.js";
+    import { initShell, loadQuestionData, vectorFromHash, encodeVector, escapeHtml } from "./js/app.js";
     import { AXES, AXIS_KEYS, axisByKey, axisLabel } from "./js/axes.js";
     import { computeScores, questionsForMode } from "./js/scoring.js";
     import { renderBarReadout, quadrantCard, downloadSvgAsPng } from "./js/charts2d.js";
     import { ARCHETYPES, matchArchetypes, singleAxisMatch } from "./js/archetypes.js";
+    import { validateFigures, nearestFigures } from "./js/figures.js";
 
     initShell("results.html");
     const toast = (m) => { const t = document.getElementById("toast"); t.textContent = m; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1600); };
@@ -151,6 +168,98 @@
       draw();
     }
 
+    // ---- Compare section (historical figures / crowd) ----
+    let cmpMode = "figures";
+    let figures = [];
+    let crowd = null;          // { count, percentiles, sample, axisOrder }
+    let crowdError = null, crowdLoaded = false;
+
+    async function loadFigures() {
+      try {
+        const res = await fetch("data/figures.json", { cache: "no-cache" });
+        if (!res.ok) return;
+        figures = validateFigures(await res.json()).figures;
+      } catch { /* figures optional */ }
+    }
+
+    async function loadCrowd(vector) {
+      if (crowdLoaded) return;
+      crowdLoaded = true;
+      try {
+        const res = await fetch("api/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vector }) });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        crowd = await res.json();
+      } catch (e) { crowdError = e; }
+    }
+
+    function renderCompare(vector) {
+      const x = document.getElementById("cx2").value, y = document.getElementById("cy2").value;
+      const card = document.getElementById("cmp-card");
+      const detail = document.getElementById("cmp-detail");
+      const meta = document.getElementById("cmp-meta");
+      const ax = axisByKey(x), ay = axisByKey(y);
+      const cap = (extra) => `<figcaption>${escapeHtml(ax.label)} × ${escapeHtml(ay.label)}${extra || ""}</figcaption>`;
+
+      if (cmpMode === "figures") {
+        meta.textContent = figures.length ? `${figures.length} figures` : "no figures loaded";
+        card.innerHTML = quadrantSVG(vector, x, y, { figures }) + cap(" — you vs figures");
+        if (!figures.length) {
+          detail.innerHTML = `<p class="muted">No historical figures defined yet. Add them to <code>data/figures.json</code> (schema: <code>{ "name", "vector": { axisKey: score }, "note"? }</code>).</p>`;
+          return;
+        }
+        const near = nearestFigures(vector, figures, 6);
+        detail.innerHTML = `<h4 style="margin-top:0">Closest historical figures</h4>
+          <p class="muted" style="font-size:0.82rem">Full-vector similarity across all 18 axes (not just the two plotted).</p>
+          <ul class="arch-list">${near.map((f) => `<li><span>${escapeHtml(f.name)}${f.note ? ` <span class="muted" style="font-size:0.76rem">${escapeHtml(f.note)}</span>` : ""}</span><span class="sim">${f.proximity.toFixed(0)}%</span></li>`).join("")}</ul>`;
+        return;
+      }
+
+      // crowd mode
+      if (crowdError || !crowd) {
+        meta.textContent = "";
+        card.innerHTML = quadrantSVG(vector, x, y, {}) + cap();
+        detail.innerHTML = `<p class="muted">Crowd comparison is unavailable here — it needs the live <code>/api</code> backend, which runs on the deployed site (not from a plain static or <code>file://</code> view).</p>`;
+        return;
+      }
+      if (crowd.count === 0) {
+        meta.textContent = "0 takers yet";
+        card.innerHTML = quadrantSVG(vector, x, y, {}) + cap();
+        detail.innerHTML = `<p class="muted">You're the first — no one else has completed the test yet.</p>`;
+        return;
+      }
+      const ix = crowd.axisOrder.indexOf(x), iy = crowd.axisOrder.indexOf(y);
+      const cloud = (crowd.sample || []).map((a) => [a[ix], a[iy]]);
+      const shown = crowd.sample ? crowd.sample.length : 0;
+      meta.textContent = `${crowd.count} taker${crowd.count === 1 ? "" : "s"}${shown < crowd.count ? ` (cloud shows ${shown})` : ""}`;
+      card.innerHTML = quadrantSVG(vector, x, y, { cloud }) + cap(" — you vs everyone");
+      const pct = crowd.percentiles || {};
+      const line = (k) => {
+        const a = axisByKey(k), p = pct[k];
+        if (p === undefined) return "";
+        return `<li><span>${escapeHtml(a.label)}</span><span class="sim">higher than ${p}% · leans ${p >= 50 ? escapeHtml(a.posLabel) : escapeHtml(a.negLabel)}</span></li>`;
+      };
+      detail.innerHTML = `<h4 style="margin-top:0">Where you fall vs everyone</h4>
+        <p class="muted" style="font-size:0.82rem">Your score is higher than this % of all ${crowd.count} takers, per axis.</p>
+        <ul class="arch-list">${line(x)}${line(y)}</ul>
+        <details><summary>All 18 axes</summary><ul class="arch-list">${AXIS_KEYS.map(line).join("")}</ul></details>`;
+    }
+
+    function setupCompare(vector) {
+      fillAxisSelect(document.getElementById("cx2"), "mkt");
+      fillAxisSelect(document.getElementById("cy2"), "soc");
+      document.getElementById("cx2").addEventListener("change", () => renderCompare(vector));
+      document.getElementById("cy2").addEventListener("change", () => renderCompare(vector));
+      document.getElementById("cmp-toggle").addEventListener("click", async (e) => {
+        const b = e.target.closest("button[data-mode]");
+        if (!b) return;
+        cmpMode = b.dataset.mode;
+        document.querySelectorAll("#cmp-toggle button").forEach((x) => x.classList.toggle("btn-primary", x.dataset.mode === cmpMode));
+        if (cmpMode === "crowd") await loadCrowd(vector);
+        renderCompare(vector);
+      });
+      renderCompare(vector);
+    }
+
     async function boot() {
       const resolved = resolveVector();
       if (!resolved) { document.getElementById("empty").hidden = false; return; }
@@ -184,6 +293,10 @@
         if (x === y) { toast("Pick two different axes."); return; }
         document.getElementById("custom-gallery").prepend(galleryCard(vector, x, y));
       });
+
+      // compare section (figures + crowd)
+      await loadFigures();
+      setupCompare(vector);
 
       // share link
       document.getElementById("explore-3d").href = `explore3d.html${location.hash}`;
