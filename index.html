@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DecaCompass</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap">
+    <section class="hero">
+      <h1 id="app-title">DecaCompass</h1>
+      <p id="app-tagline" class="muted"></p>
+      <div class="toggle-line">
+        <input type="checkbox" id="quick-mode" style="width:22px;height:22px">
+        <label for="quick-mode">Quick mode (100-question subset)</label>
+      </div>
+      <div class="btn-row" style="justify-content:center">
+        <a class="btn btn-primary" id="start-btn" href="test.html">Take the test</a>
+        <a class="btn" id="resume-btn" href="test.html" hidden>Resume in progress</a>
+        <a class="btn" href="data.html">Browse the questions</a>
+      </div>
+      <p class="muted" id="count-note" style="font-size:0.85rem"></p>
+    </section>
+
+    <section class="feature-grid">
+      <div class="card"><h3>18 axes</h3><p class="muted">Not left–right. Eighteen independent dimensions — economy, culture, liberty, foreign policy, environment and more.</p></div>
+      <div class="card"><h3>Honest labels</h3><p class="muted">Archetype matching is full-vector and salience-weighted. Every label lists what you actually disagree with.</p></div>
+      <div class="card"><h3>2D &amp; 3D</h3><p class="muted">Read your scores as bars, pair any two axes as a quadrant, or explore three axes in an interactive cube.</p></div>
+      <div class="card"><h3>Private</h3><p class="muted">Runs entirely in your browser. No accounts, no analytics, no cookies. Share results by link only if you choose.</p></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initShell, loadProgress } from "./js/app.js";
+    import { APP_NAME, APP_TAGLINE, FULL_TEST_SIZE, QUICK_TEST_SIZE } from "./js/axes.js";
+    initShell("index.html");
+    document.title = APP_NAME;
+    document.getElementById("app-title").textContent = APP_NAME;
+    document.getElementById("app-tagline").textContent = APP_TAGLINE;
+
+    const MODE_KEY = "dc_mode";
+    const quick = document.getElementById("quick-mode");
+    try { quick.checked = localStorage.getItem(MODE_KEY) === "quick"; } catch {}
+    const note = document.getElementById("count-note");
+    const setNote = () => {
+      note.textContent = quick.checked
+        ? `Quick mode: ~${QUICK_TEST_SIZE} questions.`
+        : `Full test: ~${FULL_TEST_SIZE} questions.`;
+    };
+    setNote();
+    quick.addEventListener("change", () => {
+      try { localStorage.setItem(MODE_KEY, quick.checked ? "quick" : "full"); } catch {}
+      setNote();
+    });
+
+    const prog = loadProgress();
+    if (prog && Array.isArray(prog.order) && prog.order.length) {
+      const btn = document.getElementById("resume-btn");
+      btn.hidden = false;
+      const answered = prog.answers ? Object.keys(prog.answers).length : 0;
+      btn.textContent = `Resume (${answered}/${prog.order.length})`;
+    }
+  </script>
+</body>
+</html>

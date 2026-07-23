@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3D Explorer — DecaCompass</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Three.js core from cdnjs (3D view only). OrbitControls is vendored in charts3d.js
+       because cdnjs does not host it. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap">
+    <h1>3D Explorer</h1>
+    <p class="muted" id="intro">Pick three axes and rotate the cube. Your result glows; archetypes are smaller markers.</p>
+
+    <div class="controls-3d">
+      <label>Preset
+        <select id="preset">
+          <option value="">— custom —</option>
+          <option value="auth,dem,trust">Power</option>
+          <option value="natl,imm,rel">Identity</option>
+          <option value="mkt,wel,trd">Economy</option>
+          <option value="soc,spe,jus">Culture war</option>
+          <option value="tech,env,fp">Future</option>
+        </select>
+      </label>
+      <label>X <select id="ax0"></select></label>
+      <label>Y <select id="ax1"></select></label>
+      <label>Z <select id="ax2"></select></label>
+      <label><input type="checkbox" id="autorotate"> Autorotate</label>
+      <button id="copy-view" class="btn">Copy view link</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr;gap:1rem">
+      <div id="three-mount"></div>
+      <div class="card" id="legend-card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Archetypes</h3>
+          <span><button id="all-on" class="btn" style="min-height:32px;padding:0.2rem 0.6rem">All</button>
+          <button id="all-off" class="btn" style="min-height:32px;padding:0.2rem 0.6rem">None</button></span>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+
+    <div id="fallback" hidden></div>
+  </main>
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { initShell, vectorFromHash } from "./js/app.js";
+    import { AXES, AXIS_KEYS, axisByKey } from "./js/axes.js";
+    import { ARCHETYPES } from "./js/archetypes.js";
+    import { createExplorer, isWebGLAvailable } from "./js/charts3d.js";
+    import { quadrantCard } from "./js/charts2d.js";
+
+    initShell("explore3d.html");
+    const toast = (m) => { const t = document.getElementById("toast"); t.textContent = m; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1600); };
+
+    // ---- read state from hash: #r=<vec>&ax=k,k,k&cam=p,p,p,t,t,t ----
+    const hashParams = () => {
+      const out = {};
+      (location.hash.replace(/^#/, "")).split("&").forEach((kv) => {
+        const [k, v] = kv.split("=");
+        if (k) out[k] = decodeURIComponent(v || "");
+      });
+      return out;
+    };
+    const hp = hashParams();
+    const vector = vectorFromHash() || tryLastResult() || zeroVector();
+
+    function tryLastResult() {
+      try { const l = JSON.parse(localStorage.getItem("dc_last_result") || "null"); return l && l.vector; } catch { return null; }
+    }
+    function zeroVector() { const v = {}; AXIS_KEYS.forEach((k) => v[k] = 0); return v; }
+
+    let trio = (hp.ax && hp.ax.split(",").filter((k) => axisByKey(k)).length === 3)
+      ? hp.ax.split(",") : ["auth", "dem", "trust"];
+    let camState = null;
+    if (hp.cam) {
+      const n = hp.cam.split(",").map(Number);
+      if (n.length === 6 && n.every(Number.isFinite)) camState = { p: n.slice(0, 3), t: n.slice(3, 6) };
+    }
+
+    if (!vectorFromHash() && !tryLastResult()) {
+      document.getElementById("intro").innerHTML =
+        'No result loaded — showing archetypes only. <a href="test.html">Take the test</a> or open a shared link.';
+    }
+
+    // ---- axis selects (no duplicates) ----
+    const selects = [document.getElementById("ax0"), document.getElementById("ax1"), document.getElementById("ax2")];
+    function refreshSelects() {
+      selects.forEach((sel, i) => {
+        sel.innerHTML = AXES.map((a) => {
+          const usedElsewhere = trio.some((k, j) => j !== i && k === a.key);
+          return `<option value="${a.key}"${a.key === trio[i] ? " selected" : ""}${usedElsewhere ? " disabled" : ""}>${a.label}</option>`;
+        }).join("");
+      });
+    }
+
+    let explorer = null;
+    const webgl = isWebGLAvailable();
+
+    function updateHash() {
+      const parts = [];
+      if (vectorFromHash()) parts.push("r=" + (hp.r || ""));
+      else if (hp.r) parts.push("r=" + hp.r);
+      parts.push("ax=" + trio.join(","));
+      if (explorer) {
+        const c = explorer.getCameraState();
+        parts.push("cam=" + [...c.p, ...c.t].join(","));
+      }
+      history.replaceState(null, "", "#" + parts.join("&"));
+    }
+
+    function setTrio(newTrio) {
+      trio = newTrio.slice();
+      refreshSelects();
+      if (explorer) explorer.setTrio(trio);
+      syncPreset();
+      updateHash();
+    }
+    function syncPreset() {
+      document.getElementById("preset").value =
+        [...document.querySelectorAll("#preset option")].some((o) => o.value === trio.join(",")) ? trio.join(",") : "";
+    }
+
+    selects.forEach((sel, i) => sel.addEventListener("change", () => {
+      const k = sel.value;
+      const nt = trio.slice();
+      // if chosen key already used, swap positions
+      const at = nt.indexOf(k);
+      if (at !== -1 && at !== i) { nt[at] = nt[i]; }
+      nt[i] = k;
+      setTrio(nt);
+    }));
+    document.getElementById("preset").addEventListener("change", (e) => {
+      if (e.target.value) setTrio(e.target.value.split(","));
+    });
+
+    if (!webgl) {
+      // 2D fallback: pair picker
+      document.getElementById("three-mount").hidden = true;
+      document.getElementById("legend-card").hidden = true;
+      document.getElementById("autorotate").closest("label").hidden = true;
+      const fb = document.getElementById("fallback");
+      fb.hidden = false;
+      fb.innerHTML = `<div class="card"><h3>WebGL unavailable — 2D fallback</h3>
+        <div class="picker"><select id="fx"></select><span>×</span><select id="fy"></select></div>
+        <div id="fchart" style="max-width:360px;margin-top:1rem"></div></div>`;
+      const fx = fb.querySelector("#fx"), fy = fb.querySelector("#fy");
+      const opt = (sel, def) => { sel.innerHTML = AXES.map((a) => `<option value="${a.key}">${a.label}</option>`).join(""); sel.value = def; };
+      opt(fx, trio[0]); opt(fy, trio[1]);
+      const draw = () => {
+        const c = document.getElementById("fchart"); c.innerHTML = "";
+        c.appendChild(quadrantCard(vector, fx.value, fy.value, { archetypes: ARCHETYPES }));
+      };
+      fx.addEventListener("change", draw); fy.addEventListener("change", draw); draw();
+      refreshSelects(); syncPreset();
+    } else {
+      refreshSelects(); syncPreset();
+      explorer = createExplorer(document.getElementById("three-mount"),
+        { vector, archetypes: ARCHETYPES, trio, camera: camState });
+      if (!vectorFromHash() && !tryLastResult()) {
+        // hide the "You" marker when there is no real result
+      }
+
+      // legend
+      const legend = document.getElementById("legend");
+      legend.innerHTML = explorer.legend().map((l) =>
+        `<label><input type="checkbox" data-name="${l.name}" checked>
+          <span class="swatch" style="background:${l.color}"></span>${l.name}</label>`).join("");
+      legend.addEventListener("change", (e) => {
+        const cb = e.target;
+        if (cb.dataset.name) explorer.setArchVisible(cb.dataset.name, cb.checked);
+      });
+      document.getElementById("all-on").addEventListener("click", () => {
+        explorer.setAllArch(true); legend.querySelectorAll("input").forEach((i) => i.checked = true);
+      });
+      document.getElementById("all-off").addEventListener("click", () => {
+        explorer.setAllArch(false); legend.querySelectorAll("input").forEach((i) => i.checked = false);
+      });
+
+      document.getElementById("autorotate").addEventListener("change", (e) => explorer.setAutorotate(e.target.checked));
+
+      // debounce camera->hash
+      let camTimer = 0;
+      explorer.onCameraChange(() => { clearTimeout(camTimer); camTimer = setTimeout(updateHash, 250); });
+      updateHash();
+    }
+
+    document.getElementById("copy-view").addEventListener("click", async () => {
+      updateHash();
+      const url = location.origin + location.pathname + location.hash;
+      try { await navigator.clipboard.writeText(url); toast("View link copied"); }
+      catch { prompt("Copy this link:", url); }
+    });
+  </script>
+</body>
+</html>

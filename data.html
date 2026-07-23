@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Question data — DecaCompass</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap">
+    <h1>Question data</h1>
+    <p class="muted">The full question bank, loaded and validated from <code>data/questions.json</code>.</p>
+
+    <div id="validation"></div>
+
+    <h2>Per-axis summary</h2>
+    <div class="summary-grid" id="summary"></div>
+
+    <h2 style="margin-top:1.5rem">Questions</h2>
+    <div class="picker" style="margin-bottom:0.6rem">
+      <input id="filter" type="search" placeholder="Filter by text or id…" style="min-height:44px;padding:0.4rem 0.7rem;background:var(--bg-elev);color:var(--fg);border:1px solid var(--border);border-radius:10px;flex:1;min-width:200px">
+      <span class="muted" id="rowcount"></span>
+    </div>
+    <div class="table-scroll">
+      <table class="data" id="qtable"><thead></thead><tbody></tbody></table>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initShell, loadQuestionData, escapeHtml } from "./js/app.js";
+    import { AXES, AXIS_KEYS } from "./js/axes.js";
+    import { questionsForMode, maxAttainable, itemCount } from "./js/scoring.js";
+
+    initShell("data.html");
+
+    let questions = [];
+    let sortKey = "id", sortDir = 1;
+
+    function renderValidation(errors, warnings) {
+      const el = document.getElementById("validation");
+      let html = "";
+      if (errors.length) {
+        html += `<details class="card validation-errors" open><summary>${errors.length} validation error${errors.length === 1 ? "" : "s"}</summary>
+          <ul>${errors.slice(0, 200).map((e) => `<li>${escapeHtml(e)}</li>`).join("")}</ul></details>`;
+      }
+      if (warnings.length) {
+        html += `<details class="card validation-warnings"><summary>${warnings.length} warning${warnings.length === 1 ? "" : "s"}</summary>
+          <ul>${warnings.slice(0, 200).map((w) => `<li>${escapeHtml(w)}</li>`).join("")}</ul></details>`;
+      }
+      if (!errors.length && !warnings.length) {
+        html = `<div class="card"><span class="good">✓</span> No validation problems. ${questions.length} valid questions.</div>`;
+      }
+      el.innerHTML = html;
+    }
+
+    function renderSummary() {
+      const full = questions;
+      const core = questionsForMode(questions, "quick");
+      const cells = AXES.map((a) => {
+        const n = itemCount(full, a.key);
+        let pos = 0, neg = 0;
+        for (const q of full) { const w = q.axes[a.key]; if (typeof w === "number" && w !== 0) (w > 0 ? pos++ : neg++); }
+        const max = maxAttainable(full, a.key);
+        const coreN = itemCount(core, a.key);
+        const balance = n ? Math.round((Math.max(pos, neg) / n) * 100) : 0;
+        const flag = (n < 12 || (n && balance > 65)) ? ' <span class="flag" title="thin or imbalanced">⚠</span>' : "";
+        return `<div class="summary-cell">
+          <b>${escapeHtml(a.label)}${flag}</b>
+          <div>${n} items · <span title="positive/negative keyed">+${pos}/−${neg}</span></div>
+          <div class="muted">max ${max} · core ${coreN} · ${balance}% keyed</div>
+        </div>`;
+      });
+      document.getElementById("summary").innerHTML = cells.join("");
+    }
+
+    function renderHead() {
+      const th = ["id", "text", ...AXIS_KEYS];
+      document.querySelector("#qtable thead").innerHTML =
+        "<tr>" + th.map((k) => {
+          const cls = k === sortKey ? (sortDir === 1 ? "sorted-asc" : "sorted-desc") : "";
+          const label = k === "id" ? "ID" : k === "text" ? "Question" : k;
+          return `<th data-key="${k}" class="${cls}">${label}</th>`;
+        }).join("") + "</tr>";
+      document.querySelectorAll("#qtable th").forEach((h) =>
+        h.addEventListener("click", () => {
+          const k = h.dataset.key;
+          if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+          renderHead(); renderBody();
+        }));
+    }
+
+    function valueFor(q, key) {
+      if (key === "id") return q.id;
+      if (key === "text") return q.text.toLowerCase();
+      return q.axes[key] === undefined ? -Infinity : q.axes[key];
+    }
+
+    function renderBody() {
+      const filter = document.getElementById("filter").value.trim().toLowerCase();
+      let rows = questions.filter((q) =>
+        !filter || q.text.toLowerCase().includes(filter) || String(q.id) === filter);
+      rows.sort((a, b) => {
+        const va = valueFor(a, sortKey), vb = valueFor(b, sortKey);
+        return (va < vb ? -1 : va > vb ? 1 : a.id - b.id) * sortDir;
+      });
+      const body = rows.map((q) => {
+        const cells = AXIS_KEYS.map((k) => {
+          const w = q.axes[k];
+          if (w === undefined) return `<td></td>`;
+          const cls = w > 0 ? "w-pos" : w < 0 ? "w-neg" : "";
+          return `<td class="${cls}">${w > 0 ? "+" : ""}${w}</td>`;
+        }).join("");
+        return `<tr><td>${q.id}${q.core ? ' <span class="muted" title="core / quick-mode">•</span>' : ""}</td>
+          <td class="q">${escapeHtml(q.text)}</td>${cells}</tr>`;
+      }).join("");
+      document.querySelector("#qtable tbody").innerHTML = body;
+      document.getElementById("rowcount").textContent = `${rows.length} of ${questions.length}`;
+    }
+
+    (async () => {
+      let data;
+      try { data = await loadQuestionData(); }
+      catch (e) {
+        document.getElementById("validation").innerHTML =
+          `<div class="card validation-errors"><h3>Could not load questions.json</h3><p>${escapeHtml(e.message)}</p></div>`;
+        return;
+      }
+      questions = data.questions;
+      renderValidation(data.errors, data.warnings);
+      renderSummary();
+      renderHead();
+      renderBody();
+      document.getElementById("filter").addEventListener("input", renderBody);
+    })();
+  </script>
+</body>
+</html>

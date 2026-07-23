@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Take the test — DecaCompass</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap">
+    <div class="test-stage" id="stage">
+      <div class="progress"><span id="progress-text">Loading…</span> <span id="mode-badge" class="muted"></span></div>
+      <div class="progress-bar"><i id="progress-fill" style="width:0%"></i></div>
+      <div class="q-text" id="q-text"></div>
+      <div class="answers" id="answers"></div>
+      <div class="test-nav">
+        <button id="back-btn" type="button">← Back</button>
+        <button id="restart-btn" type="button" title="Discard answers and reshuffle">Restart</button>
+      </div>
+      <p class="muted" style="font-size:0.8rem;margin-top:1rem">Keyboard: 1 Strongly Agree · 2 Agree · 3 Neutral · 4 Disagree · 5 Strongly Disagree</p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initShell, loadQuestionData, makeSeed, shuffleWithSeed,
+             saveProgress, loadProgress, clearProgress, encodeVector } from "./js/app.js";
+    import { questionsForMode, computeScores } from "./js/scoring.js";
+
+    initShell("test.html");
+
+    const OPTIONS = [
+      { v: 2, label: "Strongly Agree", key: "1" },
+      { v: 1, label: "Agree", key: "2" },
+      { v: 0, label: "Neutral / Not Sure", key: "3" },
+      { v: -1, label: "Disagree", key: "4" },
+      { v: -2, label: "Strongly Disagree", key: "5" },
+    ];
+
+    let all = [];          // validated questions
+    let served = [];       // mode-filtered
+    let byId = new Map();
+    let state = null;      // { mode, seed, order, pos, answers }
+
+    function currentMode() {
+      try { return localStorage.getItem("dc_mode") === "quick" ? "quick" : "full"; } catch { return "full"; }
+    }
+
+    function startFresh(mode) {
+      served = questionsForMode(all, mode);
+      if (!served.length) { served = all; mode = "full"; }
+      const seed = makeSeed();
+      const order = shuffleWithSeed(served.map((q) => q.id), seed);
+      state = { mode, seed, order, pos: 0, answers: {} };
+      saveProgress(state);
+    }
+
+    function restoreServed() {
+      served = questionsForMode(all, state.mode);
+      if (!served.length) served = all;
+    }
+
+    async function boot() {
+      let data;
+      try { data = await loadQuestionData(); }
+      catch (e) {
+        document.getElementById("stage").innerHTML =
+          `<div class="card validation-errors"><h3>Could not load questions</h3><p>${e.message}</p><p class="muted">See the <a href="data.html">Data page</a>.</p></div>`;
+        return;
+      }
+      all = data.questions;
+      byId = new Map(all.map((q) => [q.id, q]));
+      if (!all.length) {
+        document.getElementById("stage").innerHTML =
+          `<div class="card validation-errors"><h3>No valid questions</h3><p>questions.json produced no usable items. See the <a href="data.html">Data page</a>.</p></div>`;
+        return;
+      }
+
+      const params = new URLSearchParams(location.search);
+      const stored = loadProgress();
+      const validStored = stored && Array.isArray(stored.order) && stored.order.length &&
+        stored.order.every((id) => byId.has(id));
+
+      if (params.has("fresh") || !validStored) {
+        startFresh(currentMode());
+      } else {
+        state = stored;
+        restoreServed();
+      }
+      render();
+    }
+
+    function render() {
+      const total = state.order.length;
+      if (state.pos >= total) return finish();
+      const id = state.order[state.pos];
+      const q = byId.get(id);
+      document.getElementById("progress-text").textContent = `${state.pos + 1} / ${total}`;
+      document.getElementById("mode-badge").textContent = state.mode === "quick" ? "· quick mode" : "";
+      document.getElementById("progress-fill").style.width = `${(state.pos / total) * 100}%`;
+      document.getElementById("q-text").textContent = q.text;
+
+      const cur = state.answers[id];
+      const ans = document.getElementById("answers");
+      ans.innerHTML = OPTIONS.map((o) =>
+        `<button type="button" data-v="${o.v}" class="${cur === o.v ? "sel" : ""}">
+           <span>${o.label}</span><span class="k">${o.key}</span></button>`).join("");
+      ans.querySelectorAll("button").forEach((b) =>
+        b.addEventListener("click", () => choose(Number(b.dataset.v))));
+
+      document.getElementById("back-btn").disabled = state.pos === 0;
+    }
+
+    function choose(v) {
+      const id = state.order[state.pos];
+      state.answers[id] = v;
+      state.pos += 1;
+      saveProgress(state);
+      render();
+    }
+
+    function back() {
+      if (state.pos === 0) return;
+      state.pos -= 1;
+      saveProgress(state);
+      render();
+    }
+
+    function finish() {
+      const answersById = {};
+      for (const [k, v] of Object.entries(state.answers)) answersById[Number(k)] = v;
+      const scored = computeScores(answersById, served);
+      const enc = encodeVector(scored.vector);
+      try {
+        localStorage.setItem("dc_last_result", JSON.stringify({
+          vector: scored.vector, counts: scored.counts, mode: state.mode, enc,
+        }));
+      } catch {}
+      location.href = `results.html#r=${enc}`;
+    }
+
+    document.getElementById("back-btn").addEventListener("click", back);
+    document.getElementById("restart-btn").addEventListener("click", () => {
+      if (Object.keys(state.answers).length && !confirm("Discard your answers and restart?")) return;
+      clearProgress();
+      startFresh(currentMode());
+      render();
+    });
+    window.addEventListener("keydown", (e) => {
+      if (e.target.matches("input,textarea,select")) return;
+      const o = OPTIONS.find((x) => x.key === e.key);
+      if (o) { e.preventDefault(); if (state && state.pos < state.order.length) choose(o.v); }
+      else if (e.key === "Backspace") { e.preventDefault(); back(); }
+    });
+
+    boot();
+  </script>
+</body>
+</html>

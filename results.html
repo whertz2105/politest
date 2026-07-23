@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Results — DecaCompass</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap" id="main">
+    <div id="empty" class="card" hidden>
+      <h2>No results to show</h2>
+      <p class="muted">Take the test to see your compass, or open a shared results link.</p>
+      <a class="btn btn-primary" href="test.html">Take the test</a>
+    </div>
+
+    <div id="content" hidden>
+      <div class="btn-row" style="margin:1rem 0">
+        <button id="copy-link" class="btn">Copy share link</button>
+        <a class="btn" id="explore-3d" href="explore3d.html">Explore in 3D →</a>
+        <a class="btn" href="test.html?fresh=1">Retake</a>
+      </div>
+
+      <section>
+        <h2>Your 18 axes</h2>
+        <div id="bars"></div>
+      </section>
+
+      <section>
+        <h2>Closest archetypes</h2>
+        <div id="arch-panel" class="card"></div>
+        <details class="card">
+          <summary>Single-axis similarity (not an ideology match)</summary>
+          <p class="muted" style="font-size:0.85rem">This ranks archetypes by one axis only. It is <b>not</b> an ideology match — use the full-vector result above for that.</p>
+          <div class="picker">
+            <label for="single-axis">Axis:</label>
+            <select id="single-axis"></select>
+          </div>
+          <ul class="arch-list" id="single-list"></ul>
+        </details>
+      </section>
+
+      <section>
+        <h2>Charts</h2>
+        <p class="muted">Six default pairings, plus build your own.</p>
+        <div class="chart-gallery" id="gallery"></div>
+        <div class="card">
+          <h3>Build your own</h3>
+          <div class="picker">
+            <select id="px"></select>
+            <span>×</span>
+            <select id="py"></select>
+            <button id="add-chart" class="btn">Add chart</button>
+          </div>
+          <div class="chart-gallery" id="custom-gallery" style="margin-top:1rem"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { initShell, loadQuestionData, vectorFromHash, encodeVector } from "./js/app.js";
+    import { AXES, AXIS_KEYS, axisByKey, axisLabel } from "./js/axes.js";
+    import { computeScores, questionsForMode } from "./js/scoring.js";
+    import { renderBarReadout, quadrantCard, downloadSvgAsPng } from "./js/charts2d.js";
+    import { ARCHETYPES, matchArchetypes, singleAxisMatch } from "./js/archetypes.js";
+
+    initShell("results.html");
+    const toast = (m) => { const t = document.getElementById("toast"); t.textContent = m; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1600); };
+
+    const DEFAULT_PAIRS = [["soc","meth"],["mkt","auth"],["natl","dem"],["rel","fp"],["trust","fed"],["imm","sec"]];
+
+    function resolveVector() {
+      // Priority: URL fragment (shareable, read-only) -> last local result.
+      const fromHash = vectorFromHash();
+      if (fromHash) {
+        let counts;
+        try {
+          const last = JSON.parse(localStorage.getItem("dc_last_result") || "null");
+          if (last && encodeVector(last.vector) === encodeVector(fromHash)) counts = last.counts;
+        } catch {}
+        return { vector: fromHash, counts };
+      }
+      try {
+        const last = JSON.parse(localStorage.getItem("dc_last_result") || "null");
+        if (last && last.vector) {
+          // reflect into the URL so the page is shareable/refresh-safe
+          history.replaceState(null, "", `#r=${last.enc || encodeVector(last.vector)}`);
+          return { vector: last.vector, counts: last.counts };
+        }
+      } catch {}
+      return null;
+    }
+
+    function fillAxisSelect(sel, selected) {
+      sel.innerHTML = AXES.map((a) => `<option value="${a.key}">${a.label}</option>`).join("");
+      if (selected) sel.value = selected;
+    }
+
+    function galleryCard(vector, xKey, yKey) {
+      const card = quadrantCard(vector, xKey, yKey, { archetypes: ARCHETYPES });
+      const btn = document.createElement("button");
+      btn.className = "btn"; btn.textContent = "Download PNG";
+      btn.style.marginTop = "0.4rem"; btn.style.width = "100%";
+      btn.addEventListener("click", () => {
+        const svg = card.querySelector("svg");
+        downloadSvgAsPng(svg, `decacompass-${xKey}-${yKey}.png`);
+      });
+      card.appendChild(btn);
+      return card;
+    }
+
+    function renderArchetypes(vector) {
+      const matches = matchArchetypes(vector);
+      const panel = document.getElementById("arch-panel");
+      const top = matches[0];
+      const fmt = (m) => `${m.similarity.toFixed(0)}%`;
+      const disag = (m) => m.disagreements.length
+        ? `<div class="muted" style="font-size:0.85rem">differs on: ${m.disagreements.map((d) => d.label).join(", ")}</div>` : "";
+
+      let head;
+      if (top.tier === "None") {
+        const three = matches.slice(0, 3);
+        head = `<p><b>No strong archetype match</b> — closest regions:</p>
+          <ul class="arch-list">${three.map((m) => `
+            <li><span><span class="arch-name" style="font-size:1rem">${m.name}</span> <span class="tier ${m.tier}">${m.tier}</span>${disag(m)}</span><span class="sim">${fmt(m)}</span></li>`).join("")}</ul>`;
+      } else {
+        head = `<div class="arch-top"><span class="arch-name">${top.name}</span>
+            <span class="tier ${top.tier}">${top.tier}</span><span class="sim">${fmt(top)} match</span></div>
+          ${disag(top)}`;
+      }
+      const rest = matches.slice(top.tier === "None" ? 3 : 1, top.tier === "None" ? 8 : 6);
+      panel.innerHTML = head +
+        `<h4 style="margin:1rem 0 0.3rem">Other close matches</h4>
+         <ul class="arch-list">${rest.map((m) => `
+           <li><span>${m.name} <span class="tier ${m.tier}">${m.tier}</span></span><span class="sim">${fmt(m)}</span></li>`).join("")}</ul>`;
+    }
+
+    function renderSingleAxis(vector) {
+      const sel = document.getElementById("single-axis");
+      fillAxisSelect(sel, "mkt");
+      const list = document.getElementById("single-list");
+      const draw = () => {
+        const ranked = singleAxisMatch(vector, sel.value).slice(0, 6);
+        list.innerHTML = ranked.map((r) =>
+          `<li><span>${r.name}</span><span class="sim">${r.proximity.toFixed(0)}% on ${axisLabel(sel.value)}</span></li>`).join("");
+      };
+      sel.addEventListener("change", draw);
+      draw();
+    }
+
+    async function boot() {
+      const resolved = resolveVector();
+      if (!resolved) { document.getElementById("empty").hidden = false; return; }
+      document.getElementById("content").hidden = false;
+      const { vector } = resolved;
+      let counts = resolved.counts;
+
+      // If counts unknown (shared link), approximate from the full question set.
+      if (!counts) {
+        try {
+          const data = await loadQuestionData();
+          const s = computeScores({}, questionsForMode(data.questions, "full"));
+          counts = s.counts;
+        } catch { counts = undefined; }
+      }
+
+      renderBarReadout(document.getElementById("bars"), vector, counts);
+      renderArchetypes(vector);
+      renderSingleAxis(vector);
+
+      // default gallery
+      const gallery = document.getElementById("gallery");
+      DEFAULT_PAIRS.forEach(([x, y]) => gallery.appendChild(galleryCard(vector, x, y)));
+
+      // build-your-own
+      fillAxisSelect(document.getElementById("px"), "mkt");
+      fillAxisSelect(document.getElementById("py"), "soc");
+      document.getElementById("add-chart").addEventListener("click", () => {
+        const x = document.getElementById("px").value;
+        const y = document.getElementById("py").value;
+        if (x === y) { toast("Pick two different axes."); return; }
+        document.getElementById("custom-gallery").prepend(galleryCard(vector, x, y));
+      });
+
+      // share link
+      document.getElementById("explore-3d").href = `explore3d.html${location.hash}`;
+      document.getElementById("copy-link").addEventListener("click", async () => {
+        const url = location.origin + location.pathname + location.hash;
+        try { await navigator.clipboard.writeText(url); toast("Link copied"); }
+        catch { prompt("Copy this link:", url); }
+      });
+    }
+
+    window.addEventListener("hashchange", () => location.reload());
+    boot();
+  </script>
+</body>
+</html>

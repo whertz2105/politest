@@ -1,0 +1,12 @@
+{
+  "id": "session-1784838318112",
+  "startedAt": "2026-07-23T20:25:18.112Z",
+  "cwd": "/home/dev/politicstest",
+  "context": {},
+  "metrics": {
+    "edits": 21,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  }
+}

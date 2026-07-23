@@ -1,0 +1,16 @@
+# DecaCompass — static site served directly by Caddy (no Node process, no port).
+# APPEND this block to /etc/caddy/Caddyfile. Do NOT touch the existing
+# profileher.com / www.profileher.com / staging.profileher.com blocks.
+politest.profileher.com {
+	encode zstd gzip
+	root * /opt/politest
+	file_server
+
+	# The app's JS/CSS/HTML are not content-hashed, and questions.json can change
+	# on deploy. Force revalidation so a redeploy is never masked by a stale tab or
+	# a stale Cloudflare/browser cache. (Still cheap: 304s when unchanged.)
+	@nocache path *.html *.js *.css *.json
+	header @nocache Cache-Control "no-cache"
+
+	# Three.js is pulled from cdnjs at runtime (3D page only); nothing else is remote.
+}
