@@ -1,6 +1,6 @@
-# Deploy runbook — DecaCompass at `politest.profileher.com`
+# Deploy runbook — Politeion at `politest.profileher.com`
 
-DecaCompass is a **static frontend + a tiny Node API**. The pages/JS/CSS/JSON are
+Politeion is a **static frontend + a tiny Node API**. The pages/JS/CSS/JSON are
 served directly by Caddy; a small standard-library Node service (`server.js`, no npm
 dependencies) runs on loopback `:3200` and powers the **crowd-comparison** feature
 (storing each completed result and reporting how a result compares to everyone). This
@@ -46,7 +46,7 @@ No `npm install` — the API uses only the Node standard library.
 sudo cp /opt/politest/deploy/politest.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now politest
-journalctl -u politest -f          # expect: "DecaCompass API on http://127.0.0.1:3200"
+journalctl -u politest -f          # expect: "Politeion API on http://127.0.0.1:3200"
 curl -s http://127.0.0.1:3200/api/stats     # {"count":0} before anyone has taken it
 ```
 
@@ -110,5 +110,5 @@ its host). Prefer the subdomain. If you must, see the handoff §7 and also route
 `/politest/api/*` to `127.0.0.1:3200`.
 
 ## Rename note
-Public app name = `APP_NAME` in `js/axes.js` ("DecaCompass"). The subdomain slug
+Public app name = `APP_NAME` in `js/axes.js` ("Politeion"). The subdomain slug
 `politest`, the service name, and the app name are independent.

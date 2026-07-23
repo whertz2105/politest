@@ -1,10 +1,10 @@
-// axes.js — SINGLE SOURCE OF TRUTH for DecaCompass.
+// axes.js — SINGLE SOURCE OF TRUTH for Politeion.
 // Everything (scoring, charts, 3D dropdowns, matcher, data page, figures graph)
 // derives axis keys, order, labels and pole meanings from here. Pure data — no
 // logic depends on the *number* of axes, so growing the bank is a data edit only.
 
 // The whole app is renamed by changing this one constant.
-export const APP_NAME = "DecaCompass";
+export const APP_NAME = "Politeion";
 export const APP_TAGLINE = "A 22-axis political compass.";
 
 // Display hints only; scoring never assumes a fixed count.

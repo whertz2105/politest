@@ -203,7 +203,7 @@ export function quadrantCard(vector, xKey, yKey, opts = {}) {
 // ---------------------------------------------------------------------------
 // SVG -> PNG download (canvas). Works entirely client-side.
 // ---------------------------------------------------------------------------
-export function downloadSvgAsPng(svgEl, filename = "decacompass.png", scale = 2) {
+export function downloadSvgAsPng(svgEl, filename = "politeion.png", scale = 2) {
   const clone = svgEl.cloneNode(true);
   // Inline computed colors so the rasterised PNG matches the current theme.
   inlineStyles(svgEl, clone);

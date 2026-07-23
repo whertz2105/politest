@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Results — DecaCompass</title>
+  <title>Results — Politeion</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -330,7 +330,7 @@
       const card = quadrantCard(vector, x, y, { archetypes: ARCHETYPES });
       const btn = document.createElement("button");
       btn.className = "btn"; btn.textContent = "Download PNG"; btn.style.marginTop = "0.4rem"; btn.style.width = "100%";
-      btn.addEventListener("click", () => downloadSvgAsPng(card.querySelector("svg"), `decacompass-${x}-${y}.png`));
+      btn.addEventListener("click", () => downloadSvgAsPng(card.querySelector("svg"), `politeion-${x}-${y}.png`));
       card.appendChild(btn); return card;
     }
 

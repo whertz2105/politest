@@ -192,5 +192,5 @@ const server = http.createServer(async (req, res) => {
   AXIS_KEYS = axes.AXIS_KEYS;
   LEGACY_MAP = axes.LEGACY_AXIS_MAP;
   loadStore();
-  server.listen(PORT, HOST, () => console.log(`DecaCompass API on http://${HOST}:${PORT} (store: ${STORE_FILE})`));
+  server.listen(PORT, HOST, () => console.log(`Politeion API on http://${HOST}:${PORT} (store: ${STORE_FILE})`));
 })().catch((e) => { console.error("startup failed:", e); process.exit(1); });
