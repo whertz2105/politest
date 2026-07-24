@@ -251,8 +251,14 @@ Cookies are `Secure` (the site is https via Caddy), so no extra config is needed
 in production. **Subscriptions and paid API access are scaffolded only** (DB tables
 + an account-page placeholder); no payment provider is wired up yet.
 
-To change or reset a password, or add another admin, there is no UI yet — do it
-directly against the DB, or ask me to add a small admin CLI.
+**Promote/demote an admin** with the CLI (run from `/opt/politest`):
+```bash
+node tools/set-role.js --list                          # show accounts + roles
+node tools/set-role.js you@example.com admin           # promote
+node tools/set-role.js you@example.com user            # demote
+```
+Then sign out and back in (or wait ~30s) for the role to take effect. There is no
+password-reset UI yet — ask me to add one if needed.
 
 ---
 
