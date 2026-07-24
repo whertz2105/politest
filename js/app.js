@@ -36,8 +36,22 @@ const NAV = [
 ];
 
 // Build the site header into <div data-shell></div> (if present) and wire theme toggle.
+// Compass roundel favicon (inline SVG, dependency-free) — navy disc, brass cross.
+function ensureFavicon() {
+  if (document.querySelector('link[rel="icon"]')) return;
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+    '<circle cx="16" cy="16" r="15" fill="#1e3a5f"/>' +
+    '<g stroke="#cba43f" stroke-width="2" stroke-linecap="round"><line x1="16" y1="5" x2="16" y2="27"/><line x1="5" y1="16" x2="27" y2="16"/></g>' +
+    '<circle cx="16" cy="16" r="3" fill="#cba43f"/></svg>';
+  const link = document.createElement("link");
+  link.rel = "icon";
+  link.href = "data:image/svg+xml," + encodeURIComponent(svg);
+  document.head.appendChild(link);
+}
+
 export function initShell(activeHref) {
   applyStoredTheme();
+  ensureFavicon();
   const mount = document.querySelector("[data-shell]");
   if (!mount) return;
   const links = NAV.map((n) => {

@@ -76,6 +76,22 @@ Static changes don't strictly need the restart, but restarting picks up any `ser
 change and is harmless. **The crowd store in `/opt/politest/store/` is gitignored and is
 NOT touched by `git pull` or the restart — it persists across deploys.**
 
+## Step 8 — Serve at `politeion.profileher.com` (owner)
+The app rebranded to **Politeion**. To front it on a matching hostname (reusing the same
+`/opt/politest` files, `:3200` API, and crowd store — no second deployment):
+
+1. **Cloudflare:** add an **A record** `politeion` → `134.122.115.115` (orange cloud is fine).
+2. **Caddy:** append the new block and reload:
+   ```bash
+   cd /opt/politest && git pull      # gets deploy/politeion.Caddyfile
+   sudo bash -c 'cat /opt/politest/deploy/politeion.Caddyfile >> /etc/caddy/Caddyfile'
+   sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+   sudo systemctl reload caddy
+   curl -I https://politeion.profileher.com      # HTTP/2 200 once DNS + cert settle
+   ```
+`politest.profileher.com` keeps working; both hostnames serve the same app. (To retire the
+old name later, just delete its block from the Caddyfile and reload — optional.)
+
 ---
 
 ## The API (for reference)

@@ -5,7 +5,7 @@
 
 // The whole app is renamed by changing this one constant.
 export const APP_NAME = "Politeion";
-export const APP_TAGLINE = "A 22-axis political compass.";
+export const APP_TAGLINE = "A political compass in twenty-two dimensions.";
 
 // Display hints only; scoring never assumes a fixed count.
 export const FULL_TEST_SIZE = 400;

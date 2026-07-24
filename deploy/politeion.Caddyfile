@@ -1,0 +1,16 @@
+# Politeion — serve the app at politeion.profileher.com (same files + API as the
+# existing politest deployment; this just adds a second hostname).
+# APPEND this block to /etc/caddy/Caddyfile. Do NOT edit the existing
+# profileher.com / www / staging / politest blocks.
+politeion.profileher.com {
+	encode zstd gzip
+	root * /opt/politest
+
+	@api path /api/*
+	reverse_proxy @api 127.0.0.1:3200
+
+	file_server
+
+	@nocache path *.html *.js *.css *.json
+	header @nocache Cache-Control "no-cache"
+}
