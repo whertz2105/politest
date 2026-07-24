@@ -530,3 +530,21 @@ details.card summary { cursor: pointer; }
 .lb-bot .lr-mini { margin-left: 0; }
 .lb-n { font-size: var(--fs-xs); white-space: nowrap; margin-left: auto; }
 .split-exp-lb .split-pane[data-pane="recent"] { padding: var(--s3); }
+
+/* ===== Data page: questions table (collapsed axis weights) ============== */
+table.data th.ta-left, table.data td.ta-left { text-align: left; }
+table.data td.ta-c { text-align: center; }
+table.data td.q, table.data td.axcell { white-space: normal; }
+table.data td.q { min-width: 15rem; }
+table.data td.axcell { min-width: 14rem; }
+table.data th.nosort { cursor: default; }
+table.data th.nosort:hover { color: inherit; }
+.wchip {
+  display: inline-block; font-size: var(--fs-xs); line-height: 1.5;
+  padding: .06rem .45rem; margin: .12rem .18rem .12rem 0;
+  border-radius: var(--radius-pill); border: 1px solid var(--border-strong);
+  background: var(--bg); white-space: nowrap;
+}
+.wchip b { font-family: var(--mono); font-weight: 700; }
+.wchip.w-pos { color: var(--pos); border-color: color-mix(in srgb, var(--pos) 45%, var(--border-strong)); }
+.wchip.w-neg { color: var(--neg); border-color: color-mix(in srgb, var(--neg) 45%, var(--border-strong)); }

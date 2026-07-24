@@ -35,7 +35,7 @@
 
   <script type="module">
     import { initShell, loadQuestionData, escapeHtml } from "./js/app.js";
-    import { AXES, AXIS_KEYS } from "./js/axes.js";
+    import { AXES, AXIS_KEYS, axisByKey } from "./js/axes.js";
     import { questionsForMode, maxAttainable, itemCount } from "./js/scoring.js";
 
     initShell("data.html");
@@ -45,6 +45,7 @@
     function mdInline(s) {
       return escapeHtml(s)
         .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*([^*\n]+)\*/g, "<em>$1</em>")
         .replace(/`([^`]+)`/g, "<code>$1</code>");
     }
     function mdToHtml(md) {
@@ -69,7 +70,13 @@
         }
         if (/^\s*[-*]\s+/.test(ln)) {
           flush(); const items = [];
-          while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*[-*]\s+/, "")); i++; }
+          // Consume until a blank line; lines that don't start a new bullet are
+          // continuation text (soft-wrapped source) and join the current item.
+          while (i < lines.length && !/^\s*$/.test(lines[i])) {
+            if (/^\s*[-*]\s+/.test(lines[i])) items.push(lines[i].replace(/^\s*[-*]\s+/, ""));
+            else if (items.length) items[items.length - 1] += " " + lines[i].trim();
+            i++;
+          }
           html += `<ul>${items.map((t) => `<li>${mdInline(t)}</li>`).join("")}</ul>`;
           continue;
         }
@@ -129,20 +136,27 @@
       document.getElementById("summary").innerHTML = note + cells.join("");
     }
 
+    const COLS = [
+      { key: "id", label: "ID" },
+      { key: "text", label: "Question", align: "left" },
+      { key: "axes", label: "Axis weights", align: "left", nosort: true },
+      { key: "sev", label: "Severity" },
+      { key: "pair", label: "Pair" },
+    ];
     function renderHead() {
-      const th = ["id", "text", "sev", "pair", ...AXIS_KEYS];
-      document.querySelector("#qtable thead").innerHTML =
-        "<tr>" + th.map((k) => {
-          const cls = k === sortKey ? (sortDir === 1 ? "sorted-asc" : "sorted-desc") : "";
-          const label = k === "id" ? "ID" : k === "text" ? "Question" : k;
-          return `<th data-key="${k}" class="${cls}">${label}</th>`;
-        }).join("") + "</tr>";
-      document.querySelectorAll("#qtable th").forEach((h) =>
+      document.querySelector("#qtable thead").innerHTML = "<tr>" + COLS.map((c) => {
+        const sorted = c.key === sortKey ? (sortDir === 1 ? "sorted-asc" : "sorted-desc") : "";
+        const cls = [sorted, c.nosort ? "nosort" : "", c.align === "left" ? "ta-left" : ""].filter(Boolean).join(" ");
+        return `<th data-key="${c.key}" class="${cls}">${c.label}</th>`;
+      }).join("") + "</tr>";
+      document.querySelectorAll("#qtable th").forEach((h) => {
+        if (h.classList.contains("nosort")) return;
         h.addEventListener("click", () => {
           const k = h.dataset.key;
           if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
           renderHead(); renderBody();
-        }));
+        });
+      });
     }
 
     function valueFor(q, key) {
@@ -167,18 +181,20 @@
       });
       const body = rows.map((q) => {
         const ax = axesOf(q);
-        const cells = AXIS_KEYS.map((k) => {
-          const w = ax[k];
-          if (w === undefined) return `<td></td>`;
-          const cls = w > 0 ? "w-pos" : w < 0 ? "w-neg" : "";
-          return `<td class="${cls}">${w > 0 ? "+" : ""}${w}</td>`;
-        }).join("");
-        const badges = (q.core ? ' <span class="muted" title="core / quick-mode">•</span>' : "")
-          + (q.type === "attention" ? ` <span class="tag warn" title="attention check, expect ${q.expect}">att</span>` : "");
-        return `<tr><td>${q.id}${badges}</td>
-          <td class="q">${escapeHtml(q.text)}</td>
-          <td>${q.sev !== undefined ? q.sev : ""}</td>
-          <td>${q.pair ? escapeHtml(q.pair) : ""}</td>${cells}</tr>`;
+        const chips = AXIS_KEYS.filter((k) => typeof ax[k] === "number" && ax[k] !== 0)
+          .sort((a, b) => Math.abs(ax[b]) - Math.abs(ax[a]))
+          .map((k) => {
+            const w = ax[k], m = axisByKey(k);
+            return `<span class="wchip ${w > 0 ? "w-pos" : "w-neg"}" title="${escapeHtml(m.label)}: ${w > 0 ? "+" : ""}${w}">${escapeHtml(m.label)} <b>${w > 0 ? "+" : ""}${w}</b></span>`;
+          }).join(" ");
+        const badge = q.core ? ' <span class="muted" title="core / quick-mode item">•</span>' : "";
+        return `<tr>
+          <td class="ta-c">${q.id}${badge}</td>
+          <td class="q ta-left">${escapeHtml(q.text)}</td>
+          <td class="axcell ta-left">${chips || '<span class="muted">—</span>'}</td>
+          <td class="ta-c">${q.sev !== undefined ? q.sev : "—"}</td>
+          <td class="ta-c">${q.pair ? escapeHtml(q.pair) : "—"}</td>
+        </tr>`;
       }).join("");
       document.querySelector("#qtable tbody").innerHTML = body;
       document.getElementById("rowcount").textContent = `${rows.length} of ${visible.length} (attention checks hidden)`;
