@@ -6,13 +6,18 @@
 // node:sqlite is stdlib but still marked experimental; it emits a one-time
 // ExperimentalWarning on load. That is expected and harmless.
 
-const { DatabaseSync } = require("node:sqlite");
+// node:sqlite is required LAZILY (inside init) so that on an older Node without
+// it, requiring this module doesn't throw at load and crash the whole server —
+// the caller catches the error and disables just the accounts feature.
 const fs = require("fs");
 const path = require("path");
 
 let db = null;
 
 function init(dbPath) {
+  let DatabaseSync;
+  try { ({ DatabaseSync } = require("node:sqlite")); }
+  catch (e) { throw new Error("node:sqlite unavailable — accounts require Node 22.5+ (this Node lacks node:sqlite)"); }
   const file = dbPath || process.env.AUTH_DB || path.join(__dirname, "..", "store", "politeion.db");
   fs.mkdirSync(path.dirname(file), { recursive: true });
   db = new DatabaseSync(file);

@@ -25,6 +25,10 @@
       try { d = await (await fetch("/api/auth/me", { cache: "no-cache" })).json(); }
       catch { view.innerHTML = '<div class="notice notice-warn">Could not reach the server.</div>'; return; }
 
+      if (d.accounts_available === false) {
+        view.innerHTML = '<div class="notice notice-warn"><strong>Accounts are temporarily unavailable.</strong> The accounts database is not active on this server yet.</div>';
+        return;
+      }
       if (!d.user) { location.href = "login.html?next=account.html"; return; }
       const u = d.user;
       const since = (u.created_at || "").slice(0, 10);

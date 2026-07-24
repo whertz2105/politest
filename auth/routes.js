@@ -19,13 +19,22 @@ const CACHE_TTL_MS = 30 * 1000;
 const LOGIN_MAX = 10, LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 let ready = false;
+let initError = null;
 const cache = new Map();       // token -> { user, exp }
 const loginHits = new Map();   // ip -> [timestamps]
 
+// Initialize accounts. NEVER throws: if the DB can't open (e.g. Node lacks
+// node:sqlite), accounts are disabled and /api/auth/* returns a clean 503, but
+// the rest of the server (analyzer, crowd, static) keeps running.
 function init(dbPath) {
-  db.init(dbPath);
-  U.seedAdmin();
-  ready = true;
+  try {
+    db.init(dbPath);
+    U.seedAdmin();
+    ready = true;
+  } catch (e) {
+    ready = false; initError = e.message;
+    console.error("[auth] accounts DISABLED:", e.message);
+  }
 }
 
 // ---- helpers -------------------------------------------------------------
@@ -84,7 +93,14 @@ function invalidate(token) { if (token) cache.delete(token); }
 
 // ---- handler -------------------------------------------------------------
 async function handle(req, res, urlPath) {
-  if (!ready || !urlPath.startsWith("/api/auth/")) return false;
+  if (!urlPath.startsWith("/api/auth/")) return false;
+  // Own the /api/auth/* namespace even when disabled, so it returns clean JSON
+  // (not a fall-through) — /me stays usable (returns null) so pages don't error.
+  if (!ready) {
+    if (urlPath === "/api/auth/me" && req.method === "GET") { sendJson(res, 200, { user: null, accounts_available: false }); return true; }
+    sendJson(res, 503, { error: "Accounts are temporarily unavailable." });
+    return true;
+  }
 
   if (urlPath === "/api/auth/me" && req.method === "GET") {
     sendJson(res, 200, { user: currentUser(req) });

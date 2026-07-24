@@ -212,6 +212,21 @@ are hashed with scrypt (never stored or logged in plaintext); sessions are an
 httpOnly cookie. The DB lives at **`/opt/politest/store/politeion.db`** (gitignored,
 persists across deploys, never touched by `git pull`).
 
+> ⚠️ **Requires Node 22.5+** — `node:sqlite` does not exist on Node 20. If the
+> droplet is on Node 20, accounts are **automatically disabled** (the app logs
+> `[auth] accounts DISABLED` and keeps serving the analyzer/crowd/static; auth
+> endpoints return 503). To enable accounts, upgrade Node:
+> ```bash
+> node --version                        # if v20.x, upgrade:
+> curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+> sudo apt-get install -y nodejs
+> node --version                        # expect v22.x
+> sudo systemctl restart politest
+> journalctl -u politest -n 20 --no-pager   # expect "accounts DB ready" + "seeded admin"
+> ```
+> ProfileHer and the rest of the app are unaffected by the Node upgrade (they use
+> only stdlib too), but confirm those services after upgrading.
+
 1. **Seed the admin account (first boot only).** Add to `/etc/politeion/analyzer.env`
    (this file is `root:root 0600`, never in git):
    ```
