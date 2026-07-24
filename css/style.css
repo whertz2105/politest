@@ -668,15 +668,10 @@ details.card summary { cursor: pointer; }
 .match-weights summary { cursor: pointer; font-weight: 600; }
 .wt-grid { display: grid; gap: .2rem; grid-template-columns: 1fr; margin: .5rem 0; }
 @media (min-width: 560px) { .wt-grid { grid-template-columns: 1fr 1fr; gap: .2rem .8rem; } }
-.wt-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: var(--fs-sm); }
-.wt-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wt-toggle { display: inline-flex; flex: 0 0 auto; }
-.wt-btn { min-height: 30px; padding: .1rem .5rem; font-size: var(--fs-xs); border-radius: 0; border-right-width: 0; }
-.wt-btn:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
-.wt-btn:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-right-width: 1px; }
-.wt-btn.on.mute { background: color-mix(in srgb, var(--bad) 18%, var(--bg-elev)); border-color: var(--bad); color: var(--bad); }
-.wt-btn.on.norm { background: color-mix(in srgb, var(--fg-dim) 18%, var(--bg-elev)); border-color: var(--fg-dim); }
-.wt-btn.on.boost { background: color-mix(in srgb, var(--accent) 18%, var(--bg-elev)); border-color: var(--accent); color: var(--accent); }
+.wt-row { display: flex; align-items: center; gap: .5rem; font-size: var(--fs-sm); }
+.wt-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wt-slider { flex: 0 0 5.5rem; height: 20px; accent-color: var(--accent); cursor: pointer; }
+.wt-val { flex: 0 0 2.4rem; text-align: right; font-variant-numeric: tabular-nums; font-size: var(--fs-xs); color: var(--fg-dim); }
 
 /* ===== Sub-tabs (Data page: Analyzer / Test) ============================ */
 .subtabs {

@@ -127,17 +127,21 @@ function sourceListHtml(sources) {
 }
 
 // ---- match panel ("what matters most to you") ----------------------------
-// entries: [{ id, name, party, profile }]. weights live in localStorage (dc_weights).
+// entries: [{ id, name, party, profile }]. Per-axis importance is a 0..1 slider
+// (0 = ignore, 1 = full weight), persisted in localStorage (dc_weights). The panel
+// is built ONCE: sliding an axis re-renders only the ranking, so the weights panel
+// never collapses under you.
 export function renderMatchPanel(container, userVec, entries) {
   let weights = {};
   try { weights = JSON.parse(localStorage.getItem("dc_weights") || "{}"); } catch { weights = {}; }
-  const wOf = (k) => (weights[k] == null ? 1 : weights[k]);
+  // Migrate any legacy 0/1/2 values and clamp to the new 0..1 range.
+  for (const k of Object.keys(weights)) weights[k] = Math.max(0, Math.min(1, Number(weights[k]) || 0));
+  const wOf = (k) => (weights[k] == null ? 1 : Math.max(0, Math.min(1, weights[k])));
 
   function rankHtml() {
     const ranked = entries.map((e) => {
       if (isThin(e.profile)) return { e, thin: true };
-      const m = matchScore(userVec, e.profile.axes, weights);
-      return { e, thin: false, m };
+      return { e, thin: false, m: matchScore(userVec, e.profile.axes, weights) };
     }).sort((a, b) => {
       if (a.thin && b.thin) return 0;
       if (a.thin) return 1; if (b.thin) return -1;
@@ -151,31 +155,38 @@ export function renderMatchPanel(container, userVec, entries) {
         <span class="muted match-detail">based on ${r.m.axesUsed} axis${r.m.axesUsed === 1 ? "" : "es"} with sufficient data · weighted by your priorities</span></li>`;
     }).join("");
   }
-  function togglesHtml() {
-    return AXES.map((a) => {
-      const w = wOf(a.key);
-      const btn = (val, label, cls) => `<button type="button" class="wt-btn ${w === val ? "on " + cls : ""}" data-axis="${a.key}" data-w="${val}">${label}</button>`;
-      return `<div class="wt-row"><span class="wt-label">${escapeHtml(a.label)}</span>
-        <span class="wt-toggle">${btn(0, "mute", "mute")}${btn(1, "1×", "norm")}${btn(2, "2×", "boost")}</span></div>`;
-    }).join("");
-  }
-  function draw() {
-    container.innerHTML = `
-      <div class="match-cols">
-        <div class="match-ranking"><h3 class="lb-h">Your match</h3><ol class="match-list">${rankHtml()}</ol></div>
-        <details class="match-weights"><summary>What matters most to you (${AXES.length} axes)</summary>
-          <p class="muted" style="font-size:.78rem">Mute an axis to ignore it, or boost one that matters more. Ranking updates live.</p>
-          <div class="wt-grid">${togglesHtml()}</div>
-          <div class="btn-row" style="margin-top:.5rem"><button class="btn" type="button" id="wt-reset" style="min-height:34px">Reset weights</button></div>
-        </details>
-      </div>`;
-    container.querySelectorAll(".wt-btn").forEach((b) => b.addEventListener("click", () => {
-      weights[b.dataset.axis] = Number(b.dataset.w);
-      try { localStorage.setItem("dc_weights", JSON.stringify(weights)); } catch { /* ignore */ }
-      draw();
-    }));
-    const reset = container.querySelector("#wt-reset");
-    if (reset) reset.addEventListener("click", () => { weights = {}; try { localStorage.removeItem("dc_weights"); } catch { /* ignore */ } draw(); });
-  }
-  draw();
+
+  const slidersHtml = AXES.map((a) => {
+    const w = wOf(a.key);
+    return `<div class="wt-row"><span class="wt-label">${escapeHtml(a.label)}</span>
+      <input type="range" class="wt-slider" data-axis="${a.key}" min="0" max="1" step="0.05" value="${w}" aria-label="${escapeHtml(a.label)} importance, 0 to 1">
+      <span class="wt-val" data-axis="${a.key}">${w.toFixed(2)}</span></div>`;
+  }).join("");
+
+  // Build once — the <details> is never re-rendered, so it can't auto-close.
+  container.innerHTML = `
+    <div class="match-cols">
+      <div class="match-ranking"><h3 class="lb-h">Your match</h3><ol class="match-list" id="match-list">${rankHtml()}</ol></div>
+      <details class="match-weights" id="match-weights" open><summary>What matters most to you (${AXES.length} axes)</summary>
+        <p class="muted" style="font-size:.78rem">Slide an axis to 0 to ignore it, up to 1 to weight it fully. The ranking updates live.</p>
+        <div class="wt-grid">${slidersHtml}</div>
+        <div class="btn-row" style="margin-top:.5rem"><button class="btn" type="button" id="wt-reset" style="min-height:34px">Reset weights</button></div>
+      </details>
+    </div>`;
+
+  const listEl = container.querySelector("#match-list");
+  const update = () => { listEl.innerHTML = rankHtml(); };
+  const setVal = (k, v) => { const el = container.querySelector(`.wt-val[data-axis="${k}"]`); if (el) el.textContent = Number(v).toFixed(2); };
+
+  container.querySelectorAll(".wt-slider").forEach((s) => s.addEventListener("input", () => {
+    const k = s.dataset.axis, v = Number(s.value);
+    weights[k] = v; setVal(k, v);
+    try { localStorage.setItem("dc_weights", JSON.stringify(weights)); } catch { /* ignore */ }
+    update();
+  }));
+  container.querySelector("#wt-reset").addEventListener("click", () => {
+    weights = {}; try { localStorage.removeItem("dc_weights"); } catch { /* ignore */ }
+    container.querySelectorAll(".wt-slider").forEach((s) => { s.value = 1; setVal(s.dataset.axis, 1); });
+    update();
+  });
 }
