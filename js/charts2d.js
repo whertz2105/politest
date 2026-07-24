@@ -102,7 +102,8 @@ export function quadrantSVG(vector, xKey, yKey, opts = {}) {
   const toY = (v) => y0 + (INNER_PAD + (1 - 2 * INNER_PAD) * ((100 - v) / 200)) * plot;
   const midX = x0 + plot / 2, midY = y0 + plot / 2;
   const r1 = (n) => Math.round(n * 10) / 10;
-  const tip = (name, xv, yv) => `class="dot" data-name="${escapeHtml(name)}" data-x="${r1(xv)}" data-y="${r1(yv)}" data-xa="${escapeHtml(ax.label)}" data-ya="${escapeHtml(ay.label)}"`;
+  // data-* only (the circle carries its own class incl. "dot" — no duplicate class attr)
+  const tip = (name, xv, yv) => `data-name="${escapeHtml(name)}" data-x="${r1(xv)}" data-y="${r1(yv)}" data-xa="${escapeHtml(ax.label)}" data-ya="${escapeHtml(ay.label)}"`;
 
   // quadrant tints
   const q = (x, y, w, h, cls) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="quad ${cls}"/>`;
@@ -117,7 +118,7 @@ export function quadrantSVG(vector, xKey, yKey, opts = {}) {
   let archMarks = "";
   if (opts.archetypes && opts.archetypes.length) {
     archMarks = opts.archetypes.map((a) =>
-      `<circle cx="${toX(a.v[xKey] || 0)}" cy="${toY(a.v[yKey] || 0)}" r="3" class="arch-dot" ${tip(a.name, a.v[xKey] || 0, a.v[yKey] || 0)}></circle>`).join("");
+      `<circle cx="${toX(a.v[xKey] || 0)}" cy="${toY(a.v[yKey] || 0)}" r="3" class="arch-dot dot" ${tip(a.name, a.v[xKey] || 0, a.v[yKey] || 0)}></circle>`).join("");
   }
 
   // figure markers: dots always; labels only for the highlight set, with an
@@ -243,7 +244,8 @@ export function attachTooltips(container) {
 
 export function openChartModal({ title, render, filename }) {
   const small = window.innerWidth < 700;
-  const s = Math.round(Math.min(window.innerWidth, window.innerHeight) * (small ? 0.86 : 0.72));
+  // render size: large, leaving room for the modal chrome and viewport.
+  const s = Math.round(Math.min(window.innerWidth * (small ? 0.92 : 0.86), window.innerHeight * 0.74));
   const overlay = document.createElement("div");
   overlay.className = "chart-modal";
   overlay.innerHTML = `<div class="chart-modal-inner" role="dialog" aria-modal="true" aria-label="${escapeHtml(title || "chart")}">
@@ -253,6 +255,10 @@ export function openChartModal({ title, render, filename }) {
     </div>`;
   const body = overlay.querySelector(".chart-modal-body");
   body.innerHTML = render(s);
+  // the modal is a shrink-to-fit flex column, so give the SVG an explicit pixel
+  // width (otherwise width:100% resolves against a collapsed container -> tiny).
+  const svgEl = body.querySelector("svg");
+  if (svgEl) { svgEl.style.width = s + "px"; svgEl.style.maxWidth = "100%"; svgEl.style.height = "auto"; }
   attachTooltips(body);
   const close = () => { hideTip(); overlay.remove(); document.removeEventListener("keydown", onKey); };
   const onKey = (e) => { if (e.key === "Escape") close(); };
