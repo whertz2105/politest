@@ -20,6 +20,8 @@ const dns = require("dns");
 const net = require("net");
 const { URL } = require("url");
 
+const BOT_UA = "PoliteionAnalyzer/1.0 (+https://politeion.com)";
+const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 const MAX_REDIRECTS = 3;
 // Generous body ceiling: bloated news pages (inline scripts, ad tech) routinely
 // exceed a few MB of raw HTML even for a short article. This is a memory-safety
@@ -106,6 +108,19 @@ function once(urlStr, opts = {}) {
     const litFam = net.isIP(litHost);
     if (litFam && !isPublicAddress(litHost, litFam)) return reject(new Error(`refused: ${litHost} is a non-public address`));
     const lib = u.protocol === "https:" ? https : http;
+    // Default identifies as our bot; on a bot-block (403 etc.) the caller retries
+    // with browserUA + browser-like headers to get past CDN bot rules.
+    const headers = opts.json
+      ? { "user-agent": BOT_UA, accept: "application/json" }
+      : opts.browserUA
+        ? {
+            "user-agent": BROWSER_UA,
+            accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "accept-language": "en-US,en;q=0.9",
+            "sec-fetch-dest": "document", "sec-fetch-mode": "navigate", "sec-fetch-site": "none",
+            "upgrade-insecure-requests": "1",
+          }
+        : { "user-agent": BOT_UA, accept: "text/html,application/xhtml+xml" };
     const req = lib.request(
       {
         method: "GET",
@@ -113,10 +128,7 @@ function once(urlStr, opts = {}) {
         port: u.port || (u.protocol === "https:" ? 443 : 80),
         path: u.pathname + u.search,
         lookup: safeLookup,
-        headers: {
-          "user-agent": "PoliteionAnalyzer/1.0 (+https://politeion.com)",
-          accept: opts.json ? "application/json" : "text/html,application/xhtml+xml",
-        },
+        headers,
       },
       (res) => {
         const loc = res.headers.location;
@@ -126,7 +138,7 @@ function once(urlStr, opts = {}) {
           try { next = new URL(loc, u).href; } catch { return reject(new Error("bad redirect target")); }
           return resolve({ redirect: next });
         }
-        if (res.statusCode !== 200) { res.resume(); return reject(new Error(`fetch HTTP ${res.statusCode}`)); }
+        if (res.statusCode !== 200) { res.resume(); const err = new Error(`fetch HTTP ${res.statusCode}`); err.status = res.statusCode; return reject(err); }
         const ct = String(res.headers["content-type"] || "");
         if (!opts.json && ct && !/text\/html|application\/xhtml/i.test(ct)) { res.resume(); return reject(new Error(`unsupported content-type: ${ct}`)); }
         let size = 0;
@@ -281,7 +293,16 @@ function titleOf(html) {
 }
 
 async function fetchAndExtract(urlStr) {
-  const { html, finalUrl } = await fetchRaw(urlStr, {});
+  // Default (bot) UA first; if a CDN bot rule blocks it (403/401/429/451), retry
+  // once as a browser. Sites that accept the bot UA (e.g. National Review) never
+  // hit the retry, so this doesn't regress them.
+  let fetched;
+  try { fetched = await fetchRaw(urlStr, {}); }
+  catch (e) {
+    if (e.status && [401, 403, 429, 451].includes(e.status)) fetched = await fetchRaw(urlStr, { browserUA: true });
+    else throw e;
+  }
+  const { html, finalUrl } = fetched;
   let text = extractText(html);
   let title = titleOf(html);
   // If the server HTML yielded little text (client-side-rendered body), try the
