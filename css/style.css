@@ -375,12 +375,17 @@ details.card summary { cursor: pointer; }
 .banner-info { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--bg-elev)); }
 
 /* 3D */
-/* Viewer on the left (narrower), archetypes card slid up to the right. */
-.explore-layout { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
-@media (max-width: 760px) { .explore-layout { grid-template-columns: 1fr; } }
+/* Viewer on the left (narrower), archetypes card at the right — SAME height, with
+   the archetype list scrolling inside so both boxes match exactly. */
+.explore-layout { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) 300px; align-items: stretch; }
 #three-mount { width: 100%; height: 70vh; min-height: 420px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elev); position: relative; overflow: hidden; box-shadow: var(--shadow-1); }
-.explore-layout #legend-card { margin: 0; position: sticky; top: 5rem; }
-.explore-layout .legend { max-height: 60vh; }
+.explore-layout #legend-card { margin: 0; height: 70vh; min-height: 420px; display: flex; flex-direction: column; overflow: hidden; }
+.explore-layout .legend { flex: 1 1 auto; max-height: none; overflow-y: auto; margin-top: .4rem; }
+@media (max-width: 760px) {
+  .explore-layout { grid-template-columns: 1fr; }
+  .explore-layout #legend-card { height: auto; min-height: 0; }
+  .explore-layout .legend { max-height: 40vh; }
+}
 .legend { display: grid; gap: 0.15rem; max-height: 40vh; overflow-y: auto; }
 .legend label { display: flex; align-items: center; gap: var(--s2); font-size: var(--fs-sm); padding: 0.15rem 0; }
 .legend .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; flex: none; }
