@@ -67,7 +67,12 @@ async function handle(req, res, urlPath) {
     const m = budget.monthStats();
     // Public: only a friendly analysis count + the recent list. No model, tokens,
     // spend, queue internals, or hashes.
-    const out = { month: { month: m.month, analyses: m.analyses }, counts: store.counts(), recent: store.recentList(30) };
+    const out = {
+      month: { month: m.month, analyses: m.analyses },
+      counts: store.counts(),
+      recent: store.recentList(30),
+      leaderboard: { sources: store.rankSources(8), writers: store.rankWriters(8), minArticles: store.MIN_ARTICLES },
+    };
     if (isAdmin(req)) {
       out.provider = provider.status();
       out.rubric = { version: rubric.RUBRIC_VERSION, sha256: rubric.rubricShort() };

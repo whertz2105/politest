@@ -467,3 +467,21 @@ details.card summary { cursor: pointer; }
   border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .4rem;
 }
 .recent-scroll .article-card { background: var(--bg); }
+
+/* ===== Bias leaderboard (Analyze page) ================================== */
+.lb-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+@media (max-width: 620px) { .lb-cols { grid-template-columns: 1fr; } }
+.lb-h { font-family: var(--serif); font-size: var(--fs-md); margin: 0 0 .4rem; }
+.lb-list { display: flex; flex-direction: column; gap: .4rem; }
+.lb-row {
+  display: flex; align-items: center; gap: .6rem; padding: .45rem .6rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-elev); text-decoration: none; color: var(--fg);
+}
+.lb-row:hover { border-color: var(--accent); }
+.lb-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.lb-sub { font-weight: 400; font-size: var(--fs-xs); }
+.lb-lean { font-size: var(--fs-xs); white-space: nowrap; }
+.lb-lean.neg { color: var(--neg); } .lb-lean.pos { color: var(--pos); }
+.lb-num { font-family: var(--mono); font-weight: 700; }
+.lb-n { font-size: var(--fs-xs); min-width: 1.4em; text-align: right; }

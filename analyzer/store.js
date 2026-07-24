@@ -199,6 +199,34 @@ function sourceProfile(domain) {
   };
 }
 
+// Rank sources / writers by how far their average lean sits from center.
+// `min` = minimum number of analyzed articles WITH a detected stance to qualify.
+function groupBy(keyFn) {
+  const m = new Map();
+  for (const r of analyses) { const k = keyFn(r); if (!k) continue; if (!m.has(k)) m.set(k, []); m.get(k).push(r); }
+  return m;
+}
+function rankSources(limit, min) {
+  min = min || MIN_ARTICLES;
+  const out = [];
+  for (const [domain, recs] of groupBy((r) => r.source)) {
+    const lr = aggregateLR(recs);
+    if (lr.n >= min) out.push({ domain, lr, articleCount: recs.filter((r) => !r.flagged).length });
+  }
+  out.sort((a, b) => Math.abs(b.lr.x) - Math.abs(a.lr.x) || b.lr.n - a.lr.n);
+  return out.slice(0, limit || 10);
+}
+function rankWriters(limit, min) {
+  min = min || MIN_ARTICLES;
+  const out = [];
+  for (const [writerKey, recs] of groupBy((r) => r.writerKey)) {
+    const lr = aggregateLR(recs);
+    if (lr.n >= min) out.push({ writerKey, name: recs[0].writer, domain: recs[0].source, lr, articleCount: recs.filter((r) => !r.flagged).length });
+  }
+  out.sort((a, b) => Math.abs(b.lr.x) - Math.abs(a.lr.x) || b.lr.n - a.lr.n);
+  return out.slice(0, limit || 10);
+}
+
 function recentList(limit) {
   return analyses.slice(-Math.max(1, limit || 30)).reverse().map(articleCard);
 }
@@ -209,5 +237,5 @@ function counts() {
 
 module.exports = {
   init, addAnalysis, getById, getByUrl, normalizeUrl, writerKeyOf, normalizeName,
-  writerProfile, sourceProfile, recentList, counts, MIN_ARTICLES,
+  writerProfile, sourceProfile, recentList, counts, rankSources, rankWriters, MIN_ARTICLES,
 };

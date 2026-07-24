@@ -56,11 +56,21 @@
       <h2 class="section-h">Recently analyzed</h2>
       <div class="article-list recent-scroll" id="recent"></div>
     </section>
+
+    <section class="card">
+      <h2 class="section-h" style="margin-top:0">Most biased in this dataset</h2>
+      <p class="muted" id="lb-note" style="font-size:.85rem;margin:-.2rem 0 .6rem"></p>
+      <div class="lb-cols">
+        <div><h3 class="lb-h">Outlets</h3><div class="lb-list" id="lb-sources"></div></div>
+        <div><h3 class="lb-h">Authors</h3><div class="lb-list" id="lb-writers"></div></div>
+      </div>
+    </section>
   </main>
 
   <script type="module">
     import { initShell, escapeHtml } from "./js/app.js";
     import { miniLeftRightBar } from "./js/analyzer-ui.js";
+    import { lrLabel } from "./js/leftright.js";
     initShell("analyze.html");
 
     const $ = (id) => document.getElementById(id);
@@ -175,8 +185,32 @@
              <span class="article-card-title">${escapeHtml(c.title || c.url || "Untitled")}</span>
              ${miniLeftRightBar(c.lr)}</a>`).join("")
           || '<p class="muted">No analyses yet — be the first.</p>';
+        renderLeaderboard(d.leaderboard);
       } catch { $("stats-line").textContent = ""; }
     }
+    function lbRow(kind, e) {
+      const lr = e.lr || { x: 0, n: 0 };
+      const href = kind === "source"
+        ? "profile.html#source=" + encodeURIComponent(e.domain)
+        : "profile.html#writer=" + encodeURIComponent(e.writerKey);
+      const name = kind === "source" ? e.domain : (e.name || "Unknown");
+      const sub = kind === "writer" && e.domain ? ` <span class="muted lb-sub">${escapeHtml(e.domain)}</span>` : "";
+      const dir = lr.x < 0 ? "neg" : "pos";
+      const s = (lr.x > 0 ? "+" : "") + lr.x;
+      return `<a class="lb-row" href="${href}">
+        <span class="lb-name">${escapeHtml(name)}${sub}</span>
+        ${miniLeftRightBar(lr)}
+        <span class="lb-lean ${dir}">${escapeHtml(lrLabel(lr.x))} <span class="lb-num">${s}</span></span>
+        <span class="muted lb-n" title="analyzed articles with a detected stance">${lr.n || 0}</span>
+      </a>`;
+    }
+    function renderLeaderboard(lb) {
+      lb = lb || { sources: [], writers: [] };
+      $("lb-note").textContent = `Ranked by distance from center · ${lb.minArticles || 3}+ analyzed articles with a detected stance.`;
+      $("lb-sources").innerHTML = (lb.sources || []).length ? lb.sources.map((e) => lbRow("source", e)).join("") : '<p class="muted">Not enough data yet.</p>';
+      $("lb-writers").innerHTML = (lb.writers || []).length ? lb.writers.map((e) => lbRow("writer", e)).join("") : '<p class="muted">Not enough data yet.</p>';
+    }
+
     loadStats();
   </script>
 </body>
