@@ -123,7 +123,8 @@
           const ok = it.certOk;
           const receipt = it.analysisId ? ` <a href="article.html#id=${encodeURIComponent(it.analysisId)}" target="_blank">receipt</a>` : "";
           return `<div class="brief-admin-item" data-brief="${b.id}" data-idx="${i}">
-            <span class="brief-status ${ok ? "ok" : "bad"}">${ok ? "✓ certified" : "✗ needs human edit"}</span>${receipt}
+            <div class="ba-head"><span class="brief-status ${ok ? "ok" : "bad"}">${ok ? "✓ certified" : "✗ needs human edit"}</span>${receipt}
+              <button class="ba-x" type="button" title="Delete this item" aria-label="Delete item">✕</button></div>
             <input class="ba-headline" value="${escapeHtml(it.headline || "")}" maxlength="90">
             <textarea class="ba-summary" rows="3">${escapeHtml(it.summary || "")}</textarea>
             <textarea class="ba-why" rows="2">${escapeHtml(it.why_it_matters || "")}</textarea>
@@ -151,6 +152,16 @@
           await fetch("/api/brief/admin/edit", { method: "POST", headers: { "content-type": "application/json" },
             body: JSON.stringify({ id: row.dataset.brief, index: Number(row.dataset.idx),
               headline: row.querySelector(".ba-headline").value, summary: row.querySelector(".ba-summary").value, why_it_matters: row.querySelector(".ba-why").value }) });
+          renderBriefAdmin();
+        } catch { btn.disabled = false; }
+      }));
+      box.querySelectorAll(".ba-x").forEach((btn) => btn.addEventListener("click", async () => {
+        const row = btn.closest(".brief-admin-item");
+        if (!confirm("Delete this item from the brief?")) return;
+        btn.disabled = true;
+        try {
+          await fetch("/api/brief/admin/remove", { method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ id: row.dataset.brief, index: Number(row.dataset.idx) }) });
           renderBriefAdmin();
         } catch { btn.disabled = false; }
       }));

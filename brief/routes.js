@@ -105,6 +105,23 @@ async function handle(req, res, urlPath) {
       return true;
     }
 
+    if (urlPath === "/api/brief/admin/remove" && req.method === "POST") {
+      const p = JSON.parse((await readBody(req)) || "{}");
+      const b = store.getById(p.id);
+      if (!b) { sendJson(res, 404, { error: "no such brief" }); return true; }
+      // Drop an item entirely (e.g. one that won't pass the neutrality gate) so the
+      // rest of the brief can be approved. Index is into the combined items+review list.
+      const pool = [...(b.items || []), ...(b.review || [])];
+      const idx = Number(p.index);
+      if (!pool[idx]) { sendJson(res, 400, { error: "bad item index" }); return true; }
+      pool.splice(idx, 1);
+      b.items = pool.filter((x) => x.certOk);
+      b.review = pool.filter((x) => !x.certOk);
+      store.save(b);
+      sendJson(res, 200, { ok: true, certifiable: allCertified(b) });
+      return true;
+    }
+
     if (urlPath === "/api/brief/admin/recertify" && req.method === "POST") {
       const p = JSON.parse((await readBody(req)) || "{}");
       const b = store.getById(p.id);

@@ -657,6 +657,9 @@ details.card summary { cursor: pointer; }
 
 /* ===== Brief admin (account page) ====================================== */
 .brief-admin-item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .6rem .8rem; margin: .5rem 0; }
+.ba-head { display: flex; align-items: center; gap: .5rem; }
+.ba-x { margin-left: auto; flex: 0 0 auto; min-height: 26px; min-width: 26px; padding: 0 .35rem; line-height: 1; font-size: .95rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg-elev); color: var(--fg-dim); cursor: pointer; }
+.ba-x:hover { color: var(--bad); border-color: var(--bad); }
 .brief-admin-item textarea, .brief-admin-item input { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: .4rem .5rem; font: inherit; font-size: var(--fs-sm); margin: .2rem 0; }
 .brief-status { font-size: var(--fs-xs); font-weight: 700; }
 .brief-status.ok { color: var(--good); } .brief-status.bad { color: var(--warn); }
