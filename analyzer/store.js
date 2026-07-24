@@ -20,13 +20,15 @@ const MIN_ARTICLES = 3;
 
 let AXIS_KEYS = [];
 let STORE_FILE = "";
+let leftRightFn = null;       // injected from server.js (shared js/leftright.js)
 const analyses = [];          // full records, in insertion order
 const byId = new Map();       // id -> record
 const byUrl = new Map();      // normalized url -> id (dedupe)
 
-function init(axisKeys, storeFile) {
+function init(axisKeys, storeFile, lrFn) {
   AXIS_KEYS = axisKeys;
   STORE_FILE = storeFile;
+  leftRightFn = typeof lrFn === "function" ? lrFn : null;
   load();
 }
 
@@ -133,7 +135,10 @@ function aggregate(records) {
 }
 
 function articleCard(r) {
-  return { id: r.id, title: r.title, url: r.url, genre: r.genre, stance_detected: r.stance_detected, flagged: r.flagged, ts: r.ts };
+  const card = { id: r.id, title: r.title, url: r.url, genre: r.genre, stance_detected: r.stance_detected, flagged: r.flagged, ts: r.ts };
+  // Precomputed left↔right position for list mini-bars (flagged excluded — no lean shown).
+  if (leftRightFn && !r.flagged) card.lr = leftRightFn(r.axes || {});
+  return card;
 }
 
 function writerProfile(writerKey) {

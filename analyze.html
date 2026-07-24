@@ -60,6 +60,7 @@
 
   <script type="module">
     import { initShell, escapeHtml } from "./js/app.js";
+    import { miniLeftRightBar } from "./js/analyzer-ui.js";
     initShell("analyze.html");
 
     const $ = (id) => document.getElementById(id);
@@ -161,7 +162,8 @@
           `<a class="article-card" href="article.html#id=${encodeURIComponent(c.id)}">
              <span class="genre-chip genre-${c.genre} sm">${GENRE[c.genre] || c.genre}</span>
              ${c.flagged ? '<span class="genre-chip caution sm">caution</span>' : ""}
-             <span class="article-card-title">${escapeHtml(c.title || c.url || "Untitled")}</span></a>`).join("")
+             <span class="article-card-title">${escapeHtml(c.title || c.url || "Untitled")}</span>
+             ${miniLeftRightBar(c.lr)}</a>`).join("")
           || '<p class="muted">No analyses yet — be the first.</p>';
       } catch { $("stats-line").textContent = ""; }
     }

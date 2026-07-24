@@ -5,6 +5,9 @@
 import { AXES, AXIS_KEYS, axisByKey } from "./axes.js";
 import { escapeHtml } from "./app.js";
 import { renderBarReadout, wireQuadrant } from "./charts2d.js";
+import { leftRightScore, lrLabel } from "./leftright.js";
+
+export { leftRightScore };
 
 export const DISCLAIMER =
   `<p class="disclaimer">Automated analysis by a language model against a
@@ -16,38 +19,17 @@ const GENRE_LABEL = { report: "Report", analysis: "Analysis", opinion: "Opinion"
 function sign(n) { return (n > 0 ? "+" : "") + n; }
 function pctX(v) { return Math.max(0, Math.min(100, (v + 100) / 2)); }
 
-// ---- Traditional American left–right composite ---------------------------
-// Signed methodology weight per axis: + = the axis's POSITIVE pole is US-right-
-// coded, − = the positive pole is US-left-coded; magnitude = how load-bearing the
-// axis is for partisan placement. Axes with no clean partisan coding are omitted
-// (weight 0) and do not move the needle: trd, auth_pat, auth_pw, dem_tc,
-// trust_pol, trust_sys, meth_scope, meth_means, tech.
-const LR_WEIGHTS = {
-  mkt: 1, wel: 1, soc: 1, imm: 1, env: 0.9, rel: 0.8, jus: 0.8, natl: 0.8,
-  dem_fr: 0.6, sec: 0.5, fp: 0.3,   // right-coded positive pole
-  spe: -0.7, fed: -0.6,             // left-coded positive pole (regulated speech; federal centralization)
-};
+// The left↔right composite (LR_WEIGHTS, leftRightScore, lrLabel) lives in
+// ./leftright.js so the backend shares the exact same scoring.
 
-// axesMap: { key: { score, confidence? } }. Returns { x: −100..+100 (+ = right), hasSignal }.
-export function leftRightScore(axesMap) {
-  let num = 0, den = 0;
-  for (const k in axesMap) {
-    const w = LR_WEIGHTS[k]; if (!w) continue;
-    const s = Number(axesMap[k].score); if (!Number.isFinite(s)) continue;
-    const c = axesMap[k].confidence == null ? 1 : Math.max(0, Math.min(1, Number(axesMap[k].confidence)));
-    num += s * Math.sign(w) * Math.abs(w) * c;
-    den += Math.abs(w) * 100 * c;
-  }
-  const x = den ? Math.max(-100, Math.min(100, Math.round((num / den) * 100))) : 0;
-  return { x, hasSignal: den > 0 };
-}
-
-function lrLabel(x) {
-  const a = Math.abs(x), side = x < 0 ? "left" : "right", Side = x < 0 ? "Left" : "Right";
-  if (a < 8) return "Centrist";
-  if (a < 25) return `Center-${side}`;
-  if (a < 50) return `${Side}-leaning`;
-  return `Strongly ${side}`;
+// A compact left↔right indicator for list rows (right of an article title).
+// `lr` is { x, hasSignal } (as computed by leftRightScore), or null.
+export function miniLeftRightBar(lr) {
+  if (!lr) return "";
+  const x = Math.max(-100, Math.min(100, Number(lr.x) || 0));
+  const pos = (x + 100) / 2;
+  const title = lr.hasSignal ? `${lrLabel(x)} (${x > 0 ? "+" : ""}${x})` : "No partisan lean detected";
+  return `<span class="lr-mini" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"><span class="lr-mini-marker" style="left:${pos}%"></span></span>`;
 }
 
 // A left↔right barline shown on every analysis, even with no detected lean.
@@ -208,6 +190,7 @@ function articleCard(c) {
     <span class="genre-chip genre-${c.genre} sm">${(GENRE_LABEL[c.genre] || c.genre)}</span>
     ${c.flagged ? `<span class="genre-chip caution sm">caution</span>` : ""}
     <span class="article-card-title">${escapeHtml(c.title || c.url || "Untitled")}</span>
+    ${miniLeftRightBar(c.lr)}
   </a>`;
 }
 

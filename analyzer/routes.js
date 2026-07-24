@@ -19,8 +19,8 @@ const budget = require("./budget");
 const MAX_BODY = 200 * 1024; // analyzer bodies (pasted articles) are larger than crowd bodies
 
 let ready = false;
-function init(axisKeys) {
-  store.init(axisKeys, process.env.ANALYSES_FILE || require("path").join(__dirname, "..", "store", "analyses.jsonl"));
+function init(axisKeys, leftRightFn) {
+  store.init(axisKeys, process.env.ANALYSES_FILE || require("path").join(__dirname, "..", "store", "analyses.jsonl"), leftRightFn);
   budget.init(process.env.USAGE_FILE || require("path").join(__dirname, "..", "store", "analyzer-usage.jsonl"));
   analyze.init(axisKeys);
   ready = true;

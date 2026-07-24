@@ -195,7 +195,8 @@ const server = http.createServer(async (req, res) => {
   const axes = await import(pathToFileURL(path.join(ROOT, "js", "axes.js")).href);
   AXIS_KEYS = axes.AXIS_KEYS;
   LEGACY_MAP = axes.LEGACY_AXIS_MAP;
-  analyzerRoutes.init(AXIS_KEYS);
+  const lr = await import(pathToFileURL(path.join(ROOT, "js", "leftright.js")).href);
+  analyzerRoutes.init(AXIS_KEYS, lr.leftRightScore);
   loadStore();
   server.listen(PORT, HOST, () => console.log(`Politeion API on http://${HOST}:${PORT} (store: ${STORE_FILE})`));
 })().catch((e) => { console.error("startup failed:", e); process.exit(1); });
