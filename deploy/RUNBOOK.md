@@ -143,7 +143,13 @@ personal hardware is contacted.
    PROVIDER=anthropic
    MODEL=claude-haiku-4-5
    MONTHLY_BUDGET_USD=25
+   ANALYZER_ADMIN_KEY=<long-random-string>   # optional; see below
    ```
+   `ANALYZER_ADMIN_KEY` is optional: when set, a request carrying
+   `x-analyzer-admin: <that value>` skips the per-IP rate limit (for your own
+   testing). Unset ⇒ no bypass exists. Example:
+   `curl -X POST https://politeion.com/api/analyze -H 'content-type: application/json'
+   -H "x-analyzer-admin: $KEY" -d '{"url":"https://…"}'`.
    The **model is never hardcoded** — it comes from `MODEL`. The key never enters
    the repo, the app process, or any client response.
 2. **Wire it into the unit and restart.** The updated `politest.service` reads the
@@ -160,7 +166,7 @@ personal hardware is contacted.
 3. **Verify:**
    ```bash
    curl -s https://politeion.com/api/analyzer/stats   # provider.configured:true, model, month spend vs cap
-   curl -s https://politeion.com/api/rubric | head -c 80   # published rubric + hash
+   curl -s https://politeion.com/api/rubric | head -c 80   # methodology summary + hash (NOT the prompt)
    ```
    Then open `https://politeion.com/analyze.html`, paste a known op-ed URL, and
    confirm the analysis page shows a genre, per-axis scores each with a verbatim

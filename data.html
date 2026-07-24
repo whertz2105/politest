@@ -13,11 +13,9 @@
     <p class="muted">The full question bank, loaded and validated from <code>data/questions.json</code>.</p>
 
     <section id="rubric" class="card" style="margin:1rem 0">
-      <h2 style="margin-top:0">Analyzer rubric</h2>
-      <p class="muted">Every article analysis is scored against this exact system prompt — published in full for transparency. <span id="rubric-meta"></span></p>
-      <details><summary>Show full rubric text</summary>
-        <pre id="rubric-text" class="rubric-pre">Loading…</pre>
-      </details>
+      <h2 style="margin-top:0">Analyzer methodology</h2>
+      <p class="muted">How the article Analyzer scores stance and what it flags. The exact scoring prompt is proprietary; this is a summary of the method. <span id="rubric-meta"></span></p>
+      <div id="rubric-summary" class="md-body">Loading…</div>
     </section>
 
     <div id="validation"></div>
@@ -41,6 +39,45 @@
     import { questionsForMode, maxAttainable, itemCount } from "./js/scoring.js";
 
     initShell("data.html");
+
+    // Minimal markdown → HTML for the methodology summary: ##/### headings,
+    // GitHub-style tables, - lists, **bold**, `code`, and paragraphs.
+    function mdInline(s) {
+      return escapeHtml(s)
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>");
+    }
+    function mdToHtml(md) {
+      const lines = (md || "").split("\n");
+      let html = "", i = 0, para = [];
+      const flush = () => { if (para.length) { html += `<p>${mdInline(para.join(" "))}</p>`; para = []; } };
+      while (i < lines.length) {
+        const ln = lines[i];
+        if (/^\s*$/.test(ln)) { flush(); i++; continue; }
+        let m;
+        if ((m = ln.match(/^(#{2,4})\s+(.*)$/))) { flush(); const l = m[1].length; html += `<h${l}>${mdInline(m[2])}</h${l}>`; i++; continue; }
+        if (/^\s*\|.*\|\s*$/.test(ln) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])) {
+          flush();
+          const row = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+          const head = row(ln);
+          i += 2;
+          const body = [];
+          while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { body.push(row(lines[i])); i++; }
+          html += `<table class="md-table"><thead><tr>${head.map((c) => `<th>${mdInline(c)}</th>`).join("")}</tr></thead><tbody>` +
+            body.map((r) => `<tr>${r.map((c) => `<td>${mdInline(c)}</td>`).join("")}</tr>`).join("") + `</tbody></table>`;
+          continue;
+        }
+        if (/^\s*[-*]\s+/.test(ln)) {
+          flush(); const items = [];
+          while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*[-*]\s+/, "")); i++; }
+          html += `<ul>${items.map((t) => `<li>${mdInline(t)}</li>`).join("")}</ul>`;
+          continue;
+        }
+        para.push(ln.trim()); i++;
+      }
+      flush();
+      return html;
+    }
 
     let questions = [];
     let bankVersion = 2, approximated = [], hasSev = false;
@@ -148,13 +185,13 @@
     }
 
     (async () => {
-      // Publish the Analyzer rubric (from the API; degrades quietly if offline).
+      // Publish the Analyzer methodology summary (from the API; degrades quietly if offline).
       try {
         const rr = await fetch("/api/rubric", { cache: "no-cache" });
         if (rr.ok) {
           const rj = await rr.json();
           document.getElementById("rubric-meta").textContent = `Rubric ${rj.version} · sha256 ${rj.sha256.slice(0, 16)}…`;
-          document.getElementById("rubric-text").textContent = rj.text;
+          document.getElementById("rubric-summary").innerHTML = mdToHtml(rj.summary || "");
         } else { document.getElementById("rubric").style.display = "none"; }
       } catch { document.getElementById("rubric").style.display = "none"; }
 

@@ -134,13 +134,15 @@ async function pump() {
 }
 
 // Public entry. Returns { dedupe?, id, existing? } or throws with .code.
-async function submit({ ip, url, text, meta }) {
+// `admin` (owner testing, via a matched ANALYZER_ADMIN_KEY header) skips the
+// per-IP rate limit; the queue cap and serial worker still apply.
+async function submit({ ip, url, text, meta, admin }) {
   // URL dedupe first — cheap, spends no tokens, not rate-limited.
   if (url) {
     const existing = store.getByUrl(url);
     if (existing) return { id: existing.id, existing: true };
   }
-  if (!rateAllow(ip || "unknown")) { const e = new Error("rate limit: 5 submissions per hour"); e.code = "rate"; throw e; }
+  if (!admin && !rateAllow(ip || "unknown")) { const e = new Error("rate limit: 5 submissions per hour"); e.code = "rate"; throw e; }
   if (queue.length >= QUEUE_CAP) { const e = new Error("analysis queue is full, try again shortly"); e.code = "queue"; throw e; }
 
   const job = url ? { kind: "url", url } : { kind: "text", text, meta };

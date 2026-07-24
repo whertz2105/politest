@@ -49,7 +49,9 @@ async function handle(req, res, urlPath) {
   if (!ready) return false;
 
   if (urlPath === "/api/rubric" && req.method === "GET") {
-    sendJson(res, 200, { version: rubric.RUBRIC_VERSION, sha256: rubric.rubricSha256(), text: rubric.rubricText() });
+    // Publish the methodology SUMMARY + provenance hash only. The scoring prompt
+    // itself is proprietary and is never returned.
+    sendJson(res, 200, { version: rubric.RUBRIC_VERSION, sha256: rubric.rubricSha256(), summary: rubric.rubricSummary() });
     return true;
   }
 
@@ -98,11 +100,17 @@ async function handle(req, res, urlPath) {
       if (!url && !text) { sendJson(res, 400, { error: "provide a url or article text" }); return true; }
       if (url && !/^https?:\/\//i.test(url)) { sendJson(res, 400, { error: "url must start with http:// or https://" }); return true; }
 
+      // Owner test bypass: an x-analyzer-admin header matching ANALYZER_ADMIN_KEY
+      // (when that env var is set and non-empty) skips the per-IP rate limit.
+      const adminKey = (process.env.ANALYZER_ADMIN_KEY || "").trim();
+      const admin = adminKey.length > 0 && req.headers["x-analyzer-admin"] === adminKey;
+
       const out = await analyze.submit({
         ip: clientIp(req),
         url: url || null,
         text: url ? null : text,
         meta: { byline: p.byline, outlet: p.outlet, title: p.title },
+        admin,
       });
       sendJson(res, 200, { ok: true, id: out.id, existing: !!out.existing });
     } catch (e) {
