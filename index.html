@@ -46,6 +46,14 @@
       <p class="muted" id="count-note" style="font-size:0.85rem"></p>
     </section>
 
+    <section class="home-brief" id="home-brief" hidden>
+      <div class="home-brief-head">
+        <h2>Daily Brief <span class="muted" id="home-brief-date" style="font-weight:400;font-size:var(--fs-sm)"></span></h2>
+        <a class="btn" href="brief.html">Read the full brief →</a>
+      </div>
+      <div id="home-brief-items"></div>
+    </section>
+
     <section class="feature-grid">
       <div class="card"><h3>22 axes</h3><p class="muted">Not left–right. Twenty-two independent dimensions — economy, culture, liberty, state power, foreign policy, environment and more.</p></div>
       <div class="card"><h3>Honest labels</h3><p class="muted">Archetype matching is full-vector and salience-weighted, with confidence bands and consistency checks. Every label lists what you actually disagree with.</p></div>
@@ -54,10 +62,67 @@
     </section>
   </main>
 
+  <div class="intro-modal" id="intro-modal" hidden>
+    <div class="intro-card" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+      <span class="eyebrow">Welcome</span>
+      <h2 id="intro-title">What Politeion is</h2>
+      <p class="muted">A civic instrument for reading politics past the left–right line. Three parts, one 22-axis model:</p>
+      <ul class="intro-list">
+        <li><b>The compass</b> — a self-test that places you on 22 independent axes (economy, culture, liberty, state power, foreign policy and more), then matches you to ideological archetypes and historical figures.</li>
+        <li><b>The Analyzer</b> — paste any article and see the <em>stance of the piece</em> scored on those same axes, with a verbatim quote behind every score.</li>
+        <li><b>The Daily Brief</b> — a neutral daily read whose every item is machine-checked for <em>no detectable stance</em> before it's published.</li>
+      </ul>
+      <p class="muted" style="font-size:var(--fs-sm)">No accounts required. Your results are anonymous.</p>
+      <div class="btn-row" style="margin-top:var(--s4)"><button class="btn btn-primary" id="intro-dismiss" type="button">Get started</button></div>
+    </div>
+  </div>
+
   <script type="module">
-    import { initShell, loadProgress } from "./js/app.js";
+    import { initShell, loadProgress, escapeHtml } from "./js/app.js";
     import { APP_NAME, APP_TAGLINE, FULL_TEST_SIZE, QUICK_TEST_SIZE } from "./js/axes.js";
     initShell("index.html");
+
+    // First-visit intro: explains the site once, then never again (dc_intro_seen).
+    (function intro() {
+      let seen = false;
+      try { seen = localStorage.getItem("dc_intro_seen") === "1"; } catch {}
+      const modal = document.getElementById("intro-modal");
+      if (seen || !modal) return;
+      modal.hidden = false;
+      const close = () => {
+        modal.hidden = true;
+        try { localStorage.setItem("dc_intro_seen", "1"); } catch {}
+        document.removeEventListener("keydown", onKey);
+      };
+      const onKey = (e) => { if (e.key === "Escape") close(); };
+      modal.addEventListener("click", (e) => { if (e.target === modal) close(); });
+      document.getElementById("intro-dismiss").addEventListener("click", close);
+      document.addEventListener("keydown", onKey);
+      document.getElementById("intro-dismiss").focus();
+    })();
+
+    // Latest Daily Brief on the home page (loaded after paint; degrades to hidden
+    // when the API isn't reachable, e.g. a static/local preview).
+    (async () => {
+      const sec = document.getElementById("home-brief");
+      try {
+        const r = await fetch("/api/brief/latest", { cache: "no-cache" });
+        if (!r.ok) return;
+        const b = (await r.json()).brief;
+        sec.hidden = false;
+        const items = document.getElementById("home-brief-items");
+        if (!b || !(b.items || []).length) {
+          items.innerHTML = `<p class="muted">The first Daily Brief is coming soon — a neutral daily read, every item machine-checked for no detectable stance. <a href="brief.html">Preview →</a></p>`;
+          return;
+        }
+        document.getElementById("home-brief-date").textContent = "· " + b.date;
+        const top = b.items.slice(0, 5);
+        items.innerHTML =
+          `<ul class="home-brief-list">${top.map((it) =>
+            `<li><a href="brief.html?date=${encodeURIComponent(b.date)}">${escapeHtml(it.headline)}</a></li>`).join("")}</ul>
+           <p class="home-brief-cert">✓ All ${b.items.length} item${b.items.length === 1 ? "" : "s"} scored no detectable stance under rubric ${escapeHtml(b.rubric_version || "v?")}.</p>`;
+      } catch { /* leave hidden */ }
+    })();
     document.title = APP_NAME;
     document.getElementById("app-title").textContent = APP_NAME;
     document.getElementById("app-tagline").textContent = APP_TAGLINE;

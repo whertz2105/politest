@@ -560,6 +560,30 @@ details.card summary { cursor: pointer; }
 .lb-n { font-size: var(--fs-xs); white-space: nowrap; margin-left: auto; }
 .split-exp-lb .split-pane[data-pane="recent"] { padding: var(--s3); }
 
+/* ===== First-visit intro modal ========================================= */
+.intro-modal { position: fixed; inset: 0; z-index: 350; display: grid; place-items: center; padding: var(--s4);
+  background: color-mix(in srgb, #000 62%, transparent); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.intro-card { background: var(--bg-elev); border: 1px solid var(--border-strong); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3); max-width: 560px; width: 100%; padding: var(--s6) var(--s5); max-height: 92vh; overflow-y: auto; }
+.intro-card .eyebrow { display: block; margin-bottom: var(--s2); }
+.intro-card h2 { font-family: var(--serif); font-size: var(--fs-xl); margin: .1rem 0 .5rem; }
+.intro-list { list-style: none; padding: 0; margin: var(--s4) 0; display: grid; gap: var(--s3); }
+.intro-list li { position: relative; padding-left: 1.5rem; line-height: 1.5; }
+.intro-list li b { font-family: var(--serif); color: var(--fg); }
+.intro-list li::before { content: "◆"; position: absolute; left: 0; top: .28rem; color: var(--gold); font-size: .65rem; }
+
+/* ===== Home-page Daily Brief ============================================ */
+.home-brief { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elev);
+  padding: var(--s5); box-shadow: var(--shadow-1); }
+.home-brief-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
+.home-brief-head h2 { font-family: var(--serif); margin: 0; font-size: var(--fs-lg); }
+.home-brief-list { list-style: none; padding: 0; margin: var(--s3) 0 0; }
+.home-brief-list li { padding: .5rem 0; border-bottom: 1px solid var(--border); }
+.home-brief-list li:last-child { border-bottom: none; }
+.home-brief-list a { font-family: var(--serif); color: var(--fg); }
+.home-brief-list a:hover { color: var(--accent); }
+.home-brief-cert { font-size: var(--fs-xs); color: var(--good); margin: .6rem 0 0; }
+
 /* ===== Daily Brief ====================================================== */
 .brief-wrap { max-width: 760px; }
 .brief-head { text-align: center; padding: var(--s5) 0 var(--s3); border-bottom: 2px solid var(--gold); margin-bottom: var(--s5); }
