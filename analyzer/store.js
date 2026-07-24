@@ -74,7 +74,9 @@ function index(rec) {
   if (!rec || !rec.id) return;
   analyses.push(rec);
   byId.set(rec.id, rec);
-  if (rec.url) { const n = normalizeUrl(rec.url); if (n && !byUrl.has(n)) byUrl.set(n, rec.id); }
+  // Map the URL to the NEWEST analysis for it, so a forced admin re-scan becomes
+  // the canonical result future dedupe returns. (Load order is oldest→newest.)
+  if (rec.url) { const n = normalizeUrl(rec.url); if (n) byUrl.set(n, rec.id); }
 }
 
 // Store a completed analysis. `input` carries everything already validated.

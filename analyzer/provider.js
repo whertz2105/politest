@@ -75,21 +75,31 @@ async function callModel({ system, user }) {
   if (c.provider === "anthropic") {
     if (!c.anthropicKey) throw new Error("ANTHROPIC_API_KEY not configured");
     const url = (c.baseUrl || "https://api.anthropic.com") + "/v1/messages";
-    const { status: code, body } = await postJson(
-      url,
-      {
-        "content-type": "application/json",
-        "x-api-key": c.anthropicKey,
-        "anthropic-version": ANTHROPIC_VERSION,
-      },
-      {
+    const headers = {
+      "content-type": "application/json",
+      "x-api-key": c.anthropicKey,
+      "anthropic-version": ANTHROPIC_VERSION,
+    };
+    // Newer models (Opus 4.7/4.8, Sonnet 5, Fable/Mythos) reject sampling params
+    // like `temperature` with a 400; older ones (Haiku 4.5, Sonnet 4.6, Opus 4.6
+    // and earlier) accept them and benefit from temperature:0 for stable scoring.
+    const rejectsSampling = /(opus-4-[78]|sonnet-5|fable|mythos)/i.test(c.model);
+    const build = (withTemp) => {
+      const b = {
         model: c.model,
         max_tokens: MAX_TOKENS,
-        temperature: TEMPERATURE,
         system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: user }],
-      }
-    );
+      };
+      if (withTemp) b.temperature = TEMPERATURE;
+      return b;
+    };
+    let { status: code, body } = await postJson(url, headers, build(!rejectsSampling));
+    // Self-heal: if a model rejects temperature anyway (e.g. a future model not
+    // matched above), retry once without it.
+    if (code === 400 && !rejectsSampling && /temperature/i.test(body)) {
+      ({ status: code, body } = await postJson(url, headers, build(false)));
+    }
     let parsed;
     try { parsed = JSON.parse(body); } catch { throw new Error(`model HTTP ${code}: non-JSON response`); }
     if (code !== 200 || parsed.type === "error") {

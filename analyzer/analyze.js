@@ -135,10 +135,12 @@ async function pump() {
 
 // Public entry. Returns { dedupe?, id, existing? } or throws with .code.
 // `admin` (owner testing, via a matched ANALYZER_ADMIN_KEY header) skips the
-// per-IP rate limit; the queue cap and serial worker still apply.
-async function submit({ ip, url, text, meta, admin }) {
-  // URL dedupe first — cheap, spends no tokens, not rate-limited.
-  if (url) {
+// per-IP rate limit; the queue cap and serial worker still apply. `force` (admin
+// only) bypasses URL dedupe to run a fresh scan (e.g. after a rubric/model change).
+async function submit({ ip, url, text, meta, admin, force }) {
+  // URL dedupe first — cheap, spends no tokens, not rate-limited. Skipped when
+  // an admin forces a fresh re-scan.
+  if (url && !force) {
     const existing = store.getByUrl(url);
     if (existing) return { id: existing.id, existing: true };
   }

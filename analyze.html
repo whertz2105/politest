@@ -46,6 +46,9 @@
         <span id="status" class="muted" role="status" aria-live="polite"></span>
       </div>
       <p id="admin-note" class="muted" style="font-size:.8rem;margin:.2rem 0 0"></p>
+      <label id="force-wrap" class="muted" style="font-size:.8rem;display:none;margin:.15rem 0 0">
+        <input type="checkbox" id="force-rerun"> Force a fresh scan (ignore any cached result for this URL)
+      </label>
     </section>
 
     <section class="card">
@@ -90,7 +93,9 @@
     const adminKey = () => { try { return localStorage.getItem(ADMIN_LS) || ""; } catch { return ""; } };
     function renderAdmin() {
       const el = $("admin-note"), k = adminKey();
-      el.innerHTML = k ? `● Admin rate-limit bypass active — <a href="#" id="admin-off">turn off</a>` : "";
+      el.innerHTML = k ? `● Admin mode active (rate-limit bypass + force re-scan) — <a href="#" id="admin-off">turn off</a>` : "";
+      const fw = $("force-wrap");
+      if (fw) fw.style.display = k ? "block" : "none";
       const off = document.getElementById("admin-off");
       if (off) off.addEventListener("click", (e) => { e.preventDefault(); try { localStorage.removeItem(ADMIN_LS); } catch {} renderAdmin(); });
     }
@@ -111,10 +116,11 @@
         body.outlet = $("in-outlet").value.trim() || undefined;
         body.title = $("in-title").value.trim() || undefined;
       }
+      const k = adminKey();
+      if (k && $("force-rerun") && $("force-rerun").checked) body.force = true;
       setStatus("Analyzing… this can take up to a minute.", "muted");
       try {
         const headers = { "content-type": "application/json" };
-        const k = adminKey();
         if (k) headers["x-analyzer-admin"] = k;
         const res = await fetch("/api/analyze", { method: "POST", headers, body: JSON.stringify(body) });
         const data = await res.json();
@@ -128,26 +134,36 @@
     }
     go.addEventListener("click", submit);
 
-    // Live stats line + recent list.
+    // Live stats line + recent list. Public sees a friendly count; the operator
+    // detail (spend, tokens, model) appears only in admin mode.
     const GENRE = { report: "Report", analysis: "Analysis", opinion: "Opinion", mixed: "Mixed" };
     async function loadStats() {
       try {
-        const r = await fetch("/api/analyzer/stats", { cache: "no-cache" });
+        const headers = {}; const k = adminKey();
+        if (k) headers["x-analyzer-admin"] = k;
+        const r = await fetch("/api/analyzer/stats", { cache: "no-cache", headers });
         const d = await r.json();
         const m = d.month;
-        const spend = m.capUsd != null
-          ? `$${m.costUsd.toFixed(2)} of $${m.capUsd.toFixed(2)}${m.warn ? " ⚠ 80%+" : ""}${m.exhausted ? " — budget reached" : ""}`
-          : `$${m.costUsd.toFixed(2)} (no cap set)`;
-        const prov = d.provider.configured ? `${d.provider.model}` : "not configured";
-        $("stats-line").textContent =
-          `This month (${m.month}): ${m.analyses} analyses · ${(m.tokens.input + m.tokens.cacheRead + m.tokens.cacheCreation).toLocaleString()} in / ${m.tokens.output.toLocaleString()} out tokens · est. spend ${spend} · model ${prov} · queue ${d.queue}`;
+        if (d.provider) {
+          // admin view — full operator detail
+          const spend = m.capUsd != null
+            ? `$${m.costUsd.toFixed(2)} of $${m.capUsd.toFixed(2)}${m.warn ? " ⚠ 80%+" : ""}${m.exhausted ? " — budget reached" : ""}`
+            : `$${m.costUsd.toFixed(2)} (no cap set)`;
+          const prov = d.provider.configured ? `${d.provider.model}` : "not configured";
+          $("stats-line").textContent =
+            `[admin] ${m.month}: ${m.analyses} analyses · ${(m.tokens.input + m.tokens.cacheRead + m.tokens.cacheCreation).toLocaleString()} in / ${m.tokens.output.toLocaleString()} out · est. spend ${spend} · model ${prov} · queue ${d.queue}`;
+        } else {
+          // public view — no cost/model/token detail
+          const total = d.counts ? d.counts.analyses : 0;
+          $("stats-line").textContent = `${m.analyses} article${m.analyses === 1 ? "" : "s"} analyzed this month · ${total} in total.`;
+        }
         $("recent").innerHTML = (d.recent || []).map((c) =>
           `<a class="article-card" href="article.html#id=${encodeURIComponent(c.id)}">
              <span class="genre-chip genre-${c.genre} sm">${GENRE[c.genre] || c.genre}</span>
              ${c.flagged ? '<span class="genre-chip caution sm">caution</span>' : ""}
              <span class="article-card-title">${escapeHtml(c.title || c.url || "Untitled")}</span></a>`).join("")
           || '<p class="muted">No analyses yet — be the first.</p>';
-      } catch { $("stats-line").textContent = "Analyzer status unavailable."; }
+      } catch { $("stats-line").textContent = ""; }
     }
     loadStats();
   </script>

@@ -151,8 +151,7 @@ export function renderArticle(el, rec) {
   } else {
     html += `<div class="ax-list">${keys.map((k) => axisRow(k, rec.axes[k])).join("")}</div>`;
   }
-  html += `<p class="rubric-stamp muted">Scored against rubric ${escapeHtml(rec.rubric ? rec.rubric.version : "?")} ·
-     model ${escapeHtml(rec.rubric ? (rec.rubric.model || "?") : "?")} · hash ${escapeHtml(rec.rubric ? String(rec.rubric.sha256).slice(0, 12) : "?")}</p>`;
+  html += `<p class="rubric-stamp muted">Scored against the <a href="data.html#rubric">published rubric &amp; methodology</a>.</p>`;
   el.innerHTML = html;
 
   if (pairs.length) {

@@ -14,8 +14,12 @@
     <div id="view"><p class="muted">Loading analysis…</p></div>
     <div class="btn-row" style="justify-content:space-between">
       <button class="btn" type="button" id="back-btn">← Back</button>
-      <a class="btn" href="analyze.html">Analyze another article</a>
+      <span style="display:flex;gap:.6rem;align-items:center">
+        <button class="btn" type="button" id="rerun-btn" hidden>↻ Re-run scan</button>
+        <a class="btn" href="analyze.html">Analyze another article</a>
+      </span>
     </div>
+    <p id="rerun-status" class="muted" role="status" aria-live="polite" style="text-align:right;font-size:.85rem"></p>
   </main>
 
   <script type="module">
@@ -28,7 +32,33 @@
       if (history.length > 1) history.back(); else location.href = "analyze.html";
     });
 
+    const adminKey = () => { try { return localStorage.getItem("dc_analyzer_admin") || ""; } catch { return ""; } };
     const view = document.getElementById("view");
+    const rerunBtn = document.getElementById("rerun-btn");
+    const rerunStatus = document.getElementById("rerun-status");
+
+    // Admin-only: force a fresh scan of this article's URL, then open the new one.
+    function wireRerun(rec) {
+      const k = adminKey();
+      if (!k || !rec.url) { rerunBtn.hidden = true; return; }
+      rerunBtn.hidden = false;
+      rerunBtn.onclick = async () => {
+        rerunBtn.disabled = true;
+        rerunStatus.textContent = "Re-running fresh scan…";
+        try {
+          const res = await fetch("/api/analyze", {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-analyzer-admin": k },
+            body: JSON.stringify({ url: rec.url, force: true }),
+          });
+          const d = await res.json();
+          if (!res.ok) { rerunStatus.textContent = d.error || ("Error " + res.status); rerunBtn.disabled = false; return; }
+          location.hash = "id=" + encodeURIComponent(d.id); // hashchange → reload
+          rerunStatus.textContent = "";
+        } catch (e) { rerunStatus.textContent = "Network error: " + e.message; rerunBtn.disabled = false; }
+      };
+    }
+
     async function load() {
       const id = hashParams().id;
       if (!id) { view.innerHTML = '<div class="notice notice-warn">No analysis id in the link.</div>'; return; }
@@ -37,6 +67,7 @@
         if (r.status === 404) { view.innerHTML = '<div class="notice notice-warn">No such analysis.</div>'; return; }
         const d = await r.json();
         renderArticle(view, d.analysis);
+        wireRerun(d.analysis);
         document.title = (d.analysis.title || "Analysis") + " — Politeion";
       } catch (e) { view.innerHTML = '<div class="notice notice-warn">Could not load analysis: ' + e.message + '</div>'; }
     }

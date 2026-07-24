@@ -43,27 +43,37 @@ function clientIp(req) {
   if (typeof xff === "string" && xff.length) return xff.split(",")[0].trim();
   return (req.socket && req.socket.remoteAddress) || "unknown";
 }
+// Owner/operator requests carry x-analyzer-admin matching ANALYZER_ADMIN_KEY.
+// Operator-only detail (model, token usage, spend, hashes) is gated on this so it
+// never appears on the public site or in public API responses.
+function isAdmin(req) {
+  const k = (process.env.ANALYZER_ADMIN_KEY || "").trim();
+  return k.length > 0 && req.headers["x-analyzer-admin"] === k;
+}
 
 // Returns true if this request was (or will be) handled here.
 async function handle(req, res, urlPath) {
   if (!ready) return false;
 
   if (urlPath === "/api/rubric" && req.method === "GET") {
-    // Publish the methodology SUMMARY + provenance hash only. The scoring prompt
-    // itself is proprietary and is never returned.
-    sendJson(res, 200, { version: rubric.RUBRIC_VERSION, sha256: rubric.rubricSha256(), summary: rubric.rubricSummary() });
+    // Publish only the methodology summary. The scoring prompt and its hash are
+    // not returned.
+    sendJson(res, 200, { summary: rubric.rubricSummary() });
     return true;
   }
 
   if (urlPath === "/api/analyzer/stats" && req.method === "GET") {
-    sendJson(res, 200, {
-      provider: provider.status(),
-      rubric: { version: rubric.RUBRIC_VERSION, sha256: rubric.rubricShort() },
-      month: budget.monthStats(),
-      counts: store.counts(),
-      queue: analyze.queueDepth(),
-      recent: store.recentList(30),
-    });
+    const m = budget.monthStats();
+    // Public: only a friendly analysis count + the recent list. No model, tokens,
+    // spend, queue internals, or hashes.
+    const out = { month: { month: m.month, analyses: m.analyses }, counts: store.counts(), recent: store.recentList(30) };
+    if (isAdmin(req)) {
+      out.provider = provider.status();
+      out.rubric = { version: rubric.RUBRIC_VERSION, sha256: rubric.rubricShort() };
+      out.month = m;
+      out.queue = analyze.queueDepth();
+    }
+    sendJson(res, 200, out);
     return true;
   }
 
@@ -72,7 +82,12 @@ async function handle(req, res, urlPath) {
     const id = urlPath.slice("/api/analysis/".length);
     const rec = store.getById(id);
     if (!rec) { sendJson(res, 404, { error: "no such analysis" }); return true; }
-    sendJson(res, 200, { analysis: rec });
+    // Strip operator-only provenance (model, hash) from the public record; keep
+    // the human-facing rubric version only.
+    const out = { ...rec, rubric: rec.rubric ? { version: rec.rubric.version } : null };
+    delete out.usage;
+    delete out.injection; // still reflected via flags/notice; raw field not needed client-side
+    sendJson(res, 200, { analysis: out });
     return true;
   }
 
@@ -100,10 +115,8 @@ async function handle(req, res, urlPath) {
       if (!url && !text) { sendJson(res, 400, { error: "provide a url or article text" }); return true; }
       if (url && !/^https?:\/\//i.test(url)) { sendJson(res, 400, { error: "url must start with http:// or https://" }); return true; }
 
-      // Owner test bypass: an x-analyzer-admin header matching ANALYZER_ADMIN_KEY
-      // (when that env var is set and non-empty) skips the per-IP rate limit.
-      const adminKey = (process.env.ANALYZER_ADMIN_KEY || "").trim();
-      const admin = adminKey.length > 0 && req.headers["x-analyzer-admin"] === adminKey;
+      // Owner test bypass: skips the per-IP rate limit (see isAdmin).
+      const admin = isAdmin(req);
 
       const out = await analyze.submit({
         ip: clientIp(req),
@@ -111,6 +124,7 @@ async function handle(req, res, urlPath) {
         text: url ? null : text,
         meta: { byline: p.byline, outlet: p.outlet, title: p.title },
         admin,
+        force: admin && !!p.force, // force fresh re-scan (bypass dedupe) — admin only
       });
       sendJson(res, 200, { ok: true, id: out.id, existing: !!out.existing });
     } catch (e) {

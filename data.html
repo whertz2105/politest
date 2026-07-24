@@ -10,7 +10,7 @@
   <div data-shell></div>
   <main class="wrap">
     <h1>Question data</h1>
-    <p class="muted">The full question bank, loaded and validated from <code>data/questions.json</code>.</p>
+    <p class="muted">The full question bank behind the test.</p>
 
     <section id="rubric" class="card" style="margin:1rem 0">
       <h2 style="margin-top:0">Analyzer methodology</h2>
@@ -190,7 +190,6 @@
         const rr = await fetch("/api/rubric", { cache: "no-cache" });
         if (rr.ok) {
           const rj = await rr.json();
-          document.getElementById("rubric-meta").textContent = `Rubric ${rj.version} · sha256 ${rj.sha256.slice(0, 16)}…`;
           document.getElementById("rubric-summary").innerHTML = mdToHtml(rj.summary || "");
         } else { document.getElementById("rubric").style.display = "none"; }
       } catch { document.getElementById("rubric").style.display = "none"; }
