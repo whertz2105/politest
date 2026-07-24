@@ -107,7 +107,13 @@ async function runJob(job) {
   if (parsed === null) throw new Error("model did not return valid JSON after a repair attempt");
 
   const v = validateAnalysis(parsed, article, AXIS_KEYS);
+  // Forced re-run of a URL that already has an analysis: replace it in place so
+  // the id/link stays stable and no duplicate row is created.
+  const replaceId = job.kind === "url" && job.force && meta.url
+    ? (store.getByUrl(meta.url) || {}).id
+    : null;
   const rec = store.addAnalysis({
+    replaceId,
     url: meta.url,
     title,
     byline: meta.byline,
@@ -147,7 +153,7 @@ async function submit({ ip, url, text, meta, admin, force }) {
   if (!admin && !rateAllow(ip || "unknown")) { const e = new Error("rate limit: 5 submissions per hour"); e.code = "rate"; throw e; }
   if (queue.length >= QUEUE_CAP) { const e = new Error("analysis queue is full, try again shortly"); e.code = "queue"; throw e; }
 
-  const job = url ? { kind: "url", url } : { kind: "text", text, meta };
+  const job = url ? { kind: "url", url, force: !!force } : { kind: "text", text, meta };
   const p = new Promise((resolve, reject) => { job.resolve = resolve; job.reject = reject; });
   queue.push(job);
   pump();

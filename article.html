@@ -32,6 +32,14 @@
       if (history.length > 1) history.back(); else location.href = "analyze.html";
     });
 
+    // Returning via Back/Forward can restore the page from the bfcache with the
+    // re-run button still disabled from a prior run — re-enable it on restore.
+    window.addEventListener("pageshow", () => {
+      const b = document.getElementById("rerun-btn");
+      if (b && !b.hidden) b.disabled = false;
+      document.getElementById("rerun-status").textContent = "";
+    });
+
     const adminKey = () => { try { return localStorage.getItem("dc_analyzer_admin") || ""; } catch { return ""; } };
     const view = document.getElementById("view");
     const rerunBtn = document.getElementById("rerun-btn");
@@ -42,6 +50,7 @@
       const k = adminKey();
       if (!k || !rec.url) { rerunBtn.hidden = true; return; }
       rerunBtn.hidden = false;
+      rerunBtn.disabled = false;
       rerunBtn.onclick = async () => {
         rerunBtn.disabled = true;
         rerunStatus.textContent = "Re-running fresh scan…";
@@ -53,8 +62,12 @@
           });
           const d = await res.json();
           if (!res.ok) { rerunStatus.textContent = d.error || ("Error " + res.status); rerunBtn.disabled = false; return; }
-          location.hash = "id=" + encodeURIComponent(d.id); // hashchange → reload
           rerunStatus.textContent = "";
+          const target = "id=" + encodeURIComponent(d.id);
+          // Re-run replaces in place → same id → hashchange won't fire; refresh
+          // explicitly. If the id somehow differs, updating the hash reloads it.
+          if (location.hash.replace(/^#/, "") === target) await load();
+          else location.hash = target;
         } catch (e) { rerunStatus.textContent = "Network error: " + e.message; rerunBtn.disabled = false; }
       };
     }

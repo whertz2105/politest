@@ -74,17 +74,28 @@ function load() {
 }
 function index(rec) {
   if (!rec || !rec.id) return;
-  analyses.push(rec);
+  // Dedupe by id: a re-run persists a fresh line with the SAME id, and load()
+  // replays oldest→newest, so the latest version wins and there is never a
+  // duplicate row for the same analysis.
+  const existing = byId.get(rec.id);
+  if (existing) {
+    const i = analyses.indexOf(existing);
+    if (i >= 0) analyses[i] = rec; else analyses.push(rec);
+  } else {
+    analyses.push(rec);
+  }
   byId.set(rec.id, rec);
-  // Map the URL to the NEWEST analysis for it, so a forced admin re-scan becomes
-  // the canonical result future dedupe returns. (Load order is oldest→newest.)
   if (rec.url) { const n = normalizeUrl(rec.url); if (n) byUrl.set(n, rec.id); }
 }
 
 // Store a completed analysis. `input` carries everything already validated.
+// If input.replaceId names an existing analysis (a forced re-run), the record is
+// updated IN PLACE under the same id — so its URL/link stays stable and no
+// duplicate row appears in any list.
 function addAnalysis(input) {
+  const reuse = input.replaceId && byId.has(input.replaceId);
   const rec = {
-    id: newId(),
+    id: reuse ? input.replaceId : newId(),
     ts: new Date().toISOString(),
     url: input.url || null,
     title: input.title || null,
