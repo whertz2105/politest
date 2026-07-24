@@ -15,6 +15,7 @@
     <div class="subtabs" role="tablist" aria-label="Methodology sections">
       <button class="subtab" type="button" role="tab" id="tab-analyzer" data-tab="analyzer" aria-controls="panel-analyzer" aria-selected="true">Analyzer</button>
       <button class="subtab" type="button" role="tab" id="tab-test" data-tab="test" aria-controls="panel-test" aria-selected="false">Test</button>
+      <button class="subtab" type="button" role="tab" id="tab-candidates" data-tab="candidates" aria-controls="panel-candidates" aria-selected="false">Candidates</button>
     </div>
 
     <section id="panel-analyzer" role="tabpanel" aria-labelledby="tab-analyzer">
@@ -46,6 +47,35 @@
         <a class="btn" href="questions.html">Browse all questions →</a>
       </div>
     </section>
+
+    <section id="panel-candidates" role="tabpanel" aria-labelledby="tab-candidates" hidden>
+      <h2>Candidates methodology</h2>
+      <p class="muted">Candidate profiles apply the same 22-axis Analyzer to what candidates publish in their
+        own voice — measuring rhetoric, not records.</p>
+      <ul class="intro-list" style="margin:1rem 0">
+        <li><b>First-person sources only.</b> A source qualifies only if it is the candidate's own words — an
+          authored op-ed or essay, a floor/committee statement, a candidate questionnaire, or a verbatim
+          interview transcript. Third-person campaign pages ("Smith's platform…") do not qualify, however long.</li>
+        <li><b>Verbatim voice, never quote density.</b> A news feature that merely quotes a candidate is not
+          coverage of their voice; quote-dominated interview features are excluded in favor of transcripts and
+          authored text. (In this pilot two such interview items were removed from one candidate's sources under
+          this rule.)</li>
+        <li><b>The ≥3 threshold.</b> A per-axis score renders only once ≥2 analyzed sources support it, and the
+          full profile renders only at ≥3 qualifying sources. Below that, the candidate shows a thin-corpus
+          notice rather than a shaky profile.</li>
+        <li><b>Rhetoric, not votes.</b> Profiles measure what candidates <em>say</em> in their own published
+          words — not their votes, conduct, or record. Every axis cites the verbatim evidence behind it.</li>
+        <li><b>Isolated from the Analyzer's public data.</b> Candidate analyses never enter the outlet/author
+          leaderboard or aggregates — a floor speech fetched from a <code>.gov</code> domain never mints an
+          outlet profile.</li>
+      </ul>
+      <div id="cand-provenance"></div>
+      <div id="cand-validation"></div>
+      <p class="muted" style="font-size:.85rem"><b>Refresh calendar.</b> Six Alabama nominee slots (AL-1, AL-2,
+        AL-6, AL-7) remain pending the <b>August 11, 2026</b> special primaries created by the 2026 adoption of
+        the 2023 remedial congressional map; those races re-verify after Aug 11. The 2028 tracker is reviewed
+        monthly. Full source-by-source provenance is in <code>docs/CANDIDATES_PROVENANCE.md</code>.</p>
+    </section>
   </main>
 
   <script type="module">
@@ -55,8 +85,8 @@
 
     initShell("data.html");
 
-    // ----- sub-tabs: Analyzer | Test (hash-addressable, e.g. data.html#test) --
-    const TABS = ["analyzer", "test"];
+    // ----- sub-tabs: Analyzer | Test | Candidates (hash-addressable) --
+    const TABS = ["analyzer", "test", "candidates"];
     function showTab(name, push) {
       const tab = TABS.includes(name) ? name : "analyzer";
       for (const t of TABS) {
@@ -193,6 +223,21 @@
           if (b) document.getElementById("brief-ver").textContent = `Brief prompt ${b.brief_version || "v1"} · items certified under rubric ${b.rubric_version || "v3"}.`;
         }
       } catch { /* brief may not be live yet */ }
+
+      // Candidates: per-registry provenance versions + validation status.
+      try {
+        const cr = await fetch("/api/candidates/registries", { cache: "no-cache" });
+        if (cr.ok) {
+          const regs = (await cr.json()).registries || [];
+          document.getElementById("cand-provenance").innerHTML = regs.map((r) => {
+            const label = r.meta.state ? `${r.meta.state} ${r.meta.cycle}` : `${r.meta.office || "Tracker"} ${r.meta.cycle}`;
+            return `<div class="card" style="margin:.5rem 0"><b>${escapeHtml(label)}</b> — registry v${escapeHtml(String(r.meta.registryVersion || "?"))}, as of ${escapeHtml(r.meta.rosterAsOf || "—")}. <span class="good">✓</span> ${r.errors && r.errors.length ? `<span class="bad">${r.errors.length} error(s)</span>` : "no validation errors"}.</div>`;
+          }).join("");
+          const errs = regs.flatMap((r) => r.errors || []);
+          if (errs.length) document.getElementById("cand-validation").innerHTML =
+            `<details class="card validation-errors" open><summary>${errs.length} registry validation error(s)</summary><ul>${errs.map((e) => `<li>${escapeHtml(e)}</li>`).join("")}</ul></details>`;
+        }
+      } catch { /* candidates API may be offline in a static preview */ }
 
       let data;
       try { data = await loadQuestionData(); }

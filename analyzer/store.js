@@ -102,7 +102,8 @@ function addAnalysis(input) {
     writer: input.byline || null,
     source: input.domain || null,
     writerKey: writerKeyOf(input.byline, input.domain),
-    origin: input.origin || null,     // "brief" = internal Daily-Brief self-certification
+    origin: input.origin || null,     // "brief" | "candidate" = internal, non-public analyses
+    candidateId: input.candidateId || null, // set for origin "candidate"
     genre: input.analysis.genre,
     stance_detected: input.analysis.stance_detected,
     axes: input.analysis.axes,        // { key: {score, confidence, evidence} }
@@ -207,7 +208,7 @@ function bucketByMonth(records) {
 // subject has no non-flagged analyses. Carries only aggregate means/counts — no
 // bodies, no usage, no operator detail.
 function timeSeries(kind, key, opts = {}) {
-  const recs = analyses.filter((r) => !r.flagged && (kind === "writer" ? r.writerKey === key : r.source === key));
+  const recs = analyses.filter((r) => !r.flagged && !r.origin && (kind === "writer" ? r.writerKey === key : r.source === key));
   if (!recs.length) return null;
   const byGenre = {};
   for (const g of GENRE_LIST) byGenre[g] = bucketByMonth(recs.filter((r) => r.genre === g));
@@ -215,7 +216,9 @@ function timeSeries(kind, key, opts = {}) {
 }
 
 function writerProfile(writerKey) {
-  const recs = analyses.filter((r) => r.writerKey === writerKey);
+  // Only public scans (origin null) — a candidate/brief analysis never forms a
+  // writer profile even if it happens to carry a byline.
+  const recs = analyses.filter((r) => r.writerKey === writerKey && !r.origin);
   if (!recs.length) return null;
   const contributing = recs.filter((r) => !r.flagged);
   const sample = recs[0];
@@ -233,7 +236,9 @@ function writerProfile(writerKey) {
 }
 
 function sourceProfile(domain) {
-  const recs = analyses.filter((r) => r.source === domain);
+  // Only public scans — a floor speech fetched from tuberville.senate.gov (origin
+  // "candidate") must NEVER mint a "senate.gov" outlet profile.
+  const recs = analyses.filter((r) => r.source === domain && !r.origin);
   if (!recs.length) return null;
   const contributing = recs.filter((r) => !r.flagged);
   return {
@@ -251,7 +256,8 @@ function sourceProfile(domain) {
 // `min` = minimum number of analyzed articles WITH a detected stance to qualify.
 function groupBy(keyFn) {
   const m = new Map();
-  for (const r of analyses) { const k = keyFn(r); if (!k) continue; if (!m.has(k)) m.set(k, []); m.get(k).push(r); }
+  // origin-tagged analyses (brief, candidate) never enter the leaderboard.
+  for (const r of analyses) { if (r.origin) continue; const k = keyFn(r); if (!k) continue; if (!m.has(k)) m.set(k, []); m.get(k).push(r); }
   return m;
 }
 function rankSources(limit, min) {
@@ -275,10 +281,9 @@ function rankWriters(limit, min) {
   return out.slice(0, limit || 10);
 }
 
-// Brief self-certification analyses (origin "brief") are internal receipts, not
-// public article scans — keep them out of the recent list and the public counts
-// (they carry no source/writer, so they're already absent from aggregates/leaderboards).
-const isPublicAnalysis = (r) => r.origin !== "brief";
+// Internal analyses (origin set: "brief" certification, "candidate" profiling) are
+// not public article scans — keep them out of the recent list and the public counts.
+const isPublicAnalysis = (r) => !r.origin;
 
 function recentList(limit) {
   return analyses.filter(isPublicAnalysis).slice(-Math.max(1, limit || 30)).reverse().map(articleCard);
@@ -289,8 +294,47 @@ function counts() {
   return { analyses: pub.length, writers: new Set(pub.map((r) => r.writerKey).filter(Boolean)).size, sources: new Set(pub.map((r) => r.source).filter(Boolean)).size };
 }
 
+// ---- candidate profiling (origin "candidate", keyed by candidateId) -------
+// Mirrors the writer aggregate but over first-person candidate material only. Axes
+// render at ≥ axisMin (2) contributing non-flagged analyses; the caller treats
+// articleCount < CAND_PROFILE_MIN (3) as thin corpus. Every axis carries its
+// evidence quotes + source links — receipts everywhere.
+function hasCandidateAnalysis(url, candidateId) {
+  const n = normalizeUrl(url);
+  if (!n) return false;
+  return analyses.some((r) => r.origin === "candidate" && r.candidateId === candidateId && r.url && normalizeUrl(r.url) === n);
+}
+
+function candidateProfile(candidateId, opts = {}) {
+  const axisMin = opts.axisMin || 2;
+  const recs = analyses.filter((r) => r.origin === "candidate" && r.candidateId === candidateId);
+  const contributing = recs.filter((r) => !r.flagged);
+  const acc = {};
+  for (const k of AXIS_KEYS) acc[k] = { sum: 0, n: 0, evidence: [] };
+  for (const r of contributing) {
+    for (const k of Object.keys(r.axes || {})) {
+      if (!acc[k]) continue;
+      const a = r.axes[k];
+      if (typeof a.score !== "number") continue;
+      acc[k].sum += a.score; acc[k].n += 1;
+      if (a.evidence && acc[k].evidence.length < 4) acc[k].evidence.push({ quote: a.evidence, url: r.url, title: r.title, score: a.score, analysisId: r.id });
+    }
+  }
+  const axes = {};
+  for (const k of AXIS_KEYS) if (acc[k].n >= axisMin) axes[k] = { mean: Math.round(acc[k].sum / acc[k].n), n: acc[k].n, evidence: acc[k].evidence };
+  return {
+    candidateId,
+    articleCount: contributing.length,
+    axisMin,
+    profileMin: 3,
+    axes,
+    lr: aggregateLR(recs),
+    sources: recs.map((r) => ({ id: r.id, url: r.url, title: r.title, flagged: r.flagged })),
+  };
+}
+
 module.exports = {
   init, addAnalysis, getById, getByUrl, normalizeUrl, writerKeyOf, normalizeName,
   writerProfile, sourceProfile, recentList, counts, rankSources, rankWriters, MIN_ARTICLES,
-  timeSeries, bucketByMonth, monthKeyOf,
+  timeSeries, bucketByMonth, monthKeyOf, candidateProfile, hasCandidateAnalysis,
 };

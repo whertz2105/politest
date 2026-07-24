@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Candidates — Politeion</title>
+  <link rel="canonical" href="https://politeion.com/candidates.html">
+  <meta name="description" content="Where the candidates stand, in their own published words — scored on 22 axes.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap">
+    <section class="hero" style="padding-bottom:var(--s4)">
+      <span class="eyebrow">Candidates</span>
+      <h1>Where they stand, in their own words</h1>
+      <p class="muted">Candidate profiles score first-person material — speeches, op-eds, transcripts — on the same 22 axes. Rhetoric, not votes. Pilot: Alabama 2026, plus a rolling 2028 tracker.</p>
+    </section>
+
+    <div class="subtabs" role="tablist" aria-label="Candidate sections">
+      <button class="subtab" type="button" role="tab" id="tab-al" data-tab="al" aria-selected="true">Alabama 2026</button>
+      <button class="subtab" type="button" role="tab" id="tab-2028" data-tab="2028" aria-selected="false">2028 Watch</button>
+    </div>
+
+    <section id="panel-al">
+      <div class="card">
+        <h2 class="section-h" style="margin-top:0">Find your ballot</h2>
+        <div class="picker">
+          <input id="zip" type="text" inputmode="numeric" maxlength="5" placeholder="Alabama ZIP code" style="min-height:44px;padding:.4rem .7rem;background:var(--bg);color:var(--fg);border:1px solid var(--border-strong);border-radius:var(--radius-sm);width:12rem">
+          <button class="btn btn-primary" type="button" id="zip-go">Find</button>
+        </div>
+        <p class="muted" id="zip-privacy" style="font-size:.78rem;margin:.5rem 0 0">Your ZIP is used only to find your districts — it never leaves your browser and is never stored. Only your chosen district is remembered on this device.</p>
+        <div id="zip-result"></div>
+      </div>
+
+      <div id="ballot"></div>
+
+      <h2 class="section-h">Browse all Alabama races</h2>
+      <div id="al-races"></div>
+    </section>
+
+    <section id="panel-2028" hidden>
+      <p class="muted" id="tracker-note" style="font-size:.85rem"></p>
+      <div id="tracker"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initShell, escapeHtml, vectorFromHash, decodeVector } from "./js/app.js";
+    import { parseCrosswalk, lookupZip, statusInfo } from "./js/candidates.js";
+    import { renderMatchPanel } from "./js/candidates-ui.js";
+    initShell("candidates.html");
+
+    // Short static hint per AL district (2023 remedial map) for the split-ZIP chooser.
+    const HINTS = {
+      "AL-1": "Southwest — Mobile & Baldwin, the Gulf Coast",
+      "AL-2": "South-central — Montgomery, the Wiregrass & Black Belt",
+      "AL-3": "East — Auburn, Opelika, Anniston",
+      "AL-4": "North — Cullman, Gadsden, the northwest",
+      "AL-5": "North — Huntsville & the Tennessee Valley",
+      "AL-6": "Central — suburban Birmingham (Shelby, Hoover)",
+      "AL-7": "West-central — Birmingham, Tuscaloosa, the Black Belt",
+    };
+
+    let alReg = null, tracker = null, crosswalk = null;
+
+    // sub-tabs
+    function showTab(name) {
+      const t = name === "2028" ? "2028" : "al";
+      document.getElementById("tab-al").setAttribute("aria-selected", String(t === "al"));
+      document.getElementById("tab-2028").setAttribute("aria-selected", String(t === "2028"));
+      document.getElementById("panel-al").hidden = t !== "al";
+      document.getElementById("panel-2028").hidden = t !== "2028";
+    }
+    document.querySelectorAll(".subtab").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+    async function userVector() {
+      const fromHash = vectorFromHash();
+      if (fromHash) return fromHash;
+      try { const l = JSON.parse(localStorage.getItem("dc_last_result") || "null"); if (l && l.vector && "auth_pw" in l.vector) return l.vector; } catch { /* ignore */ }
+      try { const res = await fetch("/api/auth/results", { cache: "no-cache" }); if (res.ok) { const list = (await res.json()).results || []; if (list[0]) { const d = decodeVector(list[0].enc); if (d) return d.vector; } } } catch { /* ignore */ }
+      return null;
+    }
+
+    const raceByKey = (key) => (alReg.races || []).find((r) => r.key === key);
+    const raceHref = (key) => `race.html#state=AL&race=${encodeURIComponent(key)}`;
+
+    function raceCardHtml(race, opts = {}) {
+      const names = race.candidates.map((c) => {
+        const s = statusInfo(c.status);
+        return `<li><b>${escapeHtml(c.name)}</b> <span class="cand-party party-${escapeHtml(c.party || "")}">${escapeHtml(c.party || "")}</span> <span class="cand-status st-${escapeHtml(c.status)}">${escapeHtml(s.label)}</span></li>`;
+      }).join("");
+      return `<a class="card cand-racecard" href="${raceHref(race.key)}">
+        <div class="cand-racecard-head"><b>${escapeHtml(race.office)}${race.district ? " · " + escapeHtml(race.district) : ""}</b><span class="muted">View race →</span></div>
+        <ul class="cand-racecard-list">${names}</ul></a>`;
+    }
+
+    function renderAlRaces() {
+      document.getElementById("al-races").innerHTML = (alReg.races || []).map((r) => raceCardHtml(r)).join("");
+    }
+
+    // ---- ballot for a chosen district ----
+    async function renderBallot(district) {
+      const box = document.getElementById("ballot");
+      if (!district) { box.innerHTML = ""; return; }
+      const races = [raceByKey("governor"), raceByKey("senate"), raceByKey(district.toLowerCase())].filter(Boolean);
+      box.innerHTML = `<h2 class="section-h">Your ballot · ${escapeHtml(district)}</h2>
+        <p class="muted" style="font-size:.8rem">${escapeHtml(HINTS[district] || "")} · statewide races shown to all Alabama voters.
+          <a href="#" id="clear-district">change district</a></p>
+        <div id="ballot-races">${races.map((r) => raceCardHtml(r)).join("")}</div>
+        <div id="ballot-match"></div>`;
+      document.getElementById("clear-district").addEventListener("click", (e) => { e.preventDefault(); try { localStorage.removeItem("dc_district"); } catch {} document.getElementById("zip-result").innerHTML = ""; renderBallot(null); });
+
+      // Match module over the ballot's candidates when a compass vector is available.
+      const vec = await userVector();
+      if (!vec) return;
+      const cands = races.flatMap((r) => r.candidates).filter((c) => c.status !== "write_in_unverified" && c.sources && c.sources.length);
+      const entries = await Promise.all(cands.map(async (c) => {
+        try { const d = await (await fetch("/api/candidate?id=" + encodeURIComponent(c.id), { cache: "no-cache" })).json(); return { id: c.id, name: c.name, party: c.party, profile: d.profile }; }
+        catch { return { id: c.id, name: c.name, party: c.party, profile: null }; }
+      }));
+      const mount = document.getElementById("ballot-match");
+      mount.innerHTML = `<h3 class="lb-h" style="margin-top:1rem">Your ballot, matched to your compass</h3>`;
+      const inner = document.createElement("div"); mount.appendChild(inner);
+      renderMatchPanel(inner, vec, entries);
+    }
+
+    function setDistrict(d) { try { localStorage.setItem("dc_district", d); } catch {} renderBallot(d); }
+
+    // ---- ZIP resolution ----
+    function resolveZip() {
+      const zip = document.getElementById("zip").value.trim();
+      const out = document.getElementById("zip-result");
+      if (!/^\d{5}$/.test(zip)) { out.innerHTML = `<p class="muted" style="color:var(--warn)">Enter a 5-digit ZIP.</p>`; return; }
+      const rows = lookupZip(crosswalk, zip);
+      if (!rows.length) { out.innerHTML = `<p class="muted">That ZIP isn't in the Alabama crosswalk — it may be outside AL. You can still browse all races below.</p>`; return; }
+      if (rows.length === 1) { out.innerHTML = `<p>ZIP ${escapeHtml(zip)} is in <b>${escapeHtml(rows[0].district)}</b>.</p>`; setDistrict(rows[0].district); return; }
+      const labels = rows.map((r) => r.district).join(" and ");
+      out.innerHTML = `<p>Your ZIP ${escapeHtml(zip)} spans <b>${escapeHtml(labels)}</b> — which is your area?</p>
+        <div class="btn-row">${rows.map((r) => `<button class="btn cand-districtpick" type="button" data-d="${r.district}">${escapeHtml(r.district)} <span class="muted" style="font-weight:400">— ${escapeHtml(HINTS[r.district] || "")}</span></button>`).join("")}</div>`;
+      out.querySelectorAll(".cand-districtpick").forEach((b) => b.addEventListener("click", () => { out.innerHTML = `<p>Set to <b>${escapeHtml(b.dataset.d)}</b>.</p>`; setDistrict(b.dataset.d); }));
+    }
+    document.getElementById("zip-go").addEventListener("click", resolveZip);
+    document.getElementById("zip").addEventListener("keydown", (e) => { if (e.key === "Enter") resolveZip(); });
+
+    // ---- 2028 tracker ----
+    function renderTracker() {
+      document.getElementById("tracker-note").textContent =
+        `Rolling watch list (reviewed ${tracker.meta.rosterAsOf || "monthly"}). Listed on declaration/exploratory status or sustained national coverage; not an endorsement of viability. Profiles appear once first-person material is ingested.`;
+      const byParty = { R: [], D: [], L: [], other: [] };
+      for (const c of tracker.candidates) (byParty[c.party] || byParty.other).push(c);
+      const col = (title, list) => list.length ? `<div><h3 class="lb-h">${title}</h3><ul class="cand-tracker-list">${list.map(trackerRow).join("")}</ul></div>` : "";
+      document.getElementById("tracker").innerHTML = `<div class="lb-cols">${col("Republicans", byParty.R)}${col("Democrats", byParty.D)}</div>${byParty.L.length || byParty.other.length ? col("Other", byParty.L.concat(byParty.other)) : ""}`;
+    }
+    function trackerRow(c) {
+      const s = statusInfo(c.status);
+      const link = (c.sources && c.sources.length) ? ` <a href="candidate.html#id=${encodeURIComponent(c.id)}">profile →</a>` : "";
+      return `<li><span class="cand-name">${escapeHtml(c.name)}</span> <span class="cand-status st-${escapeHtml(c.status)}" title="${escapeHtml(s.copy)}">${escapeHtml(s.label)}</span>${c.currentOffice ? ` <span class="muted" style="font-size:.75rem">${escapeHtml(c.currentOffice)}</span>` : ""}${link}</li>`;
+    }
+
+    (async () => {
+      try {
+        const regs = (await (await fetch("/api/candidates/registries", { cache: "no-cache" })).json()).registries || [];
+        alReg = regs.find((r) => r.meta && r.meta.state === "AL");
+        tracker = regs.find((r) => r.kind === "tracker");
+      } catch (e) { document.getElementById("al-races").innerHTML = `<div class="notice notice-warn">Could not load candidates: ${escapeHtml(e.message)}</div>`; return; }
+      try { crosswalk = parseCrosswalk(await (await fetch("data/zip_to_cd_AL.csv", { cache: "no-cache" })).text()); } catch { crosswalk = new Map(); }
+
+      if (alReg) { renderAlRaces(); }
+      if (tracker) renderTracker();
+      let saved = null; try { saved = localStorage.getItem("dc_district"); } catch {}
+      if (saved && alReg) renderBallot(saved);
+    })();
+  </script>
+</body>
+</html>

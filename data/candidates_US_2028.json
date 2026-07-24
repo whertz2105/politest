@@ -1,0 +1,51 @@
+{
+  "office": "President of the United States", "cycle": 2028, "generalDate": "2028-11-07", "registryVersion": 2, "rolling": true, "lastReviewed": "2026-07-24",
+  "inclusionCriteria": "Listed only if: (a) formally declared or has an exploratory committee, OR (b) is the subject of sustained national 2028 coverage/polling AND holds or has held major office or a major-party nomination. Bare FEC filings do NOT qualify (hundreds exist, incl. pseudonyms). Statuses: speculative -> exploratory -> declared -> suspended -> nominee. Review monthly; statusAsOf per entry. sources[] holds first-person text URLs; per-URL descriptions in PROVENANCE.md.",
+  "candidates": [
+    { "name": "JD Vance", "party": "R", "currentOffice": "Vice President", "status": "speculative", "statusAsOf": "2026-07", "sources": [
+      "https://www.rev.com/transcripts/vance-speaks-at-munich-security-conference",
+      "https://www.rev.com/transcripts/vance-speaks-at-quanitco",
+      "https://www.rev.com/transcripts/vance-speaks-at-bitcoin-event",
+      "https://www.rev.com/transcripts/j-d-vance-speaks-at-cpac" ] },
+    { "name": "Marco Rubio", "party": "R", "currentOffice": "Secretary of State", "status": "speculative", "statusAsOf": "2026-07", "sources": [
+      "https://www.rev.com/transcripts/rubio-speaks-after-confirmation-as-secretary-of-state",
+      "https://www.rev.com/transcripts/marco-rubio-on-face-the-nation",
+      "https://www.rev.com/transcripts/rubio-press-gaggle",
+      "https://www.rev.com/transcripts/state-department-year-end-press-conference" ] },
+    { "name": "Josh Hawley", "party": "R", "currentOffice": "U.S. Senator (MO)", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Kristi Noem", "party": "R", "currentOffice": null, "note": "Former SD governor; DHS Secretary 2025-26 (departed March 2026)", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Greg Abbott", "party": "R", "currentOffice": "Governor (TX)", "note": "Running for a 4th term in Nov 2026", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Ron DeSantis", "party": "R", "currentOffice": "Governor (FL)", "note": "Term-limited; leaves office January 2027. Included in national 2028 GOP primary polling (Emerson May 2026, RCP average).", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Ted Cruz", "party": "R", "currentOffice": "U.S. Senator (TX)", "note": "Included in RCP 2028 national polling average with recurring 2028-framed coverage.", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Nikki Haley", "party": "R", "currentOffice": null, "note": "Former SC governor, UN ambassador, 2024 primary runner-up; included in national 2028 GOP polling fields.", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Kamala Harris", "party": "D", "currentOffice": null, "note": "Former VP; 2024 nominee. Said April 2026 she is 'thinking about' 2028; declined 2026 CA governor run.", "status": "speculative", "statusAsOf": "2026-07", "sources": [
+      "https://www.rev.com/transcripts/kamala-harris-at-emerge-gala",
+      "https://time.com/7173617/kamala-harris-concession-speech-full-transcript/",
+      "https://theblackwallsttimes.com/2024/10/30/full-transcript-of-vice-president-kamala-harriss-ellipse-speech/",
+      "https://abc7ny.com/post/kamala-harris-dnc-speech-read-full-text-democratic-nominees-remarks-democratic-national-convention-chicago/15220617/",
+      "https://www.cbsnews.com/news/kamala-harris-2024-election-interview-60-minutes-transcript/" ] },
+    { "name": "Alexandria Ocasio-Cortez", "party": "D", "currentOffice": "U.S. House (NY-14)", "note": "Reported organizational steps toward a run; also weighing a 2028 NY Senate bid; no committee for either.", "status": "speculative", "statusAsOf": "2026-07", "sources": [
+      "https://www.rev.com/transcripts/aoc-at-fight-oligarchy-event",
+      "https://www.npr.org/transcripts/1263815027",
+      "https://ocasio-cortez.house.gov/media/press-releases/transcript-rep-aoc-delivers-major-floor-speech-articles-impeachment-against",
+      "https://www.cbsnews.com/news/alexandria-ocasio-cortez-call-me-a-radical-60-minutes/",
+      "https://ocasio-cortez.house.gov/media/press-releases/transcript-ocasio-cortez-delivers-major-speech-looming-famine-gaza-and" ] },
+    { "name": "Gavin Newsom", "party": "D", "currentOffice": "Governor (CA)", "note": "Termed out January 2027", "status": "speculative", "statusAsOf": "2026-07", "sources": [
+      "https://www.gov.ca.gov/2026/01/08/governor-newsom-delivers-final-state-of-the-state-address-honoring-californias-past-and-reaffirming-a-brighter-future-for-all/",
+      "https://www.gov.ca.gov/2025/09/09/on-175th-anniversary-of-statehood-governor-newsom-delivers-2025-state-of-the-state-letter-to-california-legislature/",
+      "https://www.gov.ca.gov/2025/06/10/governor-newsoms-address-to-california-democracy-at-a-crossroads/",
+      "https://www.foxnews.com/opinion/gov-gavin-newsom-trump-trying-destroy-democracy-him" ] },
+    { "name": "Pete Buttigieg", "party": "D", "currentOffice": null, "note": "Former Transportation Secretary; passed on 2026 Michigan races", "status": "speculative", "statusAsOf": "2026-07", "sources": [
+      "https://petebuttigieg.substack.com/p/a-terrible-thing-happened-to-my-family",
+      "https://petebuttigieg.substack.com/p/im-not-running-in-2026-but-i-am-getting",
+      "https://www.npr.org/transcripts/nx-s1-5475197",
+      "https://www.transportation.gov/briefing-room/transcript-secretary-buttigieg-remarks-us-conference-mayors" ] },
+    { "name": "Gretchen Whitmer", "party": "D", "currentOffice": "Governor (MI)", "note": "Termed out January 2027. Said she would not run, then walked it back; no definitive withdrawal on record.", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Josh Shapiro", "party": "D", "currentOffice": "Governor (PA)", "note": "Running for reelection Nov 2026; included in national 2028 Democratic polling (Emerson May 2026).", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "JB Pritzker", "party": "D", "currentOffice": "Governor (IL)", "note": "Seeking a third term Nov 2026; sustained national 2028-framed coverage.", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Andy Beshear", "party": "D", "currentOffice": "Governor (KY)", "note": "Term ends Dec 2027; openly considering a run, early-state travel, included in national polling; no committee.", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Ruben Gallego", "party": "D", "currentOffice": "U.S. Senator (AZ)", "note": "Says of 2028 'we have to look at it'; early-state travel and repeated national coverage.", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Rahm Emanuel", "party": "D", "currentOffice": null, "note": "Former Chicago mayor, WH chief of staff, ambassador to Japan; openly mulling a run with early-state visits.", "status": "speculative", "statusAsOf": "2026-07", "sources": [] },
+    { "name": "Jo Jorgensen", "party": "L", "currentOffice": null, "note": "2020 Libertarian nominee; May 2026 exploratory committee, no upgrade found as of July 2026", "status": "exploratory", "statusAsOf": "2026-07", "sources": [] }
+  ]
+}

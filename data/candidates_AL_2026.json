@@ -1,0 +1,75 @@
+{
+  "state": "AL", "cycle": 2026, "generalDate": "2026-11-03", "registryVersion": 3, "rosterAsOf": "2026-07-24",
+  "notes": "Scope: governor, U.S. Senate, U.S. House only. status: nominee=verified general-election candidate; special_primary_pending=nominee will be chosen in the Aug 11, 2026 special primary (May 19 primary results in AL-1, AL-2, AL-6, AL-7 were voided by the May 2026 court-ordered adoption of the 2023 remedial congressional map; filing reopened May 20-22); write_in_unverified=listed by Ballotpedia as an independent write-in, on-ballot nominee status unconfirmed (SoS certified list unreachable, see PROVENANCE.md). sources[] holds first-person text URLs (min 3 before profile axes render); per-URL descriptions in PROVENANCE.md. District eligibility resolved via the ZIP->CD crosswalk (statewide races shown to all AL users).",
+  "races": [
+    { "office": "Governor", "level": "state", "district": null, "notes": "Open seat; Gov. Kay Ivey term-limited. Roster confirmed via Ballotpedia (SoS site unreachable).", "candidates": [
+      { "name": "Tommy Tuberville", "party": "R", "incumbentOffice": "U.S. Senator", "status": "nominee", "sources": [
+        "https://www.coachforgovernor.com/issues",
+        "https://www.tuberville.senate.gov/newsroom/press-releases/tuberville-assimilate-or-go-home/",
+        "https://www.tuberville.senate.gov/newsroom/press-releases/tuberville-on-radical-islam-the-enemy-is-now-inside-the-gates/",
+        "https://www.tuberville.senate.gov/newsroom/press-releases/icymi-tuberville-op-ed-the-fed-has-gone-rogue-fire-jerome-powell/" ] },
+      { "name": "Doug Jones", "party": "D", "incumbentOffice": null, "status": "nominee", "sources": [
+        "https://www.wbhm.org/local-news/2026-06-24/heres-why-democrat-doug-jones-believes-he-will-be-alabamas-next-governor",
+        "https://dougforalabama.substack.com/p/as-can-kentucky-so-too-will-alabama",
+        "https://dougforalabama.substack.com/p/its-time-to-do-what-alabamians-do" ] },
+      { "name": "Ronald Burnette Jr.", "party": "I", "incumbentOffice": null, "status": "write_in_unverified", "sources": [] } ] },
+    { "office": "U.S. Senate", "level": "federal", "district": null, "notes": "Open seat (Tuberville running for governor). Wess defeated Larriett in the June 16, 2026 Democratic runoff, 54.7%-45.3% (Ballotpedia; corroborated by AP/ABC, Alabama Reflector, BirminghamWatch).", "candidates": [
+      { "name": "Barry Moore", "party": "R", "incumbentOffice": "U.S. House AL-1", "status": "nominee", "sources": [
+        "https://1819news.com/news/item/u-s-rep-barry-moore-why-im-running",
+        "https://yellowhammernews.com/barry-moore-op-ed-putting-alabama-first-in-an-america-first-agenda/",
+        "https://1819news.com/news/item/u-s-rep-barry-moore-putting-american-workers-first",
+        "https://1819news.com/news/item/u-s-rep-barry-moore-honoring-the-blue-backing-the-badge",
+        "https://1819news.com/news/item/u-s-rep-barry-moore-a-republic-worth-keeping" ] },
+      { "name": "Everett Wess", "party": "D", "incumbentOffice": null, "status": "nominee", "sources": [
+        "https://ny1.com/nyc/all-boroughs/politics/2026/05/15/meet-democratic-candidate-everett-wess" ] } ] },
+    { "office": "U.S. House", "level": "federal", "district": "AL-1", "notes": "Open seat (Barry Moore running for Senate). May 19 GOP primary results voided by the 2026 map change; special GOP primary Aug 11, 2026 (field: Lucas Burger, Jerry Carl, John Mills, Austin Sidwell). Clyde Jones advanced unopposed from the special Democratic primary.", "candidates": [
+      { "name": "TBD (GOP special-primary winner, Aug 11)", "party": "R", "status": "special_primary_pending", "sources": [] },
+      { "name": "Clyde Jones", "party": "D", "incumbentOffice": null, "status": "nominee", "sources": [
+        "https://clydeforcongress.com/issues" ] } ] },
+    { "office": "U.S. House", "level": "federal", "district": "AL-2", "notes": "May 19 GOP primary results voided by the 2026 map change; special GOP primary Aug 11, 2026 (field: Hampton Harris, Christian Horn, Rhett Marques, David Matthews, Joshua McKee, James Richardson). Figures advanced unopposed from the special Democratic primary.", "candidates": [
+      { "name": "Shomari Figures", "party": "D", "incumbentOffice": "U.S. House AL-2", "status": "nominee", "sources": [
+        "https://www.figuresforcongress.com/issues",
+        "https://figures.house.gov/media/in-the-news/rep-shomari-figures-opportunity-take-advantage-every-moment-weve-got",
+        "https://figures.house.gov/media/press-releases/figures-issues-statement-house-floor-opposing-republican-efforts-condition",
+        "https://figures.house.gov/media/press-releases/figures-gives-floor-statement-pressing-trump-administration-extend-temporary",
+        "https://figures.house.gov/media/press-releases/figures-speaks-house-floor-urge-republicans-not-cut-snap-and-medicaid" ] },
+      { "name": "TBD (GOP special-primary winner, Aug 11)", "party": "R", "status": "special_primary_pending", "sources": [] } ] },
+    { "office": "U.S. House", "level": "federal", "district": "AL-3", "notes": "District not affected by the Aug 11 special-primary reset. Rogers won the May 19 GOP primary 82.9%; McInnis advanced unopposed (Democratic primary canceled).", "candidates": [
+      { "name": "Mike Rogers", "party": "R", "incumbentOffice": "U.S. House AL-3", "status": "nominee", "sources": [
+        "https://armedservices.house.gov/news/documentsingle.aspx?DocumentID=6416",
+        "https://armedservices.house.gov/news/documentsingle.aspx?DocumentID=5199",
+        "https://armedservices.house.gov/news/documentsingle.aspx?DocumentID=6615",
+        "https://armedservices.house.gov/news/documentsingle.aspx?DocumentID=6375" ] },
+      { "name": "Lee McInnis", "party": "D", "incumbentOffice": null, "status": "nominee", "sources": [
+        "https://ballotpedia.org/Lee_McInnis",
+        "https://leemcinnis4alabama.com/things-were-already-hard-enough/",
+        "https://leemcinnis4alabama.com/you-can-feel-the-change/",
+        "https://leemcinnis4alabama.com/what-gutting-the-department-of-education-looks-like-in-alabama/" ] } ] },
+    { "office": "U.S. House", "level": "federal", "district": "AL-4", "notes": "District not affected by the Aug 11 special-primary reset. Aderholt won the May 19 GOP primary 77.6%; Pusczek won the May 19 Democratic primary 62.8%.", "candidates": [
+      { "name": "Robert Aderholt", "party": "R", "incumbentOffice": "U.S. House AL-4", "status": "nominee", "sources": [
+        "https://aderholt.house.gov/media-center/press-releases/generational-investment-has-regional-impact",
+        "https://appropriations.house.gov/news/statements/aderholt-remarks-fy25-labor-health-and-human-services-education-and-related-0",
+        "https://appropriations.house.gov/news/remarks/aderholt-remarks-fy27-labor-health-and-human-services-education-and-related-agencies-0",
+        "https://appropriations.house.gov/news/remarks/aderholt-remarks-fy26-labor-health-and-human-services-education-and-related-agencies" ] },
+      { "name": "Amanda Pusczek", "party": "D", "incumbentOffice": null, "status": "nominee", "sources": [
+        "https://ballotpedia.org/Amanda_Pusczek" ] } ] },
+    { "office": "U.S. House", "level": "federal", "district": "AL-5", "notes": "District not affected by the Aug 11 special-primary reset. Strong advanced unopposed (GOP primary canceled); Sneed won the June 16 Democratic runoff 78.5%-21.5%.", "candidates": [
+      { "name": "Dale Strong", "party": "R", "incumbentOffice": "U.S. House AL-5", "status": "nominee", "sources": [
+        "https://www.dalestrongforcongress.com/issues",
+        "https://1819news.com/news/item/rep-dale-strong-mayorkas-border-invasion-shows-his-disdain-for-the-american-people",
+        "https://1819news.com/news/item/u-s-rep-dale-strong-biden-uses-executive-power-for-leftist-agenda-ignores-migrant-crime",
+        "https://strong.house.gov/media/press-releases/2025-review" ] },
+      { "name": "Andrew Sneed", "party": "D", "incumbentOffice": null, "status": "nominee", "sources": [
+        "https://ballotpedia.org/Andrew_Sneed" ] } ] },
+    { "office": "U.S. House", "level": "federal", "district": "AL-6", "notes": "May 19 primary results voided by the 2026 map change; both nominations to be decided in Aug 11, 2026 special primaries. GOP field: Gary Palmer (incumbent), Case Dixon. Democratic field: Jacob Bouma-Sims, Ashtyn Kennedy, Maurice Mercer, Keith Pilkington.", "candidates": [
+      { "name": "TBD (GOP special-primary winner, Aug 11)", "party": "R", "status": "special_primary_pending", "sources": [] },
+      { "name": "TBD (Democratic special-primary winner, Aug 11)", "party": "D", "status": "special_primary_pending", "sources": [] } ] },
+    { "office": "U.S. House", "level": "federal", "district": "AL-7", "notes": "Prior note 'no Republican filed' is outdated: after the 2026 map change the filing window reopened May 20-22, 2026 and two Republicans filed (Ammie Akin, David Perry) for the Aug 11 special GOP primary. Sewell is the confirmed Democratic candidate in the Nov 3 special general.", "candidates": [
+      { "name": "Terri Sewell", "party": "D", "incumbentOffice": "U.S. House AL-7", "status": "nominee", "sources": [
+        "https://sewell.house.gov/2026/1/rep-sewell-testifies-at-hearing-marking-five-years-since-the-january-6th-insurrection",
+        "https://sewell.house.gov/2026/2/rep-sewell-celebrates-black-history-month-on-the-house-floor-condemns-recent-attacks-on-black-americans",
+        "https://sewell.house.gov/2026/3/rep-sewell-commemorates-the-61st-anniversary-of-bloody-sunday-highlights-upcoming-alabama-civil-rights-pilgrimage",
+        "https://www.npr.org/transcripts/1084834286" ] },
+      { "name": "TBD (GOP special-primary winner, Aug 11)", "party": "R", "status": "special_primary_pending", "sources": [] } ] }
+  ]
+}

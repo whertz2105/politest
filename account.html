@@ -67,7 +67,15 @@
         ${u.role === "admin" ? `<section class="card"><h2 class="section-h" style="margin-top:0">Admin</h2>
           <p class="muted">You are signed in as an administrator. Analyzer admin tools (force re-scan, spend/model stats, rate-limit bypass) are unlocked on the <a href="analyze.html">Analyze</a> pages while you're signed in.</p></section>
         <section class="card"><h2 class="section-h" style="margin-top:0">Daily Brief — review &amp; publish</h2>
-          <div id="brief-admin"><p class="muted">Loading drafts…</p></div></section>` : ""}
+          <div id="brief-admin"><p class="muted">Loading drafts…</p></div></section>
+        <section class="card"><h2 class="section-h" style="margin-top:0">Candidate profiling</h2>
+          <p class="muted" style="font-size:.85rem">Run each candidate's first-person sources through the Analyzer (tagged <code>candidate</code>, excluded from public aggregates). Idempotent — already-analyzed URLs are skipped. Large runs are best done from the CLI (<code>node tools/candidates-ingest.js</code>); this triggers them synchronously.</p>
+          <div class="btn-row">
+            <button class="btn" type="button" id="ci-dry-gov">Dry-run: Governor + Senate</button>
+            <button class="btn btn-primary" type="button" id="ci-run-gov">Ingest: Governor + Senate</button>
+            <button class="btn" type="button" id="ci-run-house">Ingest: House</button>
+          </div>
+          <pre id="ci-out" class="rubric-pre" style="display:none"></pre></section>` : ""}
 
         <div class="btn-row"><button class="btn" type="button" id="logout">Sign out</button></div>`;
 
@@ -77,7 +85,27 @@
       });
 
       renderSavedResults();
-      if (u.role === "admin") renderBriefAdmin();
+      if (u.role === "admin") { renderBriefAdmin(); wireCandidateIngest(); }
+    }
+
+    // ---- Candidate profiling admin: trigger ingestion (dry-run or real) ---------
+    function wireCandidateIngest() {
+      const out = document.getElementById("ci-out");
+      const run = async (body, label) => {
+        out.style.display = "block"; out.textContent = `${label}…`;
+        try {
+          const r = await fetch("/api/candidates/ingest", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+          const d = await r.json();
+          if (!r.ok) { out.textContent = "Error: " + (d.error || r.status); return; }
+          const res = d.result;
+          if (res.dryRun) out.textContent = `DRY RUN — ${res.toRun} URL(s) to analyze, ${res.skipped} already done.\nEstimated ≈ $${res.estCost}.\n\n` + res.plan.map((p) => `${p.race} · ${p.name}\n  ${p.url}`).join("\n");
+          else out.textContent = `Done: ${res.run} analyzed, ${res.skipped} skipped, ${res.flagged} flagged, ${res.evidenceFailures} evidence issues, spend ≈ $${res.spend}${res.budgetHit ? " (BUDGET CAP HIT)" : ""}.` + (res.errors && res.errors.length ? "\n\nErrors:\n" + res.errors.map((e) => `${e.url}: ${e.error}`).join("\n") : "");
+        } catch (e) { out.textContent = "Network error: " + e.message; }
+      };
+      const btn = (id, body, label) => { const b = document.getElementById(id); if (b) b.addEventListener("click", () => run(body, label)); };
+      btn("ci-dry-gov", { races: ["governor", "senate"], dryRun: true }, "Planning Governor + Senate");
+      btn("ci-run-gov", { races: ["governor", "senate"] }, "Ingesting Governor + Senate (this can take a few minutes)");
+      btn("ci-run-house", { races: ["al-1", "al-2", "al-3", "al-4", "al-5", "al-6", "al-7"] }, "Ingesting House races (this can take a while)");
     }
 
     // ---- Daily Brief admin: list drafts, edit items, re-certify, approve --------

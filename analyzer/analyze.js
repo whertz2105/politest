@@ -118,7 +118,8 @@ async function runJob(job) {
     title,
     byline: meta.byline,
     domain: meta.domain,
-    origin: job.origin || null,     // "brief" for internal self-certification calls
+    origin: job.origin || null,     // "brief" | "candidate" for internal analyses
+    candidateId: job.candidateId || null,
     analysis: v.analysis,
     flagged: v.flagged,
     injection: v.injection,
@@ -144,7 +145,7 @@ async function pump() {
 // `admin` (owner testing, via a matched ANALYZER_ADMIN_KEY header) skips the
 // per-IP rate limit; the queue cap and serial worker still apply. `force` (admin
 // only) bypasses URL dedupe to run a fresh scan (e.g. after a rubric/model change).
-async function submit({ ip, url, text, meta, admin, force, kind, origin }) {
+async function submit({ ip, url, text, meta, admin, force, kind, origin, candidateId }) {
   // URL dedupe first — cheap, spends no tokens, not rate-limited. Skipped when
   // an admin forces a fresh re-scan.
   if (url && !force) {
@@ -155,8 +156,9 @@ async function submit({ ip, url, text, meta, admin, force, kind, origin }) {
   if (queue.length >= QUEUE_CAP) { const e = new Error("analysis queue is full, try again shortly"); e.code = "queue"; throw e; }
 
   const job = url ? { kind: "url", url, force: !!force } : { kind: "text", text, meta };
-  job.budgetKind = kind || "analyzer"; // budget tag: "analyzer" | "brief"
+  job.budgetKind = kind || "analyzer"; // budget tag: "analyzer" | "brief" | "candidate"
   job.origin = origin || null;         // provenance tag stored on the analysis
+  job.candidateId = candidateId || null;
   const p = new Promise((resolve, reject) => { job.resolve = resolve; job.reject = reject; });
   queue.push(job);
   pump();

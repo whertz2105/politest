@@ -624,6 +624,60 @@ details.card summary { cursor: pointer; }
 .brief-status { font-size: var(--fs-xs); font-weight: 700; }
 .brief-status.ok { color: var(--good); } .brief-status.bad { color: var(--warn); }
 
+/* ===== Candidates ======================================================= */
+.cand-grid { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin: var(--s4) 0; }
+.cand-cell { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elev); padding: var(--s4); box-shadow: var(--shadow-1); }
+.cand-cell-head { display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap; }
+.cand-name { font-family: var(--serif); font-weight: 600; font-size: var(--fs-md); }
+.cand-party { font-size: var(--fs-xs); font-weight: 700; padding: .05rem .4rem; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); }
+.cand-party.party-R { color: #c0392b; border-color: color-mix(in srgb, #c0392b 55%, var(--border-strong)); }
+.cand-party.party-D { color: #3b6fb0; border-color: color-mix(in srgb, #3b6fb0 55%, var(--border-strong)); }
+.cand-party.party-I, .cand-party.party-L, .cand-party.party-G { color: var(--fg-dim); }
+.cand-status { display: inline-block; font-size: var(--fs-xs); font-weight: 600; padding: .05rem .45rem; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); color: var(--fg-dim); margin: .35rem 0; }
+.cand-status.st-nominee { color: var(--good); border-color: color-mix(in srgb, var(--good) 55%, transparent); }
+.cand-status.st-special_primary_pending, .cand-status.st-primary_pending { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+.cand-status.st-write_in_unverified, .cand-status.st-speculative, .cand-status.st-exploratory { color: var(--fg-dim); }
+.cand-status.st-declared { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.cand-lr { display: flex; align-items: center; gap: .5rem; margin: .5rem 0 .3rem; }
+.cand-top { list-style: none; padding: 0; margin: .3rem 0; font-size: var(--fs-sm); }
+.cand-top li { padding: .15rem 0; }
+.cand-pole.pos { color: var(--pos); } .cand-pole.neg { color: var(--neg); }
+.cand-thin, .cand-pending { font-size: var(--fs-sm); font-style: italic; margin: .4rem 0; }
+.cand-viewbtn { min-height: 36px; padding: .3rem .8rem; margin-top: .4rem; }
+.cand-racecard { display: block; text-decoration: none; color: var(--fg); margin: .6rem 0; }
+.cand-racecard:hover { border-color: var(--accent); }
+.cand-racecard-head { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; }
+.cand-racecard-list { list-style: none; padding: 0; margin: .4rem 0 0; font-size: var(--fs-sm); display: grid; gap: .2rem; }
+.cand-evidence { padding: .6rem 0; border-bottom: 1px solid var(--border); }
+.cand-evidence:last-child { border-bottom: none; }
+.cand-receipt { text-decoration: none; margin-left: .3rem; }
+.cand-sources { list-style: none; padding: 0; margin: .4rem 0; }
+.cand-sources li { padding: .35rem 0; border-bottom: 1px solid var(--border); font-size: var(--fs-sm); }
+.cand-sources li:last-child { border-bottom: none; }
+.cand-tracker-list { list-style: none; padding: 0; margin: .3rem 0; }
+.cand-tracker-list li { padding: .35rem 0; border-bottom: 1px solid var(--border); font-size: var(--fs-sm); }
+
+/* Match panel ("what matters most to you") */
+.match-cols { display: grid; gap: var(--s4); grid-template-columns: 1fr; }
+.match-list { list-style: none; padding: 0; margin: .3rem 0; counter-reset: m; }
+.match-row { display: flex; align-items: baseline; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.match-row:last-child { border-bottom: none; }
+.match-name { font-family: var(--serif); font-weight: 600; }
+.match-pct { font-family: var(--mono); font-weight: 700; color: var(--accent); font-size: var(--fs-md); }
+.match-detail { font-size: var(--fs-xs); }
+.match-weights summary { cursor: pointer; font-weight: 600; }
+.wt-grid { display: grid; gap: .2rem; grid-template-columns: 1fr; margin: .5rem 0; }
+@media (min-width: 560px) { .wt-grid { grid-template-columns: 1fr 1fr; gap: .2rem .8rem; } }
+.wt-row { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: var(--fs-sm); }
+.wt-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wt-toggle { display: inline-flex; flex: 0 0 auto; }
+.wt-btn { min-height: 30px; padding: .1rem .5rem; font-size: var(--fs-xs); border-radius: 0; border-right-width: 0; }
+.wt-btn:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.wt-btn:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-right-width: 1px; }
+.wt-btn.on.mute { background: color-mix(in srgb, var(--bad) 18%, var(--bg-elev)); border-color: var(--bad); color: var(--bad); }
+.wt-btn.on.norm { background: color-mix(in srgb, var(--fg-dim) 18%, var(--bg-elev)); border-color: var(--fg-dim); }
+.wt-btn.on.boost { background: color-mix(in srgb, var(--accent) 18%, var(--bg-elev)); border-color: var(--accent); color: var(--accent); }
+
 /* ===== Sub-tabs (Data page: Analyzer / Test) ============================ */
 .subtabs {
   display: flex; gap: var(--s2); flex-wrap: wrap;

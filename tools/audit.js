@@ -28,6 +28,7 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
   const { matchArchetypes, ARCHETYPES } = await importer("js/archetypes.js");
   const { shuffleWithSeed } = await importer("js/app.js");
   const { leftRightScore } = await importer("js/leftright.js");
+  const CAND = await importer("js/candidates.js");
   const store = require("../analyzer/store");
 
   // ---- load + migrate questions.json ----
@@ -304,7 +305,9 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
   {
     // init only to wire AXIS_KEYS + the left–right fn; bucketByMonth is a pure
     // function over hand-built records, so the store's on-disk state is irrelevant.
-    store.init(AXIS_KEYS, path.join(os.tmpdir(), "politeion-audit-store.jsonl"), leftRightScore);
+    // A unique per-run file keeps addAnalysis (used by the exclusion fixture below)
+    // from persisting across runs.
+    store.init(AXIS_KEYS, path.join(os.tmpdir(), `politeion-audit-store-${process.pid}-${Date.now()}.jsonl`), leftRightScore);
     const recs = [
       { ts: "2026-06-03T00:00:00Z", genre: "report", flagged: false, axes: { mkt: { score: 10 } } },
       { ts: "2026-06-10T00:00:00Z", genre: "report", flagged: false, axes: { mkt: { score: 20 } } },
@@ -378,6 +381,51 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
 
     bad.length ? fail("daily brief: " + bad.join("; "))
       : ok("daily brief: clustering, rewrite→pass / persistent→park, item schema, feed.xml well-formed & escaped");
+  }
+
+  // ---- Candidates: registry validation, crosswalk, sparse match, exclusion ----
+  {
+    const bad = [];
+
+    // (1) both shipped registries parse with no errors; a bad status is rejected.
+    for (const f of ["candidates_AL_2026.json", "candidates_US_2028.json"]) {
+      try {
+        const p = CAND.parseRegistry(JSON.parse(fs.readFileSync(path.join(ROOT, "data", f), "utf8")), f);
+        if (p.errors.length) bad.push(`${f}: ${p.errors.length} error(s): ${p.errors[0]}`);
+      } catch (e) { bad.push(`${f}: ${e.message}`); }
+    }
+    const badStatus = CAND.parseRegistry({ cycle: 2026, state: "ZZ", races: [{ office: "X", candidates: [{ name: "Y", status: "bogus", sources: [] }] }] }, "bad.json");
+    if (!badStatus.errors.some((e) => /unknown status "bogus"/.test(e))) bad.push("bad status not rejected");
+
+    // (2) crosswalk: a split ZIP returns BOTH districts (never collapsed); a single ZIP one.
+    const xw = CAND.parseCrosswalk(fs.readFileSync(path.join(ROOT, "data", "zip_to_cd_AL.csv"), "utf8"));
+    const d36830 = CAND.lookupZip(xw, "36830").map((r) => r.district).sort();
+    if (JSON.stringify(d36830) !== JSON.stringify(["AL-2", "AL-3"])) bad.push(`36830 → ${JSON.stringify(d36830)} (want AL-2 + AL-3)`);
+    const d35203 = CAND.lookupZip(xw, "35203").map((r) => r.district);
+    if (JSON.stringify(d35203) !== JSON.stringify(["AL-7"])) bad.push(`35203 → ${JSON.stringify(d35203)} (want AL-7 only)`);
+    if ((xw.get("36830") || []).length !== 2) bad.push("36830 split row collapsed");
+
+    // (3) sparse match: hand-computed, muted axis contributes zero, thin → null.
+    const cAxes = { mkt: { mean: 50, n: 3 }, soc: { mean: -40, n: 2 } };
+    const user = { mkt: 10, soc: 20 };
+    const m1 = CAND.matchScore(user, cAxes, { mkt: 2, soc: 1 }); // rms=√(6800/3)=47.6 → 76%, 2 axes
+    if (!m1 || m1.pct !== 76 || m1.axesUsed !== 2) bad.push(`match: ${JSON.stringify(m1)} (want 76% / 2 axes)`);
+    const m2 = CAND.matchScore(user, cAxes, { mkt: 2, soc: 0 }); // soc muted → rms=40 → 80%, 1 axis
+    if (!m2 || m2.pct !== 80 || m2.axesUsed !== 1) bad.push(`muted-axis match: ${JSON.stringify(m2)} (want 80% / 1 axis)`);
+    if (CAND.matchScore(user, { mkt: { mean: 50, n: 1 } }, {}) !== null) bad.push("thin candidate (all n<2) produced a match");
+
+    // (4) leaderboard exclusion: a kind:"candidate" analysis (senate.gov) must never
+    // form a source/writer profile or enter rankSources.
+    const stamp = { version: "v3" };
+    store.addAnalysis({ url: "https://tuberville.senate.gov/x", title: "floor speech", byline: "Tommy Tuberville", domain: "senate.gov", origin: "candidate", candidateId: "al2026-governor-tommy-tuberville",
+      analysis: { genre: "opinion", stance_detected: true, axes: { imm: { score: 40, confidence: 0.8, evidence: "x", evidenceOk: true } }, neutral_summary: "", summary: "", flags: [] }, flagged: false, injection: false, rubric: stamp, usage: {} });
+    if (store.sourceProfile("senate.gov") !== null) bad.push("candidate analysis minted a senate.gov source profile");
+    if (store.writerProfile("tommy tuberville|senate.gov") !== null) bad.push("candidate analysis minted a writer profile");
+    if (store.rankSources(20).some((s) => s.domain === "senate.gov")) bad.push("candidate analysis entered rankSources");
+    if (store.recentList(20).length !== 0) bad.push("candidate analysis appeared in the public recent list");
+
+    bad.length ? fail("candidates: " + bad.join("; "))
+      : ok("candidates: registries valid + bad status rejected, crosswalk split preserved, sparse match + mute + thin, leaderboard exclusion");
   }
 
   // Nation normalization (revised bank).

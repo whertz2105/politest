@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Race — Politeion</title>
+  <link rel="canonical" href="https://politeion.com/race.html">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap">
+    <div id="view"><p class="muted">Loading race…</p></div>
+    <section id="match-section" hidden>
+      <h2>Your match</h2>
+      <p class="muted" style="font-size:.85rem">Similarity between your compass and each candidate, over the axes where they have enough published material, weighted by what matters to you.</p>
+      <div id="match"></div>
+    </section>
+    <p class="btn-row" style="margin-top:1.2rem"><a class="btn" href="candidates.html">← All candidates</a></p>
+  </main>
+
+  <script type="module">
+    import { initShell, vectorFromHash, decodeVector } from "./js/app.js";
+    import { renderRace, renderMatchPanel } from "./js/candidates-ui.js";
+    initShell("candidates.html");
+
+    const view = document.getElementById("view");
+    const hp = () => {
+      const out = {};
+      (location.hash.replace(/^#/, "")).split("&").forEach((kv) => { const i = kv.indexOf("="); if (i > 0) out[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); });
+      return out;
+    };
+
+    async function userVector() {
+      const fromHash = vectorFromHash();
+      if (fromHash) return fromHash;
+      try { const l = JSON.parse(localStorage.getItem("dc_last_result") || "null"); if (l && l.vector && "auth_pw" in l.vector) return l.vector; } catch { /* ignore */ }
+      try {
+        const res = await fetch("/api/auth/results", { cache: "no-cache" });
+        if (res.ok) { const list = (await res.json()).results || []; if (list[0]) { const d = decodeVector(list[0].enc); if (d) return d.vector; } }
+      } catch { /* ignore */ }
+      return null;
+    }
+
+    async function load() {
+      const p = hp();
+      if (!p.state || !p.race) { view.innerHTML = '<div class="notice notice-warn">No race in the link.</div>'; return; }
+      let regs;
+      try { regs = (await (await fetch("/api/candidates/registries", { cache: "no-cache" })).json()).registries || []; }
+      catch (e) { view.innerHTML = '<div class="notice notice-warn">Could not load races: ' + e.message + '</div>'; return; }
+      const reg = regs.find((r) => r.meta && String(r.meta.state).toLowerCase() === p.state.toLowerCase());
+      const race = reg && (reg.races || []).find((r) => r.key === p.race);
+      if (!race) { view.innerHTML = '<div class="notice notice-warn">No such race.</div>'; return; }
+
+      // Fetch each candidate's profile (skip pending/zero-source slots).
+      const ids = race.candidates.filter((c) => c.sources && c.sources.length).map((c) => c.id);
+      const profileMap = {};
+      await Promise.all(ids.map(async (id) => {
+        try { const d = await (await fetch("/api/candidate?id=" + encodeURIComponent(id), { cache: "no-cache" })).json(); profileMap[id] = d.profile; } catch { /* thin fallback */ }
+      }));
+      renderRace(view, race, profileMap);
+      document.title = `${race.office}${race.district ? " " + race.district : ""} — Politeion`;
+
+      // Match module (only for candidates with a real profile).
+      const vec = await userVector();
+      if (vec) {
+        const entries = race.candidates.filter((c) => c.status !== "write_in_unverified").map((c) => ({ id: c.id, name: c.name, party: c.party, profile: profileMap[c.id] || null }));
+        document.getElementById("match-section").hidden = false;
+        renderMatchPanel(document.getElementById("match"), vec, entries);
+      }
+    }
+    window.addEventListener("hashchange", load);
+    load();
+  </script>
+</body>
+</html>

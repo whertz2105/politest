@@ -21,6 +21,8 @@ const { pathToFileURL } = require("url");
 const analyzerRoutes = require("./analyzer/routes"); // Politeion Analyzer (/api/analyze, etc.)
 const authRoutes = require("./auth/routes");          // accounts / sessions (/api/auth/*)
 const briefRoutes = require("./brief/routes");        // Daily Brief (/api/brief/*, /feed.xml)
+const candidateRoutes = require("./candidates/routes"); // Candidates (/api/candidates/*, /api/candidate)
+const candidateRegistry = require("./candidates/registry");
 
 const ROOT = __dirname;
 const HOST = process.env.HOST || "127.0.0.1";
@@ -147,10 +149,11 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  // Auth endpoints first, then analyzer, then brief, then the crowd endpoints / 404.
+  // Auth first, then analyzer, brief, candidates, then the crowd endpoints / 404.
   if (await authRoutes.handle(req, res, url)) return;
   if (await analyzerRoutes.handle(req, res, url)) return;
   if (await briefRoutes.handle(req, res, url)) return;
+  if (await candidateRoutes.handle(req, res, url)) return;
 
   if (url === "/api/stats" && req.method === "GET") {
     return sendJson(res, 200, { count: records.length, byBank: { v1: recordsForBank(1).length, v2: recordsForBank(2).length } });
@@ -203,6 +206,8 @@ const server = http.createServer(async (req, res) => {
   authRoutes.init();
   analyzerRoutes.init(AXIS_KEYS, lr.leftRightScore);
   briefRoutes.init(ROOT, process.env.BRIEFS_FILE || path.join(ROOT, "store", "briefs.jsonl"), { feedOrigin: process.env.FEED_ORIGIN || "https://politeion.com" });
+  await candidateRegistry.init(path.join(ROOT, "data"));
+  candidateRoutes.init();
   loadStore();
   server.listen(PORT, HOST, () => console.log(`Politeion API on http://${HOST}:${PORT} (store: ${STORE_FILE})`));
 })().catch((e) => { console.error("startup failed:", e); process.exit(1); });
