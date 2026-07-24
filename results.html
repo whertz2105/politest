@@ -38,10 +38,9 @@
       <div id="banners"></div>
 
       <section id="refined-section" hidden>
-        <h2>Refined position</h2>
+        <h2>Across your tests</h2>
         <p class="muted" id="refined-note" style="font-size:0.85rem"></p>
         <div id="refined-cta"></div>
-        <div id="refined-bars"></div>
         <div id="refined-drift"></div>
       </section>
 
@@ -381,21 +380,15 @@
       try { results = (await (await fetch("/api/auth/results", { cache: "no-cache" })).json()).results || []; } catch { return; }
       if (results.length < 2) return;
 
+      // Compact enhancement only — NOT a second copy of the 22-axis readout above.
+      // The single-run bars stay the one chart; this adds the cross-run insight:
+      // how tight your position is, whether you've moved, and how to sharpen it.
       const comp = combineRuns(results);
-      const bands = { lo: {}, hi: {}, spansZero: {} }, counts = {};
-      for (const k of AXIS_KEYS) {
-        const s = comp.vector[k], sg = comp.sigma[k];
-        bands.lo[k] = Math.round((s - sg) * 10) / 10;
-        bands.hi[k] = Math.round((s + sg) * 10) / 10;
-        bands.spansZero[k] = bands.lo[k] <= 0 && bands.hi[k] >= 0;
-        counts[k] = comp.perAxis[k] ? comp.perAxis[k].count : 0;
-      }
       document.getElementById("refined-section").hidden = false;
-      renderBarReadout(document.getElementById("refined-bars"), comp.vector, { bands, counts });
 
       const meanSigma = AXIS_KEYS.reduce((a, k) => a + comp.sigma[k], 0) / AXIS_KEYS.length;
       document.getElementById("refined-note").textContent =
-        `Combined from ${comp.runsUsed} saved run${comp.runsUsed === 1 ? "" : "s"} by inverse-variance weighting — sharper answer modes (Precision) and longer tests (Deep) shrink each axis's uncertainty band. Mean band ±${meanSigma.toFixed(1)}.`;
+        `Combined from ${comp.runsUsed} saved run${comp.runsUsed === 1 ? "" : "s"} by inverse-variance weighting — sharper answer modes (Precision) and longer tests (Deep) shrink your uncertainty. Mean band ±${meanSigma.toFixed(1)} across the 22 axes.`;
 
       const drifted = AXIS_KEYS.filter((k) => comp.perAxis[k].drifted);
       const drift = document.getElementById("refined-drift");
