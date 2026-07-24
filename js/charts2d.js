@@ -121,12 +121,20 @@ export function quadrantSVG(vector, xKey, yKey, opts = {}) {
       `<circle cx="${toX(a.v[xKey] || 0)}" cy="${toY(a.v[yKey] || 0)}" r="3" class="arch-dot dot" ${tip(a.name, a.v[xKey] || 0, a.v[yKey] || 0)}></circle>`).join("");
   }
 
-  // figure markers: dots always; labels only for the highlight set, with an
-  // optional vertical declutter pass (used in the fullscreen modal).
+  // figure markers: every figure is a hover-only dot; we label just ONE figure
+  // per quadrant (the most extreme in each) to keep the chart uncluttered now
+  // that tooltips exist. Quadrant is the sign of this chart's two axes.
   let figMarks = "";
   if (opts.figures && opts.figures.length) {
-    const labelSet = opts.labelNames ? new Set(opts.labelNames) : null;
-    const labelled = opts.figures.map((f) => ({ f, x: toX(f.v[xKey] || 0), y: toY(f.v[yKey] || 0), show: !labelSet || labelSet.has(f.name) }));
+    const best = {}; // quadrant -> { name, dist }
+    for (const f of opts.figures) {
+      const xv = f.v[xKey] || 0, yv = f.v[yKey] || 0;
+      const qk = (xv >= 0 ? "R" : "L") + (yv >= 0 ? "T" : "B");
+      const dist = xv * xv + yv * yv;
+      if (!best[qk] || dist > best[qk].dist) best[qk] = { name: f.name, dist };
+    }
+    const labelSet = new Set(Object.values(best).map((b) => b.name));
+    const labelled = opts.figures.map((f) => ({ f, x: toX(f.v[xKey] || 0), y: toY(f.v[yKey] || 0), show: labelSet.has(f.name) }));
     if (opts.nudge) {
       const gap = font * 1.15;
       labelled.filter((d) => d.show).sort((a, b) => a.y - b.y)
