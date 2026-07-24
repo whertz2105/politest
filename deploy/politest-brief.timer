@@ -1,0 +1,13 @@
+# Draft the Daily Brief once a day at 10:00 UTC. Persistent=true so a missed run
+# (droplet asleep/rebooted) fires on next boot. Drafting only — publication is a
+# separate, always-human approval step in account.html.
+[Unit]
+Description=Politeion Daily Brief — daily draft at 10:00 UTC
+
+[Timer]
+OnCalendar=*-*-* 10:00:00 UTC
+Persistent=true
+Unit=politest-brief.service
+
+[Install]
+WantedBy=timers.target

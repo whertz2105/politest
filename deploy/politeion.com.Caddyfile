@@ -14,8 +14,10 @@ politeion.com {
 	encode zstd gzip
 	root * /opt/politest
 
-	@api path /api/*
-	reverse_proxy @api 127.0.0.1:3200
+	# /api/* and the Daily Brief RSS feed are served by the Node app (the feed is
+	# written into the writable store dir, not the read-only web root).
+	@app path /api/* /feed.xml
+	reverse_proxy @app 127.0.0.1:3200
 
 	file_server
 

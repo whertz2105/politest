@@ -22,6 +22,11 @@
       <p class="muted">How the article Analyzer scores stance and what it flags. The exact scoring prompt is proprietary; this is a summary of the method. <span id="rubric-meta"></span></p>
       <div id="rubric-summary" class="md-body">Loading…</div>
       <div id="rubric-error" class="muted" hidden>Methodology summary is unavailable right now.</div>
+
+      <div class="card" id="brief-methodology" style="margin-top:1.4rem">
+        <h3 style="margin-top:0">The Daily Brief</h3>
+        <p class="muted">The <a href="brief.html">Politeion Daily Brief</a> is drafted by synthesizing wire-service coverage across multiple outlets (a story is only used when ≥2 outlets carry it), then <b>machine-certified</b>: every item is scored by this same Analyzer and may publish only if it registers <b>no detectable stance and no flags</b>. An item that fails is rewritten once with its failing framing fed back, then held for human editing. Each published item links a neutrality receipt. The source list is public config (<code>data/brief_sources.json</code>). <span id="brief-ver"></span></p>
+      </div>
     </section>
 
     <section id="panel-test" role="tabpanel" aria-labelledby="tab-test" hidden>
@@ -178,6 +183,16 @@
         document.getElementById("rubric-summary").hidden = true;
         document.getElementById("rubric-error").hidden = false;
       }
+
+      // Show the current Brief prompt version + certifying rubric (from the latest
+      // published brief, if any).
+      try {
+        const br = await fetch("/api/brief/latest", { cache: "no-cache" });
+        if (br.ok) {
+          const b = (await br.json()).brief;
+          if (b) document.getElementById("brief-ver").textContent = `Brief prompt ${b.brief_version || "v1"} · items certified under rubric ${b.rubric_version || "v3"}.`;
+        }
+      } catch { /* brief may not be live yet */ }
 
       let data;
       try { data = await loadQuestionData(); }

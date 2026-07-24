@@ -102,6 +102,7 @@ function addAnalysis(input) {
     writer: input.byline || null,
     source: input.domain || null,
     writerKey: writerKeyOf(input.byline, input.domain),
+    origin: input.origin || null,     // "brief" = internal Daily-Brief self-certification
     genre: input.analysis.genre,
     stance_detected: input.analysis.stance_detected,
     axes: input.analysis.axes,        // { key: {score, confidence, evidence} }
@@ -274,12 +275,18 @@ function rankWriters(limit, min) {
   return out.slice(0, limit || 10);
 }
 
+// Brief self-certification analyses (origin "brief") are internal receipts, not
+// public article scans — keep them out of the recent list and the public counts
+// (they carry no source/writer, so they're already absent from aggregates/leaderboards).
+const isPublicAnalysis = (r) => r.origin !== "brief";
+
 function recentList(limit) {
-  return analyses.slice(-Math.max(1, limit || 30)).reverse().map(articleCard);
+  return analyses.filter(isPublicAnalysis).slice(-Math.max(1, limit || 30)).reverse().map(articleCard);
 }
 
 function counts() {
-  return { analyses: analyses.length, writers: new Set(analyses.map((r) => r.writerKey).filter(Boolean)).size, sources: new Set(analyses.map((r) => r.source).filter(Boolean)).size };
+  const pub = analyses.filter(isPublicAnalysis);
+  return { analyses: pub.length, writers: new Set(pub.map((r) => r.writerKey).filter(Boolean)).size, sources: new Set(pub.map((r) => r.source).filter(Boolean)).size };
 }
 
 module.exports = {

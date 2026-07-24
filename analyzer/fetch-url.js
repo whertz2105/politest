@@ -140,7 +140,9 @@ function once(urlStr, opts = {}) {
         }
         if (res.statusCode !== 200) { res.resume(); const err = new Error(`fetch HTTP ${res.statusCode}`); err.status = res.statusCode; return reject(err); }
         const ct = String(res.headers["content-type"] || "");
-        if (!opts.json && ct && !/text\/html|application\/xhtml/i.test(ct)) { res.resume(); return reject(new Error(`unsupported content-type: ${ct}`)); }
+        // opts.raw (feeds/calendars: RSS/Atom/XML) and opts.json skip the HTML
+        // content-type gate. The SSRF guards above still fully apply either way.
+        if (!opts.json && !opts.raw && ct && !/text\/html|application\/xhtml/i.test(ct)) { res.resume(); return reject(new Error(`unsupported content-type: ${ct}`)); }
         let size = 0;
         const chunks = [];
         res.on("data", (c) => { size += c.length; if (size > MAX_BYTES) { req.destroy(new Error("page exceeds 25MB fetch limit")); return; } chunks.push(c); });
@@ -362,4 +364,15 @@ async function fetchAndExtract(urlStr) {
   throw fetchErr || new Error("could not fetch article");
 }
 
-module.exports = { fetchAndExtract, registrableDomain, isPublicIPv4, isPublicIPv6, extractText, extractByline };
+// Raw fetch for feeds/calendars (RSS/Atom/XML/JSON text). Reuses the SAME
+// SSRF-hardened fetcher (fetchRaw → once → safeLookup); on a bot-block it retries
+// as a browser once. Returns the raw response body string. No new fetch path.
+async function fetchText(urlStr) {
+  try { const { html } = await fetchRaw(urlStr, { raw: true }); return html; }
+  catch (e) {
+    if (e.status && BLOCK_STATUSES.includes(e.status)) { const { html } = await fetchRaw(urlStr, { raw: true, browserUA: true }); return html; }
+    throw e;
+  }
+}
+
+module.exports = { fetchAndExtract, fetchText, registrableDomain, isPublicIPv4, isPublicIPv6, extractText, extractByline };

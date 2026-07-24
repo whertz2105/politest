@@ -560,6 +560,41 @@ details.card summary { cursor: pointer; }
 .lb-n { font-size: var(--fs-xs); white-space: nowrap; margin-left: auto; }
 .split-exp-lb .split-pane[data-pane="recent"] { padding: var(--s3); }
 
+/* ===== Daily Brief ====================================================== */
+.brief-wrap { max-width: 760px; }
+.brief-head { text-align: center; padding: var(--s5) 0 var(--s3); border-bottom: 2px solid var(--gold); margin-bottom: var(--s5); }
+.brief-date { font-family: var(--serif); font-size: var(--fs-xl); margin: .2rem 0; }
+.brief-standfirst { font-style: italic; }
+.brief-section { margin: var(--s5) 0; }
+.brief-section > h2 { font-family: var(--serif); font-size: var(--fs-lg); border-bottom: 1px solid var(--border); padding-bottom: .3rem; }
+.brief-item { padding: var(--s3) 0; border-bottom: 1px solid var(--border); }
+.brief-item:last-child { border-bottom: none; }
+.brief-item h3 { font-family: var(--serif); font-size: var(--fs-md); margin: 0 0 .3rem; }
+.brief-summary { margin: .3rem 0; }
+.brief-why { margin: .3rem 0; font-size: var(--fs-sm); }
+.brief-why-lbl { font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: .04em; font-size: .72rem; margin-right: .3rem; }
+.brief-links { font-size: var(--fs-xs); margin: .3rem 0 0; }
+.brief-receipt { color: var(--good); font-weight: 600; }
+.brief-today { margin: .4rem 0 0 1.1rem; }
+.brief-today li { margin: .3rem 0; }
+.brief-cert { margin-top: var(--s6); padding-top: var(--s4); border-top: 2px solid var(--gold); font-size: var(--fs-sm); }
+.brief-cert p { margin: .4rem 0; }
+.brief-archive a { font-variant-numeric: tabular-nums; }
+
+@media print {
+  [data-shell], .theme-toggle, .brief-links, .site-header { display: none !important; }
+  body { background: #fff; color: #111; font-size: 11pt; }
+  .brief-wrap { max-width: 100%; }
+  .brief-cert { page-break-inside: avoid; }
+  a { color: #111; text-decoration: none; }
+}
+
+/* ===== Brief admin (account page) ====================================== */
+.brief-admin-item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .6rem .8rem; margin: .5rem 0; }
+.brief-admin-item textarea, .brief-admin-item input { width: 100%; box-sizing: border-box; background: var(--bg); color: var(--fg); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: .4rem .5rem; font: inherit; font-size: var(--fs-sm); margin: .2rem 0; }
+.brief-status { font-size: var(--fs-xs); font-weight: 700; }
+.brief-status.ok { color: var(--good); } .brief-status.bad { color: var(--warn); }
+
 /* ===== Sub-tabs (Data page: Analyzer / Test) ============================ */
 .subtabs {
   display: flex; gap: var(--s2); flex-wrap: wrap;

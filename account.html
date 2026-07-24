@@ -65,7 +65,9 @@
         </section>
 
         ${u.role === "admin" ? `<section class="card"><h2 class="section-h" style="margin-top:0">Admin</h2>
-          <p class="muted">You are signed in as an administrator. Analyzer admin tools (force re-scan, spend/model stats, rate-limit bypass) are unlocked on the <a href="analyze.html">Analyze</a> pages while you're signed in.</p></section>` : ""}
+          <p class="muted">You are signed in as an administrator. Analyzer admin tools (force re-scan, spend/model stats, rate-limit bypass) are unlocked on the <a href="analyze.html">Analyze</a> pages while you're signed in.</p></section>
+        <section class="card"><h2 class="section-h" style="margin-top:0">Daily Brief — review &amp; publish</h2>
+          <div id="brief-admin"><p class="muted">Loading drafts…</p></div></section>` : ""}
 
         <div class="btn-row"><button class="btn" type="button" id="logout">Sign out</button></div>`;
 
@@ -75,6 +77,71 @@
       });
 
       renderSavedResults();
+      if (u.role === "admin") renderBriefAdmin();
+    }
+
+    // ---- Daily Brief admin: list drafts, edit items, re-certify, approve --------
+    async function renderBriefAdmin() {
+      const box = document.getElementById("brief-admin");
+      if (!box) return;
+      let briefs = [];
+      try { briefs = (await (await fetch("/api/brief/admin/list", { cache: "no-cache" })).json()).briefs || []; }
+      catch { box.innerHTML = '<p class="muted">Could not load briefs.</p>'; return; }
+      if (!briefs.length) { box.innerHTML = '<p class="muted">No briefs drafted yet. Run <code>node tools/brief-draft.js</code> to generate one.</p>'; return; }
+
+      box.innerHTML = briefs.map((b) => {
+        const items = [...(b.items || []), ...(b.review || [])];
+        const rows = items.map((it, i) => {
+          const ok = it.certOk;
+          const receipt = it.analysisId ? ` <a href="article.html#id=${encodeURIComponent(it.analysisId)}" target="_blank">receipt</a>` : "";
+          return `<div class="brief-admin-item" data-brief="${b.id}" data-idx="${i}">
+            <span class="brief-status ${ok ? "ok" : "bad"}">${ok ? "✓ certified" : "✗ needs human edit"}</span>${receipt}
+            <input class="ba-headline" value="${escapeHtml(it.headline || "")}" maxlength="90">
+            <textarea class="ba-summary" rows="3">${escapeHtml(it.summary || "")}</textarea>
+            <textarea class="ba-why" rows="2">${escapeHtml(it.why_it_matters || "")}</textarea>
+            <button class="btn ba-save" type="button" style="min-height:34px;padding:.25rem .7rem">Save edit</button>
+          </div>`;
+        }).join("");
+        const canApprove = b.certifiable && b.status !== "published";
+        return `<div class="card" style="margin:.6rem 0" data-brief-card="${b.id}">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap">
+            <b>${escapeHtml(b.date)} — ${escapeHtml(b.status)}</b>
+            <span>
+              <button class="btn ba-recert" type="button" data-brief="${b.id}" style="min-height:34px;padding:.25rem .7rem">Re-certify edits</button>
+              <button class="btn btn-primary ba-approve" type="button" data-brief="${b.id}" ${canApprove ? "" : "disabled"} style="min-height:34px;padding:.25rem .7rem">Approve &amp; publish</button>
+            </span>
+          </div>
+          ${rows || '<p class="muted">No items.</p>'}
+          <p class="muted" style="font-size:.78rem;margin:.4rem 0 0">Editing an item marks it uncertified; re-certify before approval. Approval writes <code>/feed.xml</code>.</p>
+        </div>`;
+      }).join("");
+
+      box.querySelectorAll(".ba-save").forEach((btn) => btn.addEventListener("click", async () => {
+        const row = btn.closest(".brief-admin-item");
+        btn.disabled = true;
+        try {
+          await fetch("/api/brief/admin/edit", { method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ id: row.dataset.brief, index: Number(row.dataset.idx),
+              headline: row.querySelector(".ba-headline").value, summary: row.querySelector(".ba-summary").value, why_it_matters: row.querySelector(".ba-why").value }) });
+          renderBriefAdmin();
+        } catch { btn.disabled = false; }
+      }));
+      box.querySelectorAll(".ba-recert").forEach((btn) => btn.addEventListener("click", async () => {
+        btn.disabled = true; btn.textContent = "Certifying…";
+        try { await fetch("/api/brief/admin/recertify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: btn.dataset.brief }) }); }
+        catch {}
+        renderBriefAdmin();
+      }));
+      box.querySelectorAll(".ba-approve").forEach((btn) => btn.addEventListener("click", async () => {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        try {
+          const r = await fetch("/api/brief/admin/approve", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: btn.dataset.brief }) });
+          const d = await r.json();
+          if (!r.ok) alert(d.error || "approve failed");
+        } catch {}
+        renderBriefAdmin();
+      }));
     }
 
     async function renderSavedResults() {

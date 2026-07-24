@@ -102,7 +102,7 @@ async function runJob(job) {
     usage.cacheRead += res.usage.cacheRead; usage.cacheCreation += res.usage.cacheCreation;
     parsed = extractJson(res.text);
   }
-  budget.record(usage, model); // log usage even if parsing ultimately failed
+  budget.record(usage, model, job.budgetKind); // log usage (tagged) even if parsing ultimately failed
 
   if (parsed === null) throw new Error("model did not return valid JSON after a repair attempt");
 
@@ -118,6 +118,7 @@ async function runJob(job) {
     title,
     byline: meta.byline,
     domain: meta.domain,
+    origin: job.origin || null,     // "brief" for internal self-certification calls
     analysis: v.analysis,
     flagged: v.flagged,
     injection: v.injection,
@@ -143,7 +144,7 @@ async function pump() {
 // `admin` (owner testing, via a matched ANALYZER_ADMIN_KEY header) skips the
 // per-IP rate limit; the queue cap and serial worker still apply. `force` (admin
 // only) bypasses URL dedupe to run a fresh scan (e.g. after a rubric/model change).
-async function submit({ ip, url, text, meta, admin, force }) {
+async function submit({ ip, url, text, meta, admin, force, kind, origin }) {
   // URL dedupe first — cheap, spends no tokens, not rate-limited. Skipped when
   // an admin forces a fresh re-scan.
   if (url && !force) {
@@ -154,6 +155,8 @@ async function submit({ ip, url, text, meta, admin, force }) {
   if (queue.length >= QUEUE_CAP) { const e = new Error("analysis queue is full, try again shortly"); e.code = "queue"; throw e; }
 
   const job = url ? { kind: "url", url, force: !!force } : { kind: "text", text, meta };
+  job.budgetKind = kind || "analyzer"; // budget tag: "analyzer" | "brief"
+  job.origin = origin || null;         // provenance tag stored on the analysis
   const p = new Promise((resolve, reject) => { job.resolve = resolve; job.reject = reject; });
   queue.push(job);
   pump();

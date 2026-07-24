@@ -179,8 +179,10 @@
             ? `$${m.costUsd.toFixed(2)} of $${m.capUsd.toFixed(2)}${m.warn ? " ⚠ 80%+" : ""}${m.exhausted ? " — budget reached" : ""}`
             : `$${m.costUsd.toFixed(2)} (no cap set)`;
           const prov = d.provider.configured ? `${d.provider.model}` : "not configured";
+          const bk = m.byKind || {};
+          const kinds = Object.keys(bk).length ? " · " + Object.keys(bk).map((k) => `${k} ${bk[k].calls}×/$${bk[k].costUsd.toFixed(2)}`).join(" ") : "";
           $("stats-line").textContent =
-            `[admin] ${m.month}: ${m.analyses} analyses · ${(m.tokens.input + m.tokens.cacheRead + m.tokens.cacheCreation).toLocaleString()} in / ${m.tokens.output.toLocaleString()} out · est. spend ${spend} · model ${prov} · queue ${d.queue}`;
+            `[admin] ${m.month}: ${m.analyses} analyses · ${(m.tokens.input + m.tokens.cacheRead + m.tokens.cacheCreation).toLocaleString()} in / ${m.tokens.output.toLocaleString()} out · est. spend ${spend}${kinds} · model ${prov} · queue ${d.queue}`;
         } else {
           // public view — no cost/model/token detail
           const total = d.counts ? d.counts.analyses : 0;

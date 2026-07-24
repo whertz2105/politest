@@ -325,6 +325,61 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
       : ok("timeSeries: n≥3 buckets kept, sparse month omitted, genre-mix + mean + lr correct");
   }
 
+  // ---- Daily Brief: clustering, certification loop, item schema, feed.xml ----
+  {
+    const { clusterStories } = require("../brief/cluster");
+    const { certifyItem } = require("../brief/certify");
+    const briefStore = require("../brief/store");
+    const bad = [];
+
+    // (1) clustering: a story on >=2 outlets promotes; an outlier stays out.
+    const cl = clusterStories([
+      { source: "A", title: "Senate passes annual budget bill" },
+      { source: "B", title: "Senate approves budget bill after debate" },
+      { source: "C", title: "Local weather turns colder this weekend" },
+    ]);
+    if (cl.selected.length !== 1 || cl.selected[0].outlets.length !== 2) bad.push(`cluster: selected=${cl.selected.length} outlets=${cl.selected[0] && cl.selected[0].outlets.length} (want 1 / 2)`);
+
+    // (2) certification rewrite loop: non-neutral → rewrite → neutral passes.
+    let calls = 0;
+    const passOnSecond = await certifyItem({ headline: "h" }, {
+      certify: async () => (++calls === 1
+        ? { id: "a1", stance_detected: true, flags: [], flagged: false, axes: { imm: { score: 34, evidence: "x" } } }
+        : { id: "a2", stance_detected: false, flags: [], flagged: false, axes: {} }),
+      rewrite: async (it) => ({ ...it, rewritten: true }),
+      maxRewrites: 1,
+    });
+    if (!passOnSecond.certOk || passOnSecond.attempts !== 1 || !passOnSecond.item.rewritten || passOnSecond.analysisId !== "a2") bad.push(`rewrite loop: certOk=${passOnSecond.certOk} attempts=${passOnSecond.attempts} rewritten=${passOnSecond.item.rewritten} (want true/1/true)`);
+
+    // (2b) persistent failure → parked for human edit.
+    const parked = await certifyItem({ headline: "h" }, {
+      certify: async () => ({ id: "x", stance_detected: true, flags: ["injection_attempt"], flagged: true, axes: {} }),
+      rewrite: async (it) => it, maxRewrites: 1,
+    });
+    if (parked.certOk || !parked.needsHuman) bad.push(`persistent fail: certOk=${parked.certOk} needsHuman=${parked.needsHuman} (want false/true)`);
+
+    // (3) item schema.
+    const words = (n) => Array.from({ length: n }, () => "word").join(" ");
+    if (!briefStore.validateItem({ headline: "Senate passes budget", summary: words(50), why_it_matters: words(10), links: ["https://example.com/a"] }).ok) bad.push("valid item rejected");
+    if (briefStore.validateItem({ headline: "x", summary: words(10), why_it_matters: words(40), links: [] }).ok) bad.push("invalid item accepted");
+
+    // (4) feed.xml well-formedness + escaping.
+    const xml = briefStore.feedXml([{ id: "abc", date: "2026-07-24", items: [{ headline: "A & B <ok>" }] }], { origin: "https://politeion.com" });
+    const wellFormed = (s) => {
+      const body = s.replace(/<\?xml[^?]*\?>/, ""); const stack = []; const re = /<(\/?)([a-zA-Z][\w:-]*)([^>]*?)(\/?)>/g; let m;
+      while ((m = re.exec(body))) { if (m[4] === "/") continue; if (m[1] === "/") { if (stack.pop() !== m[2]) return false; } else stack.push(m[2]); }
+      return stack.length === 0;
+    };
+    if (!xml.startsWith("<?xml")) bad.push("feed: missing xml declaration");
+    if (!/<rss version="2\.0">/.test(xml)) bad.push("feed: missing rss 2.0 root");
+    if ((xml.match(/<item>/g) || []).length !== 1) bad.push("feed: item count wrong");
+    if (!wellFormed(xml)) bad.push("feed: tags not balanced");
+    if (/&(?!amp;|lt;|gt;|quot;|#)/.test(xml) || xml.includes("A & B <ok>")) bad.push("feed: text not escaped");
+
+    bad.length ? fail("daily brief: " + bad.join("; "))
+      : ok("daily brief: clustering, rewrite→pass / persistent→park, item schema, feed.xml well-formed & escaped");
+  }
+
   // Nation normalization (revised bank).
   {
     let total = itemCount(full, "natl"), primary = 0;

@@ -50,10 +50,11 @@ function estimateCost(usage, model) {
 
 function monthKey(d) { const x = d instanceof Date ? d : new Date(d); return `${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, "0")}`; }
 
-function record(usage, model) {
+function record(usage, model, kind) {
   const e = {
     ts: new Date().toISOString(),
     model: model || null,
+    kind: kind || "analyzer",   // "analyzer" | "brief" — for the per-kind breakdown
     input: usage.input || 0,
     output: usage.output || 0,
     cacheRead: usage.cacheRead || 0,
@@ -86,16 +87,22 @@ function monthStats() {
   const cur = entries.filter((e) => monthKey(e.ts) === mk);
   const tok = { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
   let cost = 0;
+  const byKind = {};
   for (const e of cur) {
     tok.input += e.input; tok.output += e.output; tok.cacheRead += e.cacheRead; tok.cacheCreation += e.cacheCreation;
     cost += e.cost;
+    const k = e.kind || "analyzer";
+    if (!byKind[k]) byKind[k] = { calls: 0, costUsd: 0 };
+    byKind[k].calls++; byKind[k].costUsd += e.cost;
   }
+  for (const k of Object.keys(byKind)) byKind[k].costUsd = Math.round(byKind[k].costUsd * 10000) / 10000;
   const cap = capUsd();
   const pctOfCap = cap ? cost / cap : null;
   return {
     month: mk,
     analyses: cur.length,
     tokens: tok,
+    byKind,
     costUsd: Math.round(cost * 10000) / 10000,
     capUsd: cap,
     pctOfCap: pctOfCap === null ? null : Math.round(pctOfCap * 1000) / 1000,

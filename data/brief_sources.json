@@ -1,0 +1,18 @@
+{
+  "_note": "Public config for the Politeion Daily Brief. 'yesterday' = wire-tier RSS feeds clustered into stories; 'today' = public calendars for expected events. All fetched through the SSRF-hardened fetcher; a dead source is skipped, never fatal. Edit freely — this is config, not code.",
+  "yesterday": [
+    { "name": "NPR News", "rss": "https://feeds.npr.org/1001/rss.xml", "max": 15 },
+    { "name": "NPR Politics", "rss": "https://feeds.npr.org/1014/rss.xml", "max": 12 },
+    { "name": "BBC US & Canada", "rss": "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml", "max": 15 },
+    { "name": "BBC World", "rss": "https://feeds.bbci.co.uk/news/world/rss.xml", "max": 15 },
+    { "name": "AP Top News", "rss": "https://apnews.com/index.rss", "max": 15 },
+    { "name": "Reuters", "rss": "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best", "max": 15 }
+  ],
+  "today": [
+    { "name": "U.S. House floor schedule", "url": "https://docs.house.gov/floor/", "kind": "floor_schedule" },
+    { "name": "U.S. Senate floor schedule", "url": "https://www.senate.gov/legislative/schedule.htm", "kind": "floor_schedule" },
+    { "name": "Supreme Court arguments & opinions", "url": "https://www.supremecourt.gov/oral_arguments/argument_calendars.aspx", "kind": "scotus" },
+    { "name": "BLS release calendar", "url": "https://www.bls.gov/schedule/news_release/current_month.htm", "kind": "econ_calendar" },
+    { "name": "BEA release schedule", "url": "https://www.bea.gov/news/schedule", "kind": "econ_calendar" }
+  ]
+}

@@ -20,6 +20,7 @@ const path = require("path");
 const { pathToFileURL } = require("url");
 const analyzerRoutes = require("./analyzer/routes"); // Politeion Analyzer (/api/analyze, etc.)
 const authRoutes = require("./auth/routes");          // accounts / sessions (/api/auth/*)
+const briefRoutes = require("./brief/routes");        // Daily Brief (/api/brief/*, /feed.xml)
 
 const ROOT = __dirname;
 const HOST = process.env.HOST || "127.0.0.1";
@@ -146,9 +147,10 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  // Auth endpoints first, then analyzer, then the crowd endpoints / /api 404.
+  // Auth endpoints first, then analyzer, then brief, then the crowd endpoints / 404.
   if (await authRoutes.handle(req, res, url)) return;
   if (await analyzerRoutes.handle(req, res, url)) return;
+  if (await briefRoutes.handle(req, res, url)) return;
 
   if (url === "/api/stats" && req.method === "GET") {
     return sendJson(res, 200, { count: records.length, byBank: { v1: recordsForBank(1).length, v2: recordsForBank(2).length } });
@@ -200,6 +202,7 @@ const server = http.createServer(async (req, res) => {
   const lr = await import(pathToFileURL(path.join(ROOT, "js", "leftright.js")).href);
   authRoutes.init();
   analyzerRoutes.init(AXIS_KEYS, lr.leftRightScore);
+  briefRoutes.init(ROOT, process.env.BRIEFS_FILE || path.join(ROOT, "store", "briefs.jsonl"), { feedOrigin: process.env.FEED_ORIGIN || "https://politeion.com" });
   loadStore();
   server.listen(PORT, HOST, () => console.log(`Politeion API on http://${HOST}:${PORT} (store: ${STORE_FILE})`));
 })().catch((e) => { console.error("startup failed:", e); process.exit(1); });

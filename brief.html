@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daily Brief — Politeion</title>
+  <link rel="canonical" href="https://politeion.com/brief.html">
+  <meta name="description" content="The Politeion Daily Brief — a neutral daily read, machine-certified for no detectable stance.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://politeion.com/brief.html">
+  <meta property="og:title" content="Politeion Daily Brief">
+  <meta property="og:description" content="A neutral daily brief, machine-certified for no detectable stance.">
+  <meta name="twitter:card" content="summary">
+  <link rel="alternate" type="application/rss+xml" title="Politeion Daily Brief" href="/feed.xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap brief-wrap">
+    <div id="view"><p class="muted">Loading the brief…</p></div>
+  </main>
+
+  <script type="module">
+    import { initShell, escapeHtml } from "./js/app.js";
+    initShell("brief.html");
+    const view = document.getElementById("view");
+
+    const params = () => new URLSearchParams(location.search);
+
+    function itemHtml(it, i) {
+      const links = (it.links || []).map((u, n) => `<a href="${escapeHtml(u)}" rel="nofollow noopener" target="_blank">source ${n + 1}</a>`).join(" · ");
+      const receipt = it.analysisId
+        ? `<a class="brief-receipt" href="article.html#id=${encodeURIComponent(it.analysisId)}" title="neutrality check for this item">✓ no detectable stance</a>`
+        : "";
+      return `<article class="brief-item">
+        <h3>${i + 1}. ${escapeHtml(it.headline || "Untitled")}</h3>
+        <p class="brief-summary">${escapeHtml(it.summary || "")}</p>
+        ${it.why_it_matters ? `<p class="brief-why"><span class="brief-why-lbl">Why it matters</span> ${escapeHtml(it.why_it_matters)}</p>` : ""}
+        <p class="brief-links muted">${links}${links && receipt ? " · " : ""}${receipt}</p>
+      </article>`;
+    }
+
+    function todayHtml(today) {
+      if (!today || !today.length) return "";
+      return `<section class="brief-section"><h2>Today</h2>
+        <ul class="brief-today">${today.map((t) => `<li><b>${escapeHtml(t.name)}</b>${t.note ? ` — ${escapeHtml(t.note)}` : ""}${t.url ? ` <a href="${escapeHtml(t.url)}" rel="nofollow noopener" target="_blank">calendar</a>` : ""}</li>`).join("")}</ul></section>`;
+    }
+
+    function render(brief, recent) {
+      if (!brief) {
+        view.innerHTML = `<div class="card"><h1>No brief published yet</h1><p class="muted">The Politeion Daily Brief will appear here once the first edition is approved.</p></div>`;
+        return;
+      }
+      const items = brief.items || [];
+      const nCert = items.filter((it) => it.certOk).length;
+      const certLine = `All ${nCert} item${nCert === 1 ? "" : "s"} scored <b>no detectable stance</b> under rubric ${escapeHtml(brief.rubric_version || "v?")} — receipts linked on each item.`;
+      const archive = (recent || []).filter((r) => r.date !== brief.date).slice(0, 12)
+        .map((r) => `<a href="brief.html?date=${escapeHtml(r.date)}">${escapeHtml(r.date)}</a>`).join(" · ");
+
+      view.innerHTML = `
+        <header class="brief-head">
+          <span class="eyebrow">Politeion Daily Brief</span>
+          <h1 class="brief-date">${escapeHtml(brief.date)}</h1>
+          <p class="muted brief-standfirst">A neutral read — every item machine-checked for stance before publication.</p>
+        </header>
+        <section class="brief-section"><h2>Yesterday</h2>
+          ${items.length ? items.map(itemHtml).join("") : `<p class="muted">No items in this edition.</p>`}
+        </section>
+        ${todayHtml(brief.today)}
+        <footer class="brief-cert">
+          <p>${certLine}</p>
+          <p class="muted">Drafted by synthesis across multiple wire sources (brief prompt ${escapeHtml(brief.brief_version || "v1")}); certified by the same Analyzer that scores articles on the <a href="data.html#analyzer">published rubric</a>. Neutrality is a machine judgment, not a guarantee.</p>
+          ${archive ? `<p class="brief-archive"><b>Archive:</b> ${archive}</p>` : ""}
+          <p class="muted"><a href="/feed.xml">RSS</a></p>
+        </footer>`;
+      document.title = `Daily Brief ${brief.date} — Politeion`;
+    }
+
+    (async () => {
+      const date = params().get("date");
+      const url = date ? `/api/brief?date=${encodeURIComponent(date)}` : "/api/brief/latest";
+      try {
+        const r = await fetch(url, { cache: "no-cache" });
+        if (r.status === 404) { render(null, []); return; }
+        const d = await r.json();
+        render(d.brief, d.recent);
+      } catch (e) {
+        view.innerHTML = `<div class="notice notice-warn">Could not load the brief: ${escapeHtml(e.message)}</div>`;
+      }
+    })();
+  </script>
+</body>
+</html>
