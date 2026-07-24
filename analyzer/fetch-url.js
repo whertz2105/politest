@@ -319,7 +319,9 @@ function titleOf(html) {
   return t ? collapse(stripTags(t[1])) : null;
 }
 
-const BLOCK_STATUSES = [401, 403, 429, 451];
+// 202 included: some sites (Ballotpedia) answer bot user-agents with a 202
+// "challenge" instead of the article; the browser-UA retry gets the real 200.
+const BLOCK_STATUSES = [202, 401, 403, 429, 451];
 
 async function fetchAndExtract(urlStr) {
   // Default (bot) UA first; if a CDN bot rule blocks it (403/401/429/451), retry

@@ -13,7 +13,22 @@ const { pathToFileURL } = require("url");
 
 const ROOT = path.resolve(__dirname, "..");
 
+// A manual CLI run doesn't inherit the systemd EnvironmentFile — load it (KEY=value,
+// no shell eval), filling only unset vars, so MODEL/ANTHROPIC_API_KEY are available.
+function loadEnvFile() {
+  const file = process.env.ANALYZER_ENV || "/etc/politeion/analyzer.env";
+  let text;
+  try { text = fs.readFileSync(file, "utf8"); } catch { return; }
+  for (const line of text.split("\n")) {
+    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!m || line.trim().startsWith("#")) continue;
+    const v = m[2].trim().replace(/^(['"])(.*)\1$/, "$2");
+    if (process.env[m[1]] === undefined) process.env[m[1]] = v;
+  }
+}
+
 (async () => {
+  loadEnvFile();
   const axes = await import(pathToFileURL(path.join(ROOT, "js", "axes.js")).href);
   const lr = await import(pathToFileURL(path.join(ROOT, "js", "leftright.js")).href);
 

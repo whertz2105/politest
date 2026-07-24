@@ -8,6 +8,7 @@
 //   node tools/candidates-ingest.js --state AL                # all AL races
 //   node tools/candidates-ingest.js                           # everything (incl. tracker)
 
+const fs = require("fs");
 const path = require("path");
 const { pathToFileURL } = require("url");
 
@@ -15,7 +16,23 @@ const ROOT = path.resolve(__dirname, "..");
 
 function argVal(name) { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : null; }
 
+// A manual CLI run does NOT inherit the systemd EnvironmentFile, so load it here
+// (KEY=value lines, no shell eval) — only filling vars not already set. This is how
+// the CLI gets MODEL / ANTHROPIC_API_KEY / MONTHLY_BUDGET_USD on the droplet.
+function loadEnvFile() {
+  const file = process.env.ANALYZER_ENV || "/etc/politeion/analyzer.env";
+  let text;
+  try { text = fs.readFileSync(file, "utf8"); } catch { return; }
+  for (const line of text.split("\n")) {
+    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!m || line.trim().startsWith("#")) continue;
+    let v = m[2].trim().replace(/^(['"])(.*)\1$/, "$2");
+    if (process.env[m[1]] === undefined) process.env[m[1]] = v;
+  }
+}
+
 (async () => {
+  loadEnvFile();
   const axes = await import(pathToFileURL(path.join(ROOT, "js", "axes.js")).href);
   const lr = await import(pathToFileURL(path.join(ROOT, "js", "leftright.js")).href);
 
