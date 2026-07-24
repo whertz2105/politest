@@ -147,7 +147,10 @@ personal hardware is contacted.
    ```
    `ANALYZER_ADMIN_KEY` is optional: when set, a request carrying
    `x-analyzer-admin: <that value>` skips the per-IP rate limit (for your own
-   testing). Unset ⇒ no bypass exists. Example:
+   testing). Unset ⇒ no bypass exists. **On the website:** visit
+   `https://politeion.com/analyze.html?admin=<that value>` once — the key is saved
+   in that browser and sent on every submission (a "bypass active · turn off"
+   note appears; visit `?admin=` empty to clear). **Via curl:**
    `curl -X POST https://politeion.com/api/analyze -H 'content-type: application/json'
    -H "x-analyzer-admin: $KEY" -d '{"url":"https://…"}'`.
    The **model is never hardcoded** — it comes from `MODEL`. The key never enters

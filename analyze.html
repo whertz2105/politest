@@ -45,6 +45,7 @@
         <button class="btn btn-primary" id="go" type="button">Analyze</button>
         <span id="status" class="muted" role="status" aria-live="polite"></span>
       </div>
+      <p id="admin-note" class="muted" style="font-size:.8rem;margin:.2rem 0 0"></p>
     </section>
 
     <section class="card">
@@ -71,6 +72,30 @@
     const status = $("status"), go = $("go");
     function setStatus(msg, cls) { status.textContent = msg; status.className = cls || "muted"; }
 
+    // Admin rate-limit bypass. Enable it once by visiting
+    //   https://politeion.com/analyze.html?admin=YOUR_KEY
+    // The key is saved in this browser's localStorage (stripped from the URL,
+    // never in page source) and sent as x-analyzer-admin on each submission.
+    // Visit ?admin= (empty) to clear it, or use "Turn off" below.
+    const ADMIN_LS = "dc_analyzer_admin";
+    (function captureAdminFromUrl() {
+      const u = new URL(location.href);
+      if (u.searchParams.has("admin")) {
+        const v = u.searchParams.get("admin");
+        try { v ? localStorage.setItem(ADMIN_LS, v) : localStorage.removeItem(ADMIN_LS); } catch {}
+        u.searchParams.delete("admin");
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
+      }
+    })();
+    const adminKey = () => { try { return localStorage.getItem(ADMIN_LS) || ""; } catch { return ""; } };
+    function renderAdmin() {
+      const el = $("admin-note"), k = adminKey();
+      el.innerHTML = k ? `● Admin rate-limit bypass active — <a href="#" id="admin-off">turn off</a>` : "";
+      const off = document.getElementById("admin-off");
+      if (off) off.addEventListener("click", (e) => { e.preventDefault(); try { localStorage.removeItem(ADMIN_LS); } catch {} renderAdmin(); });
+    }
+    renderAdmin();
+
     async function submit() {
       go.disabled = true;
       const body = {};
@@ -88,7 +113,10 @@
       }
       setStatus("Analyzing… this can take up to a minute.", "muted");
       try {
-        const res = await fetch("/api/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+        const headers = { "content-type": "application/json" };
+        const k = adminKey();
+        if (k) headers["x-analyzer-admin"] = k;
+        const res = await fetch("/api/analyze", { method: "POST", headers, body: JSON.stringify(body) });
         const data = await res.json();
         if (!res.ok) { setStatus(data.error || `Error ${res.status}`, "err"); go.disabled = false; return; }
         setStatus(data.existing ? "Already analyzed — opening…" : "Done — opening analysis…", "ok");
