@@ -173,23 +173,38 @@ async function fetchRaw(urlStr, opts = {}) {
 // returns the body as JSON. Try {origin}/wp-json/wp/v2/posts?slug=<slug>. Same
 // host as the (already validated) article, re-validated by fetchRaw's SSRF guards.
 // Returns { text, title } or null.
+// GET a JSON endpoint via the SSRF-validated fetcher, retrying with a browser UA
+// on a bot-block. Returns parsed JSON (throws on error / non-JSON).
+async function fetchJson(url) {
+  let body;
+  try { ({ html: body } = await fetchRaw(url, { json: true, maxRedirects: 1 })); }
+  catch (e) {
+    if (e.status && [401, 403, 429, 451].includes(e.status)) ({ html: body } = await fetchRaw(url, { json: true, browserUA: true, maxRedirects: 1 }));
+    else throw e;
+  }
+  return JSON.parse(body);
+}
+
 async function tryWordPress(finalUrl) {
   try {
     const u = new URL(finalUrl);
     const slug = u.pathname.split("/").filter(Boolean).pop();
     if (!slug) return null;
-    const api = `${u.origin}/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_fields=title,content,excerpt`;
-    let body;
-    try { ({ html: body } = await fetchRaw(api, { json: true, maxRedirects: 1 })); }
-    catch (e) {
-      if (e.status && [401, 403, 429, 451].includes(e.status)) ({ html: body } = await fetchRaw(api, { json: true, browserUA: true, maxRedirects: 1 }));
-      else throw e;
-    }
-    const arr = JSON.parse(body);
+    const arr = await fetchJson(`${u.origin}/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_fields=title,content,excerpt,author`);
     if (!Array.isArray(arr) || !arr[0] || !arr[0].content) return null;
-    const text = extractText(arr[0].content.rendered || "");
-    const title = arr[0].title && arr[0].title.rendered ? collapse(stripTags(arr[0].title.rendered)) : null;
-    return text && text.length >= 120 ? { text, title } : null;
+    const post = arr[0];
+    const text = extractText(post.content.rendered || "");
+    const title = post.title && post.title.rendered ? collapse(stripTags(post.title.rendered)) : null;
+    // Resolve the author name from the WP users endpoint (public for post authors
+    // on most sites; if disabled, byline just stays null).
+    let byline = null;
+    if (post.author) {
+      try {
+        const usr = await fetchJson(`${u.origin}/wp-json/wp/v2/users/${encodeURIComponent(post.author)}?_fields=name`);
+        if (usr && usr.name) byline = collapse(stripTags(String(usr.name))).slice(0, 120) || null;
+      } catch { /* users endpoint restricted — leave byline null */ }
+    }
+    return text && text.length >= 120 ? { text, title, byline } : null;
   } catch { return null; }
 }
 
@@ -321,14 +336,16 @@ async function fetchAndExtract(urlStr) {
     const { html, finalUrl } = fetched;
     let text = extractText(html);
     let title = titleOf(html);
+    let wp = null;
     // If the server HTML yielded little text (client-side-rendered body), try the
     // WordPress REST API for the full article body.
     if (text.length < 400) {
-      const wp = await tryWordPress(finalUrl);
+      wp = await tryWordPress(finalUrl);
       if (wp && wp.text.length > text.length) { text = wp.text; title = title || wp.title; }
     }
     if (!text || text.length < 120) throw new Error("could not extract article text (client-side-rendered or paywalled — try pasting the text)");
-    return { text, title, byline: extractByline(html), domain: canonicalDomain(html, finalUrl), finalUrl };
+    const byline = extractByline(html) || (wp && wp.byline) || null; // prefer the page's own byline, fall back to WP
+    return { text, title, byline, domain: canonicalDomain(html, finalUrl), finalUrl };
   }
 
   // The page itself was blocked (e.g. a CDN 403 under both UAs). WordPress REST
@@ -339,7 +356,7 @@ async function fetchAndExtract(urlStr) {
     if (wp && wp.text) {
       let domain = null;
       try { domain = registrableDomain(new URL(urlStr).hostname); } catch {}
-      return { text: wp.text, title: wp.title, byline: null, domain, finalUrl: urlStr };
+      return { text: wp.text, title: wp.title, byline: wp.byline || null, domain, finalUrl: urlStr };
     }
   }
   throw fetchErr || new Error("could not fetch article");
