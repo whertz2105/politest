@@ -10,40 +10,61 @@
   <div data-shell></div>
   <main class="wrap">
     <h1>Data &amp; methodology</h1>
-    <p class="muted">How Politeion works, in the open — the article Analyzer's scoring method, and the full test question bank.</p>
+    <p class="muted">How Politeion works, in the open — the two halves of the site are measured differently, so they're documented separately.</p>
 
-    <section id="rubric" class="card" style="margin:1.2rem 0">
-      <h2 style="margin-top:0">Analyzer methodology</h2>
+    <div class="subtabs" role="tablist" aria-label="Methodology sections">
+      <button class="subtab" type="button" role="tab" id="tab-analyzer" data-tab="analyzer" aria-controls="panel-analyzer" aria-selected="true">Analyzer</button>
+      <button class="subtab" type="button" role="tab" id="tab-test" data-tab="test" aria-controls="panel-test" aria-selected="false">Test</button>
+    </div>
+
+    <section id="panel-analyzer" role="tabpanel" aria-labelledby="tab-analyzer">
+      <h2>Analyzer methodology</h2>
       <p class="muted">How the article Analyzer scores stance and what it flags. The exact scoring prompt is proprietary; this is a summary of the method. <span id="rubric-meta"></span></p>
       <div id="rubric-summary" class="md-body">Loading…</div>
+      <div id="rubric-error" class="muted" hidden>Methodology summary is unavailable right now.</div>
     </section>
 
-    <section>
-      <h2>The question bank</h2>
-      <p class="muted">The full set of questions behind the test — separate from the Analyzer above.</p>
+    <section id="panel-test" role="tabpanel" aria-labelledby="tab-test" hidden>
+      <h2>Test methodology</h2>
+      <p class="muted">The self-test places you on 22 independent axes. Each item contributes to one or more
+        of those categories; the per-item weights are proprietary, so what's published here is the shape of
+        the bank — how many items cover each axis and how evenly they're keyed.</p>
 
       <div id="validation"></div>
 
-      <h3>Per-axis summary</h3>
+      <h3>Per-axis coverage</h3>
       <div class="summary-grid" id="summary"></div>
 
-      <h3 style="margin-top:1.5rem">Questions</h3>
-      <div class="picker" style="margin-bottom:0.6rem">
-        <input id="filter" type="search" placeholder="Filter by text or id…" style="min-height:44px;padding:0.4rem 0.7rem;background:var(--bg-elev);color:var(--fg);border:1px solid var(--border);border-radius:10px;flex:1;min-width:200px">
-        <span class="muted" id="rowcount"></span>
-      </div>
-      <div class="table-scroll">
-        <table class="data" id="qtable"><thead></thead><tbody></tbody></table>
+      <div class="card" style="margin-top:1.5rem">
+        <h3>The question bank</h3>
+        <p class="muted">Every item in the test, with the categories it affects.</p>
+        <a class="btn" href="questions.html">Browse all questions →</a>
       </div>
     </section>
   </main>
 
   <script type="module">
     import { initShell, loadQuestionData, escapeHtml } from "./js/app.js";
-    import { AXES, AXIS_KEYS, axisByKey } from "./js/axes.js";
-    import { questionsForMode, maxAttainable, itemCount } from "./js/scoring.js";
+    import { AXES } from "./js/axes.js";
+    import { questionsForMode, itemCount } from "./js/scoring.js";
 
     initShell("data.html");
+
+    // ----- sub-tabs: Analyzer | Test (hash-addressable, e.g. data.html#test) --
+    const TABS = ["analyzer", "test"];
+    function showTab(name, push) {
+      const tab = TABS.includes(name) ? name : "analyzer";
+      for (const t of TABS) {
+        document.getElementById(`tab-${t}`).setAttribute("aria-selected", String(t === tab));
+        document.getElementById(`panel-${t}`).hidden = t !== tab;
+      }
+      if (push) history.replaceState(null, "", `#${tab}`);
+    }
+    document.querySelectorAll(".subtab").forEach((b) => {
+      b.addEventListener("click", () => showTab(b.dataset.tab, true));
+    });
+    window.addEventListener("hashchange", () => showTab(location.hash.slice(1), false));
+    showTab(location.hash.slice(1), false);
 
     // Minimal markdown → HTML for the methodology summary: ##/### headings,
     // GitHub-style tables, - lists, **bold**, `code`, and paragraphs.
@@ -93,7 +114,6 @@
 
     let questions = [];
     let bankVersion = 2, approximated = [], hasSev = false;
-    let sortKey = "id", sortDir = 1;
     const axesOf = (q) => (q.axes && typeof q.axes === "object") ? q.axes : {};
 
     function renderValidation(errors, warnings) {
@@ -118,14 +138,15 @@
       const core = questionsForMode(questions, "quick");
       const attentionN = full.filter((q) => q.type === "attention").length;
       const pairN = new Set(full.filter((q) => q.pair).map((q) => q.pair)).size;
-      const note = `<div class="card" style="grid-column:1/-1"><b>Bank v${bankVersion}</b> · ${full.length} items · ${attentionN} attention (hidden from table) · ${pairN} consistency pairs`
+      const note = `<div class="card" style="grid-column:1/-1"><b>Bank v${bankVersion}</b> · ${full.length} items · ${attentionN} attention checks · ${pairN} consistency pairs`
         + (approximated.length ? ` · <span class="muted">split axes approximated: ${approximated.map(escapeHtml).join(", ")}</span>` : "")
         + (hasSev ? "" : ` · <span class="muted">no severity (sev) tags</span>`) + `</div>`;
       const cells = AXES.map((a) => {
         const n = itemCount(full, a.key);
-        let pos = 0, neg = 0, sev = 0;
-        for (const q of full) { const w = axesOf(q)[a.key]; if (typeof w === "number" && w !== 0) { (w > 0 ? pos++ : neg++); if (q.sev !== undefined) sev++; } }
-        const max = maxAttainable(full, a.key);
+        // Keyed direction counts (how many items point to each pole) describe the
+        // bank's balance without publishing any item's actual weight.
+        let pos = 0, neg = 0;
+        for (const q of full) { const w = axesOf(q)[a.key]; if (typeof w === "number" && w !== 0) (w > 0 ? pos++ : neg++); }
         const coreN = itemCount(core, a.key);
         const balance = n ? Math.round((Math.max(pos, neg) / n) * 100) : 0;
         if (n === 0) {
@@ -134,75 +155,11 @@
         const flag = (n < 12 || balance > 65) ? ' <span class="flag" title="thin or imbalanced">⚠</span>' : "";
         return `<div class="summary-cell">
           <b>${escapeHtml(a.label)}${flag}</b>
-          <div>${n} items · <span title="positive/negative keyed">+${pos}/−${neg}</span></div>
-          <div class="muted">max ${max} · core ${coreN} · ${balance}% keyed${hasSev ? ` · sev ${sev}` : ""}</div>
+          <div>${n} items · <span title="items keyed toward each pole">+${pos}/−${neg}</span></div>
+          <div class="muted">core ${coreN} · ${balance}% one-sided</div>
         </div>`;
       });
       document.getElementById("summary").innerHTML = note + cells.join("");
-    }
-
-    const COLS = [
-      { key: "id", label: "ID" },
-      { key: "text", label: "Question", align: "left" },
-      { key: "axes", label: "Axis weights", align: "left", nosort: true },
-      { key: "sev", label: "Severity" },
-      { key: "pair", label: "Pair" },
-    ];
-    function renderHead() {
-      document.querySelector("#qtable thead").innerHTML = "<tr>" + COLS.map((c) => {
-        const sorted = c.key === sortKey ? (sortDir === 1 ? "sorted-asc" : "sorted-desc") : "";
-        const cls = [sorted, c.nosort ? "nosort" : "", c.align === "left" ? "ta-left" : ""].filter(Boolean).join(" ");
-        return `<th data-key="${c.key}" class="${cls}">${c.label}</th>`;
-      }).join("") + "</tr>";
-      document.querySelectorAll("#qtable th").forEach((h) => {
-        if (h.classList.contains("nosort")) return;
-        h.addEventListener("click", () => {
-          const k = h.dataset.key;
-          if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
-          renderHead(); renderBody();
-        });
-      });
-    }
-
-    function valueFor(q, key) {
-      if (key === "id") return q.id;
-      if (key === "text") return q.text.toLowerCase();
-      if (key === "sev") return q.sev === undefined ? -Infinity : q.sev;
-      if (key === "pair") return q.pair || "";
-      const a = axesOf(q);
-      return a[key] === undefined ? -Infinity : a[key];
-    }
-
-    function renderBody() {
-      const filter = document.getElementById("filter").value.trim().toLowerCase();
-      // Attention-check items are excluded from the public table (exposing their
-      // wording would make them trivially defeatable); they stay counted in the header.
-      const visible = questions.filter((q) => q.type !== "attention");
-      let rows = visible.filter((q) =>
-        !filter || q.text.toLowerCase().includes(filter) || String(q.id) === filter);
-      rows.sort((a, b) => {
-        const va = valueFor(a, sortKey), vb = valueFor(b, sortKey);
-        return (va < vb ? -1 : va > vb ? 1 : a.id - b.id) * sortDir;
-      });
-      const body = rows.map((q) => {
-        const ax = axesOf(q);
-        const chips = AXIS_KEYS.filter((k) => typeof ax[k] === "number" && ax[k] !== 0)
-          .sort((a, b) => Math.abs(ax[b]) - Math.abs(ax[a]))
-          .map((k) => {
-            const w = ax[k], m = axisByKey(k);
-            return `<span class="wchip ${w > 0 ? "w-pos" : "w-neg"}" title="${escapeHtml(m.label)}: ${w > 0 ? "+" : ""}${w}">${escapeHtml(m.label)} <b>${w > 0 ? "+" : ""}${w}</b></span>`;
-          }).join(" ");
-        const badge = q.core ? ' <span class="muted" title="core / quick-mode item">•</span>' : "";
-        return `<tr>
-          <td class="ta-c">${q.id}${badge}</td>
-          <td class="q ta-left">${escapeHtml(q.text)}</td>
-          <td class="axcell ta-left">${chips || '<span class="muted">—</span>'}</td>
-          <td class="ta-c">${q.sev !== undefined ? q.sev : "—"}</td>
-          <td class="ta-c">${q.pair ? escapeHtml(q.pair) : "—"}</td>
-        </tr>`;
-      }).join("");
-      document.querySelector("#qtable tbody").innerHTML = body;
-      document.getElementById("rowcount").textContent = `${rows.length} of ${visible.length} (attention checks hidden)`;
     }
 
     (async () => {
@@ -212,8 +169,11 @@
         if (rr.ok) {
           const rj = await rr.json();
           document.getElementById("rubric-summary").innerHTML = mdToHtml(rj.summary || "");
-        } else { document.getElementById("rubric").style.display = "none"; }
-      } catch { document.getElementById("rubric").style.display = "none"; }
+        } else { throw new Error("unavailable"); }
+      } catch {
+        document.getElementById("rubric-summary").hidden = true;
+        document.getElementById("rubric-error").hidden = false;
+      }
 
       let data;
       try { data = await loadQuestionData(); }
@@ -228,9 +188,6 @@
       hasSev = questions.some((q) => q.sev !== undefined);
       renderValidation(data.errors, data.warnings);
       renderSummary();
-      renderHead();
-      renderBody();
-      document.getElementById("filter").addEventListener("input", renderBody);
     })();
   </script>
 </body>

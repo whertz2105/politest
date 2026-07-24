@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Question bank — Politeion</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap">
+    <h1>The question bank</h1>
+    <p class="muted">Every item in the test, and which of the 22 categories each one touches.
+      How much an item moves a category — and in which direction — is not published.</p>
+
+    <div class="picker" style="margin:1.2rem 0 0.6rem">
+      <input id="filter" type="search" placeholder="Filter by text, id, or category…" style="min-height:44px;padding:0.4rem 0.7rem;background:var(--bg-elev);color:var(--fg);border:1px solid var(--border);border-radius:10px;flex:1;min-width:200px">
+      <span class="muted" id="rowcount"></span>
+    </div>
+    <div class="table-scroll">
+      <table class="data" id="qtable"><thead></thead><tbody></tbody></table>
+    </div>
+
+    <div class="btn-row" style="margin-top:1.2rem">
+      <a class="btn" href="data.html#test">← Data &amp; methodology</a>
+      <a class="btn btn-primary" href="test.html">Take the test</a>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initShell, loadQuestionData, escapeHtml } from "./js/app.js";
+    import { AXIS_KEYS, axisByKey } from "./js/axes.js";
+
+    // Reached only from the Data page's Test tab; keep Data lit in the nav.
+    initShell("data.html");
+
+    let questions = [];
+    let sortKey = "id", sortDir = 1;
+    const axesOf = (q) => (q.axes && typeof q.axes === "object") ? q.axes : {};
+
+    // Categories an item touches, in a stable (axes.js) order. No weights, no
+    // direction — the per-item scoring values are proprietary.
+    function categoriesOf(q) {
+      const ax = axesOf(q);
+      return AXIS_KEYS.filter((k) => typeof ax[k] === "number" && ax[k] !== 0).map((k) => axisByKey(k).label);
+    }
+
+    const COLS = [
+      { key: "id", label: "ID" },
+      { key: "text", label: "Question", align: "left" },
+      { key: "cats", label: "Categories affected", align: "left", nosort: true },
+    ];
+    function renderHead() {
+      document.querySelector("#qtable thead").innerHTML = "<tr>" + COLS.map((c) => {
+        const sorted = c.key === sortKey ? (sortDir === 1 ? "sorted-asc" : "sorted-desc") : "";
+        const cls = [sorted, c.nosort ? "nosort" : "", c.align === "left" ? "ta-left" : ""].filter(Boolean).join(" ");
+        return `<th data-key="${c.key}" class="${cls}">${c.label}</th>`;
+      }).join("") + "</tr>";
+      document.querySelectorAll("#qtable th").forEach((h) => {
+        if (h.classList.contains("nosort")) return;
+        h.addEventListener("click", () => {
+          const k = h.dataset.key;
+          if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+          renderHead(); renderBody();
+        });
+      });
+    }
+
+    function valueFor(q, key) {
+      if (key === "text") return q.text.toLowerCase();
+      return q.id;
+    }
+
+    function renderBody() {
+      const filter = document.getElementById("filter").value.trim().toLowerCase();
+      // Attention-check items are excluded from the public table (exposing their
+      // wording would make them trivially defeatable).
+      const visible = questions.filter((q) => q.type !== "attention");
+      let rows = visible.filter((q) => {
+        if (!filter) return true;
+        return q.text.toLowerCase().includes(filter)
+          || String(q.id) === filter
+          || categoriesOf(q).some((c) => c.toLowerCase().includes(filter));
+      });
+      rows.sort((a, b) => {
+        const va = valueFor(a, sortKey), vb = valueFor(b, sortKey);
+        return (va < vb ? -1 : va > vb ? 1 : a.id - b.id) * sortDir;
+      });
+      const body = rows.map((q) => {
+        const chips = categoriesOf(q)
+          .map((label) => `<span class="wchip">${escapeHtml(label)}</span>`).join(" ");
+        const badge = q.core ? ' <span class="muted" title="core / quick-mode item">•</span>' : "";
+        return `<tr>
+          <td class="ta-c">${q.id}${badge}</td>
+          <td class="q ta-left">${escapeHtml(q.text)}</td>
+          <td class="axcell ta-left">${chips || '<span class="muted">—</span>'}</td>
+        </tr>`;
+      }).join("");
+      document.querySelector("#qtable tbody").innerHTML = body;
+      document.getElementById("rowcount").textContent = `${rows.length} of ${visible.length} (attention checks hidden)`;
+    }
+
+    (async () => {
+      let data;
+      try { data = await loadQuestionData(); }
+      catch (e) {
+        document.querySelector("#qtable").insertAdjacentHTML("beforebegin",
+          `<div class="card validation-errors"><h3>Could not load questions.json</h3><p>${escapeHtml(e.message)}</p></div>`);
+        return;
+      }
+      questions = data.questions;
+      renderHead();
+      renderBody();
+      document.getElementById("filter").addEventListener("input", renderBody);
+    })();
+  </script>
+</body>
+</html>

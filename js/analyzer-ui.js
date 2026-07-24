@@ -11,7 +11,7 @@ export { leftRightScore };
 
 export const DISCLAIMER =
   `<p class="disclaimer">Automated analysis by a language model against a
-   <a href="data.html#rubric">published rubric</a>. Every score cites evidence from
+   <a href="data.html#analyzer">published rubric</a>. Every score cites evidence from
    the text. It is a starting point, not a verdict.</p>`;
 
 const GENRE_LABEL = { report: "Report", analysis: "Analysis", opinion: "Opinion", mixed: "Mixed" };
@@ -143,7 +143,7 @@ export function renderArticle(el, rec) {
   } else {
     html += `<div class="ax-list">${keys.map((k) => axisRow(k, rec.axes[k])).join("")}</div>`;
   }
-  html += `<p class="rubric-stamp muted">Scored against the <a href="data.html#rubric">published rubric &amp; methodology</a>.</p>`;
+  html += `<p class="rubric-stamp muted">Scored against the <a href="data.html#analyzer">published rubric &amp; methodology</a>.</p>`;
   el.innerHTML = html;
 
   if (pairs.length) {
