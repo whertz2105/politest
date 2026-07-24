@@ -51,20 +51,28 @@
       </label>
     </section>
 
-    <section class="card">
-      <div class="stats-line muted" id="stats-line">Loading analyzer status…</div>
-      <h2 class="section-h">Recently analyzed</h2>
-      <div class="article-list recent-scroll" id="recent"></div>
-    </section>
+    <div class="stats-line muted" id="stats-line" style="margin:.5rem 0 1rem">Loading analyzer status…</div>
 
-    <section class="card">
-      <h2 class="section-h" style="margin-top:0">Most biased in this dataset</h2>
-      <p class="muted" id="lb-note" style="font-size:.85rem;margin:-.2rem 0 .6rem"></p>
-      <div class="lb-cols">
-        <div><h3 class="lb-h">Outlets</h3><div class="lb-list" id="lb-sources"></div></div>
-        <div><h3 class="lb-h">Authors</h3><div class="lb-list" id="lb-writers"></div></div>
-      </div>
-    </section>
+    <div class="split split-even" id="split">
+      <section class="card split-pane" data-pane="lb">
+        <div class="pane-head">
+          <h2 class="section-h" style="margin:0">Most biased</h2>
+          <button class="pane-expand" type="button" data-expand="lb" title="Widen this panel" aria-label="Widen leaderboard">⤢</button>
+        </div>
+        <p class="muted" id="lb-note" style="font-size:.8rem;margin:.15rem 0 .55rem"></p>
+        <div class="lb-cols">
+          <div><h3 class="lb-h">Outlets</h3><div class="lb-list" id="lb-sources"></div></div>
+          <div><h3 class="lb-h">Authors</h3><div class="lb-list" id="lb-writers"></div></div>
+        </div>
+      </section>
+      <section class="card split-pane" data-pane="recent">
+        <div class="pane-head">
+          <h2 class="section-h" style="margin:0">Recently analyzed</h2>
+          <button class="pane-expand" type="button" data-expand="recent" title="Widen this panel" aria-label="Widen recent">⤢</button>
+        </div>
+        <div class="article-list recent-scroll" id="recent"></div>
+      </section>
+    </div>
   </main>
 
   <script type="module">
@@ -179,11 +187,14 @@
           $("stats-line").textContent = `${m.analyses} article${m.analyses === 1 ? "" : "s"} analyzed this month · ${total} in total.`;
         }
         $("recent").innerHTML = (d.recent || []).map((c) =>
-          `<a class="article-card" href="article.html#id=${encodeURIComponent(c.id)}">
-             <span class="genre-chip genre-${c.genre} sm">${GENRE[c.genre] || c.genre}</span>
-             ${c.flagged ? '<span class="genre-chip caution sm">caution</span>' : ""}
-             <span class="article-card-title">${escapeHtml(c.title || c.url || "Untitled")}</span>
-             ${miniLeftRightBar(c.lr)}</a>`).join("")
+          `<a class="article-card ac-tall" href="article.html#id=${encodeURIComponent(c.id)}">
+             <span class="ac-headline">${c.source ? `<span class="ac-src">${escapeHtml(c.source)}</span> — ` : ""}${escapeHtml(c.title || c.url || "Untitled")}</span>
+             <span class="ac-meta">
+               <span class="genre-chip genre-${c.genre} sm">${GENRE[c.genre] || c.genre}</span>
+               ${c.flagged ? '<span class="genre-chip caution sm">caution</span>' : ""}
+               ${miniLeftRightBar(c.lr)}
+             </span>
+           </a>`).join("")
           || '<p class="muted">No analyses yet — be the first.</p>';
         renderLeaderboard(d.leaderboard);
       } catch { $("stats-line").textContent = ""; }
@@ -212,6 +223,26 @@
     }
 
     loadStats();
+
+    // Split ratio: even (50-50), lb (80-20), recent (20-80). Persisted.
+    const split = document.getElementById("split");
+    const SPLIT_KEY = "dc_analyze_split";
+    function applySplit(state) {
+      split.classList.remove("split-even", "split-exp-lb", "split-exp-recent");
+      split.classList.add(state === "lb" ? "split-exp-lb" : state === "recent" ? "split-exp-recent" : "split-even");
+      try { localStorage.setItem(SPLIT_KEY, state); } catch {}
+      split.querySelectorAll(".pane-expand").forEach((b) => {
+        const on = (b.dataset.expand === state);
+        b.classList.toggle("active", on);
+        b.textContent = on ? "⤡" : "⤢";
+        b.title = on ? "Reset to even split" : "Widen this panel";
+      });
+    }
+    split.querySelectorAll(".pane-expand").forEach((b) => b.addEventListener("click", () => {
+      const cur = (localStorage.getItem(SPLIT_KEY) || "even");
+      applySplit(cur === b.dataset.expand ? "even" : b.dataset.expand);
+    }));
+    applySplit((() => { try { return localStorage.getItem(SPLIT_KEY) || "even"; } catch { return "even"; } })());
   </script>
 </body>
 </html>

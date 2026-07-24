@@ -71,7 +71,7 @@ async function handle(req, res, urlPath) {
       month: { month: m.month, analyses: m.analyses },
       counts: store.counts(),
       recent: store.recentList(30),
-      leaderboard: { sources: store.rankSources(8), writers: store.rankWriters(8), minArticles: store.MIN_ARTICLES },
+      leaderboard: { sources: store.rankSources(5), writers: store.rankWriters(5), minArticles: store.MIN_ARTICLES },
     };
     if (isAdmin(req)) {
       out.provider = provider.status();

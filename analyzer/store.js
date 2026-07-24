@@ -160,7 +160,7 @@ function aggregateLR(records) {
 }
 
 function articleCard(r) {
-  const card = { id: r.id, title: r.title, url: r.url, genre: r.genre, stance_detected: r.stance_detected, flagged: r.flagged, ts: r.ts };
+  const card = { id: r.id, title: r.title, url: r.url, source: r.source || null, genre: r.genre, stance_detected: r.stance_detected, flagged: r.flagged, ts: r.ts };
   // Precomputed left↔right position for list mini-bars (flagged excluded — no lean shown).
   if (leftRightFn && !r.flagged) card.lr = leftRightFn(r.axes || {});
   return card;
