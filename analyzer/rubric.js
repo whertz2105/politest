@@ -15,8 +15,9 @@ const RUBRIC_FILE = path.join(__dirname, "..", "data", "analyzer_system_prompt.m
 // Public methodology summary — what is measured and flagged, NOT the prompt.
 const SUMMARY_FILE = path.join(__dirname, "..", "data", "rubric_summary.md");
 
-// v1 is the human-facing rubric revision. Bump on any deliberate rubric edit.
-const RUBRIC_VERSION = "v1";
+// Human-facing rubric revision. Bump on any deliberate rubric edit.
+// v2 added the required neutral_summary output field.
+const RUBRIC_VERSION = "v2";
 
 let _text = null;
 let _sha = null;

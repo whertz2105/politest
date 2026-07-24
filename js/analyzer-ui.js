@@ -121,6 +121,16 @@ export function renderArticle(el, rec) {
   const sourceLink = rec.source ? `<a href="profile.html#source=${encodeURIComponent(rec.source)}">${escapeHtml(rec.source)}</a>` : "unknown";
   const urlLine = rec.url ? `<a class="src-url" href="${escapeHtml(rec.url)}" rel="nofollow noopener" target="_blank">${escapeHtml(rec.url)}</a>` : `<span class="muted">pasted text</span>`;
 
+  const neutral = rec.neutral_summary
+    ? `<section class="neutral-summary"><h2 class="ns-h">What the article says</h2>
+        <p>${escapeHtml(rec.neutral_summary)}</p>
+        <p class="ns-note muted">A neutral summary of the substance, independent of the bias scan below.</p></section>`
+    : "";
+
+  // Up to 3 small quadrant charts pairing the strongest axes (need 2 axes each).
+  const pairs = [];
+  for (let i = 0; i + 1 < keys.length && pairs.length < 3; i += 2) pairs.push([keys[i], keys[i + 1]]);
+
   let html = `
     <div class="analysis-head">
       <span class="genre-chip genre-${rec.genre}">${GENRE_LABEL[rec.genre] || rec.genre}</span>
@@ -129,30 +139,32 @@ export function renderArticle(el, rec) {
       <p class="analysis-meta">By ${writerLink} · ${sourceLink} · ${urlLine}</p>
       <p class="analysis-summary">${escapeHtml(rec.summary || "")}</p>
     </div>
+    ${neutral}
     ${flagBanner(rec)}
     ${DISCLAIMER}
-    ${renderLeftRightBar(rec.axes || {})}`;
+    ${renderLeftRightBar(rec.axes || {})}
+    ${pairs.length ? `<div class="quad-row" data-quads></div>` : ""}`;
 
   if (!rec.stance_detected || keys.length === 0) {
     html += `<div class="notice notice-ok"><strong>No detectable stance.</strong>
       This piece read as straight reporting: no axis met the evidence bar. That is a valid and common result.</div>`;
-    el.innerHTML = html;
-    return;
-  }
-
-  html += `<div class="ax-list">${keys.map((k) => axisRow(k, rec.axes[k])).join("")}</div>`;
-  // A quadrant of the two strongest axes, using the shared chart component.
-  if (keys.length >= 2) {
-    html += `<figure class="quad-figure" data-quad></figure>`;
+  } else {
+    html += `<div class="ax-list">${keys.map((k) => axisRow(k, rec.axes[k])).join("")}</div>`;
   }
   html += `<p class="rubric-stamp muted">Scored against rubric ${escapeHtml(rec.rubric ? rec.rubric.version : "?")} ·
      model ${escapeHtml(rec.rubric ? (rec.rubric.model || "?") : "?")} · hash ${escapeHtml(rec.rubric ? String(rec.rubric.sha256).slice(0, 12) : "?")}</p>`;
   el.innerHTML = html;
 
-  if (keys.length >= 2) {
+  if (pairs.length) {
     const vec = {};
     for (const k of AXIS_KEYS) vec[k] = rec.axes[k] ? rec.axes[k].score : 0;
-    wireQuadrant(el.querySelector("[data-quad]"), vec, keys[0], keys[1], { title: "Two strongest axes" });
+    const row = el.querySelector("[data-quads]");
+    for (const [x, y] of pairs) {
+      const fig = document.createElement("figure");
+      fig.className = "quad-mini";
+      row.appendChild(fig);
+      wireQuadrant(fig, vec, x, y, { title: `${axisByKey(x).label} × ${axisByKey(y).label}` });
+    }
   }
 }
 

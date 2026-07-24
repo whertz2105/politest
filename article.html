@@ -12,13 +12,21 @@
   <div data-shell></div>
   <main class="wrap">
     <div id="view"><p class="muted">Loading analysis…</p></div>
-    <p class="btn-row"><a class="btn" href="analyze.html">Analyze another article</a></p>
+    <div class="btn-row" style="justify-content:space-between">
+      <button class="btn" type="button" id="back-btn">← Back</button>
+      <a class="btn" href="analyze.html">Analyze another article</a>
+    </div>
   </main>
 
   <script type="module">
     import { initShell } from "./js/app.js";
     import { renderArticle, hashParams } from "./js/analyzer-ui.js";
     initShell("analyze.html");
+
+    // Back button: return to the previous page, or the Analyzer if there's no history.
+    document.getElementById("back-btn").addEventListener("click", () => {
+      if (history.length > 1) history.back(); else location.href = "analyze.html";
+    });
 
     const view = document.getElementById("view");
     async function load() {

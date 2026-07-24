@@ -38,6 +38,9 @@ function validateAnalysis(parsed, articleText, axisKeys) {
   const genre = GENRES.has(parsed && parsed.genre) ? parsed.genre : "report";
   const stanceDetected = !!(parsed && parsed.stance_detected);
   const summary = typeof (parsed && parsed.summary) === "string" ? parsed.summary.slice(0, 400) : "";
+  // Neutral substance summary (article content, not stance). A short derived
+  // abstract — not the article body — so it is safe to persist and display.
+  const neutralSummary = typeof (parsed && parsed.neutral_summary) === "string" ? parsed.neutral_summary.slice(0, 1000) : "";
 
   // Model-supplied flags, filtered to the known set.
   const modelFlags = Array.isArray(parsed && parsed.flags)
@@ -87,7 +90,7 @@ function validateAnalysis(parsed, articleText, axisKeys) {
 
   return {
     ok: true,
-    analysis: { genre, stance_detected: stanceDetected, axes, summary, flags },
+    analysis: { genre, stance_detected: stanceDetected, axes, neutral_summary: neutralSummary, summary, flags },
     flagged,
     injection,
     reasons,

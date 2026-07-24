@@ -90,6 +90,7 @@ function addAnalysis(input) {
     genre: input.analysis.genre,
     stance_detected: input.analysis.stance_detected,
     axes: input.analysis.axes,        // { key: {score, confidence, evidence} }
+    neutral_summary: input.analysis.neutral_summary || "",
     summary: input.analysis.summary,
     flags: input.analysis.flags,
     flagged: input.flagged,

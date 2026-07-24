@@ -15,6 +15,9 @@ summarizes the methodology so results can be read and challenged.
   quote flags the analysis.
 - **Sparing by design.** A typical article implicates 1–5 axes. A straight report
   with no detectable stance is a valid, common result (no axes scored).
+- **Neutral summary too.** Alongside the bias scan, every analysis includes a short
+  neutral summary of the article's substance — what it reports or argues — written
+  to be fair to readers of any politics and independent of the lean.
 
 ## Genre
 

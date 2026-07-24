@@ -406,6 +406,13 @@ details.card summary { cursor: pointer; }
 .axrow-ev { font-family: var(--serif); font-style: italic; color: var(--fg-dim); margin: .4rem 0 0; padding-left: .8rem; border-left: 2px solid var(--gold); }
 
 .quad-figure { margin: 1.1rem auto; max-width: 290px; }
+.quad-row { display: flex; flex-wrap: wrap; gap: .8rem; justify-content: center; margin: 1rem 0 1.2rem; }
+.quad-mini { flex: 0 1 190px; max-width: 210px; margin: 0; }
+.quad-mini figcaption, .quad-mini .chart-title { font-size: var(--fs-xs); }
+.neutral-summary { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-elev); padding: .8rem 1rem; margin: 1rem 0; }
+.neutral-summary .ns-h { font-family: var(--serif); font-size: var(--fs-md); margin: 0 0 .4rem; }
+.neutral-summary p { margin: .3rem 0; }
+.neutral-summary .ns-note { font-size: var(--fs-xs); }
 .rubric-stamp { font-family: var(--mono); font-size: var(--fs-xs); margin-top: 1.4rem; }
 
 .article-list { display: flex; flex-direction: column; gap: .45rem; }

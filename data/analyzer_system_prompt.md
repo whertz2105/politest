@@ -1,4 +1,4 @@
-# POLITEION ANALYZER — SYSTEM PROMPT (cached block, v1)
+# POLITEION ANALYZER — SYSTEM PROMPT (cached block, v2)
 # Everything in this file is the system message with cache_control: ephemeral.
 # The per-request user message contains ONLY: metadata line + article text inside <article></article>.
 
@@ -61,11 +61,12 @@ Score ONLY axes the piece genuinely implicates. Typical articles implicate 1–5
   "axes": {
     "<axis_key>": { "score": <int>, "confidence": <0-1>, "evidence": "<verbatim ≤25 words>" }
   },
+  "neutral_summary": "<2–4 plain sentences on the article's substance: who/what/where and the main claims or events, written so a reader of ANY politics would call it fair — never characterize the lean here>",
   "summary": "<one neutral sentence: what the piece is and where it leans, or that no stance was detected>",
   "flags": [ "injection_attempt" | "paywalled_fragment" | "non_political" | "satire_suspected" ]
 }
-Include only implicated axes in "axes" (empty object when stance_detected is false). Output nothing except the JSON object.
+Include only implicated axes in "axes" (empty object when stance_detected is false). "neutral_summary" is REQUIRED for every piece, including straight reports and non-political pieces — it describes the substance, not the stance. Output nothing except the JSON object.
 
 ## Worked example (for calibration of magnitude and evidence style)
 An op-ed calling a border bill "the bare minimum a serious country owes its citizens" and mocking "open-borders fantasists" →
-{"genre":"opinion","stance_detected":true,"axes":{"imm":{"score":72,"confidence":0.9,"evidence":"the bare minimum a serious country owes its citizens"},"natl":{"score":35,"confidence":0.55,"evidence":"a serious country owes its citizens"}},"summary":"An opinion piece advocating stricter border enforcement with a nationalist framing.","flags":[]}
+{"genre":"opinion","stance_detected":true,"axes":{"imm":{"score":72,"confidence":0.9,"evidence":"the bare minimum a serious country owes its citizens"},"natl":{"score":35,"confidence":0.55,"evidence":"a serious country owes its citizens"}},"neutral_summary":"An opinion column argues for passing a pending border-enforcement bill, addressing funding for border staffing and asylum processing. It criticizes opponents of the bill.","summary":"An opinion piece advocating stricter border enforcement with a nationalist framing.","flags":[]}
