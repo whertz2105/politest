@@ -179,7 +179,12 @@ async function tryWordPress(finalUrl) {
     const slug = u.pathname.split("/").filter(Boolean).pop();
     if (!slug) return null;
     const api = `${u.origin}/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_fields=title,content,excerpt`;
-    const { html: body } = await fetchRaw(api, { json: true, maxRedirects: 1 });
+    let body;
+    try { ({ html: body } = await fetchRaw(api, { json: true, maxRedirects: 1 })); }
+    catch (e) {
+      if (e.status && [401, 403, 429, 451].includes(e.status)) ({ html: body } = await fetchRaw(api, { json: true, browserUA: true, maxRedirects: 1 }));
+      else throw e;
+    }
     const arr = JSON.parse(body);
     if (!Array.isArray(arr) || !arr[0] || !arr[0].content) return null;
     const text = extractText(arr[0].content.rendered || "");
@@ -200,10 +205,15 @@ function registrableDomain(host) {
 }
 function stripTags(s) { return s.replace(/<[^>]+>/g, " "); }
 function decodeEntities(s) {
-  return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x27;/g, "'")
-    .replace(/&nbsp;/g, " ").replace(/&mdash;/g, "—").replace(/&rsquo;/g, "’").replace(/&lsquo;/g, "‘")
-    .replace(/&rdquo;/g, "”").replace(/&ldquo;/g, "“");
+  return s
+    .replace(/&nbsp;/g, " ").replace(/&mdash;/g, "—").replace(/&ndash;/g, "–")
+    .replace(/&rsquo;/g, "’").replace(/&lsquo;/g, "‘").replace(/&rdquo;/g, "”").replace(/&ldquo;/g, "“")
+    .replace(/&hellip;/g, "…").replace(/&quot;/g, '"')
+    // numeric entities (decimal and hex), e.g. &#8217; &#x2019;
+    .replace(/&#(\d+);/g, (m, n) => { try { return String.fromCodePoint(+n); } catch { return m; } })
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch { return m; } })
+    // &amp; last so we don't double-decode (e.g. &amp;#8217;)
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 }
 function collapse(s) { return decodeEntities(s).replace(/\s+/g, " ").trim(); }
 
@@ -292,33 +302,47 @@ function titleOf(html) {
   return t ? collapse(stripTags(t[1])) : null;
 }
 
+const BLOCK_STATUSES = [401, 403, 429, 451];
+
 async function fetchAndExtract(urlStr) {
   // Default (bot) UA first; if a CDN bot rule blocks it (403/401/429/451), retry
   // once as a browser. Sites that accept the bot UA (e.g. National Review) never
   // hit the retry, so this doesn't regress them.
-  let fetched;
+  let fetched = null, fetchErr = null;
   try { fetched = await fetchRaw(urlStr, {}); }
   catch (e) {
-    if (e.status && [401, 403, 429, 451].includes(e.status)) fetched = await fetchRaw(urlStr, { browserUA: true });
-    else throw e;
+    if (e.status && BLOCK_STATUSES.includes(e.status)) {
+      try { fetched = await fetchRaw(urlStr, { browserUA: true }); }
+      catch (e2) { fetchErr = e2; }
+    } else { fetchErr = e; }
   }
-  const { html, finalUrl } = fetched;
-  let text = extractText(html);
-  let title = titleOf(html);
-  // If the server HTML yielded little text (client-side-rendered body), try the
-  // WordPress REST API for the full article body.
-  if (text.length < 400) {
-    const wp = await tryWordPress(finalUrl);
-    if (wp && wp.text.length > text.length) { text = wp.text; title = title || wp.title; }
+
+  if (fetched) {
+    const { html, finalUrl } = fetched;
+    let text = extractText(html);
+    let title = titleOf(html);
+    // If the server HTML yielded little text (client-side-rendered body), try the
+    // WordPress REST API for the full article body.
+    if (text.length < 400) {
+      const wp = await tryWordPress(finalUrl);
+      if (wp && wp.text.length > text.length) { text = wp.text; title = title || wp.title; }
+    }
+    if (!text || text.length < 120) throw new Error("could not extract article text (client-side-rendered or paywalled — try pasting the text)");
+    return { text, title, byline: extractByline(html), domain: canonicalDomain(html, finalUrl), finalUrl };
   }
-  if (!text || text.length < 120) throw new Error("could not extract article text (client-side-rendered or paywalled — try pasting the text)");
-  return {
-    text,
-    title,
-    byline: extractByline(html),
-    domain: canonicalDomain(html, finalUrl),
-    finalUrl,
-  };
+
+  // The page itself was blocked (e.g. a CDN 403 under both UAs). WordPress REST
+  // APIs are usually NOT behind the same bot rules — try it directly from the URL
+  // (NewsNation, other Nexstar/WordPress sites). Same host, SSRF-revalidated.
+  if (fetchErr && fetchErr.status && BLOCK_STATUSES.includes(fetchErr.status)) {
+    const wp = await tryWordPress(urlStr);
+    if (wp && wp.text) {
+      let domain = null;
+      try { domain = registrableDomain(new URL(urlStr).hostname); } catch {}
+      return { text: wp.text, title: wp.title, byline: null, domain, finalUrl: urlStr };
+    }
+  }
+  throw fetchErr || new Error("could not fetch article");
 }
 
 module.exports = { fetchAndExtract, registrableDomain, isPublicIPv4, isPublicIPv6, extractText, extractByline };
