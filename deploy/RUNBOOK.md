@@ -212,10 +212,11 @@ are hashed with scrypt (never stored or logged in plaintext); sessions are an
 httpOnly cookie. The DB lives at **`/opt/politest/store/politeion.db`** (gitignored,
 persists across deploys, never touched by `git pull`).
 
-1. **Seed the admin account (first boot only).** Add to `/etc/politeion/analyzer.env`:
+1. **Seed the admin account (first boot only).** Add to `/etc/politeion/analyzer.env`
+   (this file is `root:root 0600`, never in git):
    ```
    ADMIN_EMAIL=admin
-   ADMIN_PASSWORD=1hC$NVmp2105
+   ADMIN_PASSWORD=<the admin password you chose>
    ```
    On first start with no admin present, the app creates the admin row (hashed
    password) once. **After the first boot you can remove `ADMIN_PASSWORD`** — the
@@ -226,8 +227,8 @@ persists across deploys, never touched by `git pull`).
    ```bash
    curl -s https://politeion.com/api/auth/me            # {"user":null} when signed out
    ```
-   Then open `https://politeion.com/login.html`, sign in as `admin` /
-   `1hC$NVmp2105`, and confirm the Account page loads. While signed in as admin,
+   Then open `https://politeion.com/login.html`, sign in as `admin` with the
+   password you set, and confirm the Account page loads. While signed in as admin,
    the Analyzer admin tools (force re-scan, spend/model stats, rate-limit bypass)
    unlock automatically on the Analyze pages — no `?admin=` key needed.
 
