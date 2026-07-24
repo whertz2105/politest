@@ -32,6 +32,7 @@ const NAV = [
   { href: "test.html", label: "Test" },
   { href: "results.html", label: "Results" },
   { href: "explore3d.html", label: "3D" },
+  { href: "analyze.html", label: "Analyze" },
   { href: "data.html", label: "Data" },
 ];
 

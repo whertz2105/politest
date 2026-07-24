@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profile — Politeion</title>
+  <link rel="canonical" href="https://politeion.com/profile.html">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap">
+    <div id="view"><p class="muted">Loading profile…</p></div>
+    <p class="btn-row"><a class="btn" href="analyze.html">Back to the Analyzer</a></p>
+  </main>
+
+  <script type="module">
+    import { initShell } from "./js/app.js";
+    import { renderProfile, hashParams } from "./js/analyzer-ui.js";
+    initShell("analyze.html");
+
+    const view = document.getElementById("view");
+    async function load() {
+      const p = hashParams();
+      let endpoint = null, label = "";
+      if (p.writer) { endpoint = "/api/writer?key=" + encodeURIComponent(p.writer); label = "writer"; }
+      else if (p.source) { endpoint = "/api/source?domain=" + encodeURIComponent(p.source); label = "source"; }
+      if (!endpoint) { view.innerHTML = '<div class="notice notice-warn">No writer or source in the link.</div>'; return; }
+      try {
+        const r = await fetch(endpoint, { cache: "no-cache" });
+        if (r.status === 404) { view.innerHTML = `<div class="notice notice-warn">No analyses for this ${label} yet.</div>`; return; }
+        const d = await r.json();
+        renderProfile(view, d.profile);
+        document.title = (d.profile.name || d.profile.domain || "Profile") + " — Politeion";
+      } catch (e) { view.innerHTML = '<div class="notice notice-warn">Could not load profile: ' + e.message + '</div>'; }
+    }
+    window.addEventListener("hashchange", load);
+    load();
+  </script>
+</body>
+</html>

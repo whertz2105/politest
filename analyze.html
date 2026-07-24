@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analyze — Politeion</title>
+  <link rel="canonical" href="https://politeion.com/analyze.html">
+  <meta name="description" content="Analyze a published article for political stance on 22 axes.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap">
+    <section class="hero">
+      <span class="eyebrow">The Analyzer</span>
+      <h1>Analyze an article</h1>
+      <p class="muted">Paste a URL or the article text. Politeion scores the <em>stance of the piece</em> —
+        its framing, not its subject — on the same 22 axes, with a verbatim quote behind every score.</p>
+    </section>
+
+    <section class="card analyze-card">
+      <div class="mode-picker" role="tablist" aria-label="Submission type">
+        <button class="mode-opt active" type="button" role="tab" data-tab="url"><b>By URL</b><span class="muted">Fetched server-side</span></button>
+        <button class="mode-opt" type="button" role="tab" data-tab="text"><b>Paste text</b><span class="muted">No fetch</span></button>
+      </div>
+
+      <div data-panel="url">
+        <label class="fld"><span>Article URL</span>
+          <input id="in-url" type="url" placeholder="https://…" autocomplete="off" spellcheck="false"></label>
+        <p class="muted fld-note">The server fetches and extracts the main text. Private/reserved addresses are refused;
+          the article body is used transiently and never stored.</p>
+      </div>
+
+      <div data-panel="text" hidden>
+        <label class="fld"><span>Article text</span>
+          <textarea id="in-text" rows="12" placeholder="Paste the article body here…"></textarea></label>
+        <div class="fld-row">
+          <label class="fld"><span>Byline <em class="muted">(optional)</em></span><input id="in-byline" type="text" placeholder="Author"></label>
+          <label class="fld"><span>Outlet <em class="muted">(optional)</em></span><input id="in-outlet" type="text" placeholder="example.com"></label>
+        </div>
+        <label class="fld"><span>Title <em class="muted">(optional)</em></span><input id="in-title" type="text" placeholder="Headline"></label>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="go" type="button">Analyze</button>
+        <span id="status" class="muted" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="stats-line muted" id="stats-line">Loading analyzer status…</div>
+      <h2 class="section-h">Recently analyzed</h2>
+      <div class="article-list" id="recent"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initShell, escapeHtml } from "./js/app.js";
+    initShell("analyze.html");
+
+    const $ = (id) => document.getElementById(id);
+    const tabs = [...document.querySelectorAll("[data-tab]")];
+    let tab = "url";
+    tabs.forEach((t) => t.addEventListener("click", () => {
+      tab = t.dataset.tab;
+      tabs.forEach((b) => b.classList.toggle("active", b === t));
+      document.querySelector('[data-panel="url"]').hidden = tab !== "url";
+      document.querySelector('[data-panel="text"]').hidden = tab !== "text";
+    }));
+
+    const status = $("status"), go = $("go");
+    function setStatus(msg, cls) { status.textContent = msg; status.className = cls || "muted"; }
+
+    async function submit() {
+      go.disabled = true;
+      const body = {};
+      if (tab === "url") {
+        const u = $("in-url").value.trim();
+        if (!/^https?:\/\//i.test(u)) { setStatus("Enter a http(s) URL.", "err"); go.disabled = false; return; }
+        body.url = u;
+      } else {
+        const t = $("in-text").value;
+        if (t.trim().length < 120) { setStatus("Paste at least a couple of paragraphs.", "err"); go.disabled = false; return; }
+        body.text = t;
+        body.byline = $("in-byline").value.trim() || undefined;
+        body.outlet = $("in-outlet").value.trim() || undefined;
+        body.title = $("in-title").value.trim() || undefined;
+      }
+      setStatus("Analyzing… this can take up to a minute.", "muted");
+      try {
+        const res = await fetch("/api/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (!res.ok) { setStatus(data.error || `Error ${res.status}`, "err"); go.disabled = false; return; }
+        setStatus(data.existing ? "Already analyzed — opening…" : "Done — opening analysis…", "ok");
+        location.href = "article.html#id=" + encodeURIComponent(data.id);
+      } catch (e) {
+        setStatus("Network error: " + e.message, "err");
+        go.disabled = false;
+      }
+    }
+    go.addEventListener("click", submit);
+
+    // Live stats line + recent list.
+    const GENRE = { report: "Report", analysis: "Analysis", opinion: "Opinion", mixed: "Mixed" };
+    async function loadStats() {
+      try {
+        const r = await fetch("/api/analyzer/stats", { cache: "no-cache" });
+        const d = await r.json();
+        const m = d.month;
+        const spend = m.capUsd != null
+          ? `$${m.costUsd.toFixed(2)} of $${m.capUsd.toFixed(2)}${m.warn ? " ⚠ 80%+" : ""}${m.exhausted ? " — budget reached" : ""}`
+          : `$${m.costUsd.toFixed(2)} (no cap set)`;
+        const prov = d.provider.configured ? `${d.provider.model}` : "not configured";
+        $("stats-line").textContent =
+          `This month (${m.month}): ${m.analyses} analyses · ${(m.tokens.input + m.tokens.cacheRead + m.tokens.cacheCreation).toLocaleString()} in / ${m.tokens.output.toLocaleString()} out tokens · est. spend ${spend} · model ${prov} · queue ${d.queue}`;
+        $("recent").innerHTML = (d.recent || []).map((c) =>
+          `<a class="article-card" href="article.html#id=${encodeURIComponent(c.id)}">
+             <span class="genre-chip genre-${c.genre} sm">${GENRE[c.genre] || c.genre}</span>
+             ${c.flagged ? '<span class="genre-chip caution sm">caution</span>' : ""}
+             <span class="article-card-title">${escapeHtml(c.title || c.url || "Untitled")}</span></a>`).join("")
+          || '<p class="muted">No analyses yet — be the first.</p>';
+      } catch { $("stats-line").textContent = "Analyzer status unavailable."; }
+    }
+    loadStats();
+  </script>
+</body>
+</html>

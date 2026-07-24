@@ -129,6 +129,71 @@ Bonus: because `politeion.com` is grey-cloud (Caddy serves directly, no Cloudfla
 proxy), the origin `Cache-Control: no-cache` headers now actually reach the browser —
 so the stale-`.js`-after-deploy problem disappears on the apex domain (no cache purge needed).
 
+## Step 10 — The Analyzer (article → 22-axis stance profile)
+
+The Analyzer adds server-side article analysis via the Anthropic API. It is part of
+the same `server.js` process and the same static site — no second service, no npm
+deps. Inference is **Anthropic API only**: no model runs on the droplet and no
+personal hardware is contacted.
+
+1. **Secret/config file (already provisioned).** `/etc/politeion/analyzer.env`,
+   `root:root 0600`, holding:
+   ```
+   ANTHROPIC_API_KEY=sk-ant-...
+   PROVIDER=anthropic
+   MODEL=claude-haiku-4-5
+   MONTHLY_BUDGET_USD=25
+   ```
+   The **model is never hardcoded** — it comes from `MODEL`. The key never enters
+   the repo, the app process, or any client response.
+2. **Wire it into the unit and restart.** The updated `politest.service` reads the
+   env file via `EnvironmentFile=-/etc/politeion/analyzer.env` (systemd, as root,
+   injects the vars *before* dropping to `User=profileher`, so the 0600 root file
+   need not be readable by the app user):
+   ```bash
+   cd /opt/politest && git pull
+   sudo cp /opt/politest/deploy/politest.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl restart politest
+   journalctl -u politest -n 20     # confirm it started
+   ```
+3. **Verify:**
+   ```bash
+   curl -s https://politeion.com/api/analyzer/stats   # provider.configured:true, model, month spend vs cap
+   curl -s https://politeion.com/api/rubric | head -c 80   # published rubric + hash
+   ```
+   Then open `https://politeion.com/analyze.html`, paste a known op-ed URL, and
+   confirm the analysis page shows a genre, per-axis scores each with a verbatim
+   quote, and links to the writer/source profiles.
+
+**Durable stores (gitignored, survive deploys — never touched by `git pull`):**
+- `/opt/politest/store/analyses.jsonl` — one analysis per line: scores, metadata,
+  rubric hash, evidence quotes (≤25 words). **Article bodies are never stored.**
+- `/opt/politest/store/analyzer-usage.jsonl` — per-analysis token usage + est. cost.
+
+**Budget cap.** Once the month's estimated spend reaches `MONTHLY_BUDGET_USD`, new
+jobs are refused with "monthly analysis budget reached" (the stats line warns at
+80%). Unset ⇒ no cap.
+
+**Abuse controls (built in):** 5 submissions/hour per IP, global queue cap 50, a
+single serial worker, anonymous submissions, results public by URL, and URL-level
+dedupe (re-submitting a URL returns the stored analysis, spending no tokens).
+
+**SSRF.** URL fetches resolve DNS first and refuse private/reserved/link-local and
+`100.64.0.0/10` (CGNAT) addresses — IP-literal hosts included — allow http(s) only,
+re-validate every redirect (max 3), cap the body at 5 MB, and time out at 15 s.
+
+### Recalibration (rubric v1 → vN, or a MODEL change)
+The rubric is `data/analyzer_system_prompt.md`, installed verbatim as **v1**; its
+sha256 is stamped into every stored analysis. **Any edit to that file, or a change
+to `MODEL`, is a recalibration event:** bump `RUBRIC_VERSION` in
+`analyzer/rubric.js`, `git pull` on the droplet, restart, and rerun the calibration
+harness. Old analyses keep their old stamp, so mixed-version data is always
+distinguishable.
+```bash
+node tools/calibrate.js     # asserts stored reference-outlet mkt ordering; also runs inside tools/audit.js
+```
+
 ---
 
 ## The API (for reference)
@@ -136,6 +201,13 @@ so the stale-`.js`-after-deploy problem disappears on the apex domain (no cache 
 - `POST /api/label` `{id, label}` — attach an optional self-chosen archetype label to a submitted result.
 - `POST /api/compare` `{vector, bank}` — read-only: `{count, percentiles, sample, axisOrder}` for the crowd graph, **per bank version** (v1/v2 never mixed). Does not store.
 - `GET  /api/stats` — `{count, byBank}`.
+
+Analyzer endpoints:
+- `POST /api/analyze` `{url}` | `{text, byline?, outlet?, title?}` — queue an analysis (or return an existing one for a duplicate URL). → `{ok, id, existing}`. Errors: 429 rate limit, 503 queue full / budget reached.
+- `GET  /api/analysis/:id` — a stored analysis (public by id).
+- `GET  /api/writer?key=<name|domain>` / `GET /api/source?domain=<domain>` — aggregate profiles (axes reported at ≥3 articles; flagged analyses excluded).
+- `GET  /api/analyzer/stats` — `{provider, rubric, month, counts, queue, recent}` (drives the stats line).
+- `GET  /api/rubric` — the published rubric text + hash (rendered on the Data page).
 
 Sharing is **opt-out** (on by default; a checkbox on the results page turns it off) and
 stores only the 22 scores, answer mode, bank version, and anonymous per-item answers — no

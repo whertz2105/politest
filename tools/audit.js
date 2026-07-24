@@ -238,6 +238,17 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
     ok(`natl coverage: ${primary} primary / ${total} total`);
   }
 
+  // Analyzer calibration: assert stored reference-outlet mkt ordering. Skips
+  // cleanly when no reference-outlet analyses exist yet (fresh deploy).
+  {
+    const { runCalibration } = require("./calibrate");
+    const cal = runCalibration();
+    if (cal.report.present.length === 0) ok("calibration: no reference-outlet analyses stored yet (skipped)");
+    else if (cal.insufficient) ok(`calibration: only ${cal.checked} reference outlet with data (need ≥2; skipped)`);
+    else if (cal.ok) ok(`calibration: mkt ordering holds across ${cal.checked} outlets (${cal.report.present.map((o) => o.name + " " + o.meanMkt).join(", ")})`);
+    else { for (const v of cal.violations) fail("calibration: " + v); }
+  }
+
   console.log();
   if (FAIL) { console.log("\x1b[31mAUDIT FAILED\x1b[0m"); process.exit(1); }
   console.log("\x1b[32mAUDIT PASSED\x1b[0m");

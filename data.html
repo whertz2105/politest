@@ -12,6 +12,14 @@
     <h1>Question data</h1>
     <p class="muted">The full question bank, loaded and validated from <code>data/questions.json</code>.</p>
 
+    <section id="rubric" class="card" style="margin:1rem 0">
+      <h2 style="margin-top:0">Analyzer rubric</h2>
+      <p class="muted">Every article analysis is scored against this exact system prompt — published in full for transparency. <span id="rubric-meta"></span></p>
+      <details><summary>Show full rubric text</summary>
+        <pre id="rubric-text" class="rubric-pre">Loading…</pre>
+      </details>
+    </section>
+
     <div id="validation"></div>
 
     <h2>Per-axis summary</h2>
@@ -140,6 +148,16 @@
     }
 
     (async () => {
+      // Publish the Analyzer rubric (from the API; degrades quietly if offline).
+      try {
+        const rr = await fetch("/api/rubric", { cache: "no-cache" });
+        if (rr.ok) {
+          const rj = await rr.json();
+          document.getElementById("rubric-meta").textContent = `Rubric ${rj.version} · sha256 ${rj.sha256.slice(0, 16)}…`;
+          document.getElementById("rubric-text").textContent = rj.text;
+        } else { document.getElementById("rubric").style.display = "none"; }
+      } catch { document.getElementById("rubric").style.display = "none"; }
+
       let data;
       try { data = await loadQuestionData(); }
       catch (e) {

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analysis — Politeion</title>
+  <link rel="canonical" href="https://politeion.com/article.html">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap">
+    <div id="view"><p class="muted">Loading analysis…</p></div>
+    <p class="btn-row"><a class="btn" href="analyze.html">Analyze another article</a></p>
+  </main>
+
+  <script type="module">
+    import { initShell } from "./js/app.js";
+    import { renderArticle, hashParams } from "./js/analyzer-ui.js";
+    initShell("analyze.html");
+
+    const view = document.getElementById("view");
+    async function load() {
+      const id = hashParams().id;
+      if (!id) { view.innerHTML = '<div class="notice notice-warn">No analysis id in the link.</div>'; return; }
+      try {
+        const r = await fetch("/api/analysis/" + encodeURIComponent(id), { cache: "no-cache" });
+        if (r.status === 404) { view.innerHTML = '<div class="notice notice-warn">No such analysis.</div>'; return; }
+        const d = await r.json();
+        renderArticle(view, d.analysis);
+        document.title = (d.analysis.title || "Analysis") + " — Politeion";
+      } catch (e) { view.innerHTML = '<div class="notice notice-warn">Could not load analysis: ' + e.message + '</div>'; }
+    }
+    window.addEventListener("hashchange", load);
+    load();
+  </script>
+</body>
+</html>
