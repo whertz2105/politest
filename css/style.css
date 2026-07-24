@@ -233,7 +233,7 @@ input[type="range"].slider:focus-visible { box-shadow: 0 0 0 4px var(--ring); }
 @media (hover: none) { .chart-expand { opacity: 0.85; } }
 
 /* chart tooltip */
-.chart-tip { position: fixed; z-index: 200; pointer-events: none; background: var(--bg-elev2s); border: 1px solid var(--gold); color: var(--fg); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); font-size: var(--fs-xs); box-shadow: var(--shadow-2); opacity: 0; transition: opacity 90ms var(--ease); max-width: 240px; }
+.chart-tip { position: fixed; z-index: 400; pointer-events: none; background: var(--bg-elev2s); border: 1px solid var(--gold); color: var(--fg); padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); font-size: var(--fs-xs); box-shadow: var(--shadow-2); opacity: 0; transition: opacity 90ms var(--ease); max-width: 240px; }
 .chart-tip.show { opacity: 1; }
 .chart-tip b { font-family: var(--serif); display: block; }
 .chart-tip span { color: var(--fg-dim); font-variant-numeric: tabular-nums; }

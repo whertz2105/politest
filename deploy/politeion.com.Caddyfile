@@ -1,0 +1,38 @@
+# Politeion at its own domain — politeion.com — on the existing droplet.
+# This REPLACES the old politeion.profileher.com / politest.profileher.com serving
+# blocks with (1) an apex serving block and (2) permanent redirects to the apex.
+# Same root (/opt/politest), same API (127.0.0.1:3200), same store — routing only.
+#
+# In /etc/caddy/Caddyfile: delete the old politeion.profileher.com and
+# politest.profileher.com { … file_server … } blocks, then paste these. Leave the
+# profileher.com / www.profileher.com / staging.profileher.com blocks untouched.
+#
+# politeion.com MUST be DNS-only (grey cloud) so Caddy can complete the HTTP-01
+# ACME challenge; Cloudflare's proxy would break it.
+
+politeion.com {
+	encode zstd gzip
+	root * /opt/politest
+
+	@api path /api/*
+	reverse_proxy @api 127.0.0.1:3200
+
+	file_server
+
+	# Grey-cloud DNS means these origin headers now actually reach the browser,
+	# so app assets are never served stale after a deploy.
+	@nocache path *.html *.js *.css *.json
+	header @nocache Cache-Control "no-cache"
+}
+
+# www -> apex
+www.politeion.com {
+	redir https://politeion.com{uri} permanent
+}
+
+# Old hostnames -> apex. {uri} carries path + query; the #r=... result fragment is
+# preserved by the browser across the 301 (it never reaches the server), so every
+# previously shared link keeps working.
+politeion.profileher.com, politest.profileher.com {
+	redir https://politeion.com{uri} permanent
+}

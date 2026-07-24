@@ -92,6 +92,43 @@ The app rebranded to **Politeion**. To front it on a matching hostname (reusing 
 `politest.profileher.com` keeps working; both hostnames serve the same app. (To retire the
 old name later, just delete its block from the Caddyfile and reload — optional.)
 
+## Step 9 — Primary domain: `politeion.com` (supersedes Step 8)
+Serve the app on its own domain and redirect the old hostnames to it. Same root
+(`/opt/politest`), same API (`127.0.0.1:3200`), same store — routing only. **Do not
+touch `/opt/politest/store/`.**
+
+1. **DNS (Cloudflare, in the politeion.com zone).** Add both as **DNS-only (grey cloud)** —
+   proxied/orange breaks Caddy's HTTP-01 cert challenge:
+   - `A  @    → 134.122.115.115`
+   - `A  www  → 134.122.115.115`
+2. **Caddyfile.** First get to a known-good config, then swap the blocks:
+   ```bash
+   cd /opt/politest && git pull
+   sudo caddy validate --config /etc/caddy/Caddyfile     # clean up any orphaned (old cyberstudy) blocks first
+   ```
+   Edit `/etc/caddy/Caddyfile`: **delete** the old `politeion.profileher.com` and
+   `politest.profileher.com` serving blocks, then paste the contents of
+   `deploy/politeion.com.Caddyfile` (apex serving block + `www`→apex redirect +
+   old-subdomains→apex redirect). Leave the `profileher.com` / `www` / `staging`
+   blocks untouched. Then:
+   ```bash
+   sudo caddy validate --config /etc/caddy/Caddyfile
+   sudo systemctl reload caddy
+   ```
+3. **Verify (certs issue once DNS resolves + :80/:443 are open):**
+   ```bash
+   curl -I https://politeion.com                 # 200, valid cert
+   curl -I https://www.politeion.com             # 301 -> https://politeion.com/
+   curl -I https://politeion.profileher.com      # 301 -> https://politeion.com/
+   curl -s https://politeion.com/api/stats       # {"count":N,...} — same store
+   ```
+   Shared `#r=…` links survive the 301 automatically — the fragment never reaches the
+   server; the browser re-appends it after the redirect. No server-side fragment handling.
+
+Bonus: because `politeion.com` is grey-cloud (Caddy serves directly, no Cloudflare
+proxy), the origin `Cache-Control: no-cache` headers now actually reach the browser —
+so the stale-`.js`-after-deploy problem disappears on the apex domain (no cache purge needed).
+
 ---
 
 ## The API (for reference)
