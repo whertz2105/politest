@@ -131,14 +131,35 @@ function sourceListHtml(sources) {
 // (0 = ignore, 1 = full weight), persisted in localStorage (dc_weights). The panel
 // is built ONCE: sliding an axis re-renders only the ranking, so the weights panel
 // never collapses under you.
-export function renderMatchPanel(container, userVec, entries) {
+export function renderMatchPanel(container, userVec, entries, opts = {}) {
   let weights = {};
   try { weights = JSON.parse(localStorage.getItem("dc_weights") || "{}"); } catch { weights = {}; }
   // Migrate any legacy 0/1/2 values and clamp to the new 0..1 range.
   for (const k of Object.keys(weights)) weights[k] = Math.max(0, Math.min(1, Number(weights[k]) || 0));
   const wOf = (k) => (weights[k] == null ? 1 : Math.max(0, Math.min(1, weights[k])));
 
+  // Per-race mode: exactly ONE recommendation per race (the closest match). Used by
+  // the recommended ballot so a race is never double-recommended.
+  function perRaceHtml() {
+    const groups = new Map();
+    for (const e of entries) { const k = e.raceKey || "?"; if (!groups.has(k)) groups.set(k, { key: k, label: e.raceLabel || k, items: [] }); groups.get(k).items.push(e); }
+    return [...groups.values()].map((g) => {
+      const scored = g.items.filter((e) => !isThin(e.profile))
+        .map((e) => ({ e, m: matchScore(userVec, e.profile.axes, weights) }))
+        .filter((x) => x.m).sort((a, b) => b.m.pct - a.m.pct);
+      const link = opts.state ? `race.html#state=${encodeURIComponent(opts.state)}&race=${encodeURIComponent(g.key)}` : null;
+      const linkHtml = link ? `<a class="rec-link" href="${link}">see race →</a>` : "";
+      if (!scored.length) return `<li class="rec-row"><span class="rec-race">${escapeHtml(g.label)}</span><span class="muted rec-none">not enough published material to compare yet</span>${linkHtml}</li>`;
+      const top = scored[0];
+      return `<li class="rec-row">
+        <span class="rec-race">${escapeHtml(g.label)}</span>
+        <span class="rec-pick"><b class="rec-name">${escapeHtml(top.e.name)}</b> <span class="cand-party party-${escapeHtml(top.e.party || "")}">${escapeHtml(top.e.party || "")}</span></span>
+        <span class="match-pct rec-pct">${top.m.pct}%</span>${linkHtml}</li>`;
+    }).join("");
+  }
+
   function rankHtml() {
+    if (opts.perRace) return perRaceHtml();
     const ranked = entries.map((e) => {
       if (isThin(e.profile)) return { e, thin: true };
       return { e, thin: false, m: matchScore(userVec, e.profile.axes, weights) };
@@ -166,7 +187,10 @@ export function renderMatchPanel(container, userVec, entries) {
   // Build once — the <details> is never re-rendered, so it can't auto-close.
   container.innerHTML = `
     <div class="match-cols">
-      <div class="match-ranking"><h3 class="lb-h">Your match</h3><ol class="match-list" id="match-list">${rankHtml()}</ol></div>
+      <div class="match-ranking">
+        <h3 class="${opts.perRace ? "rec-title" : "lb-h"}">${escapeHtml(opts.heading || "Your match")}</h3>
+        ${opts.perRace ? `<p class="muted" style="font-size:.8rem;margin:.1rem 0 .5rem">Your closest match in each race, weighted by your priorities. One pick per race.</p>` : ""}
+        <ol class="match-list${opts.perRace ? " rec-list" : ""}" id="match-list">${rankHtml()}</ol></div>
       <details class="match-weights" id="match-weights" open><summary>What matters most to you (${AXES.length} axes)</summary>
         <p class="muted" style="font-size:.78rem">Slide an axis to 0 to ignore it, up to 1 to weight it fully. The ranking updates live.</p>
         <div class="wt-grid">${slidersHtml}</div>

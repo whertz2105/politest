@@ -24,7 +24,7 @@
 
   <script type="module">
     import { initShell, loadQuestionData, makeSeed, shuffleWithSeed, saveProgress, loadProgress,
-             clearProgress, encodeVector, PROGRESS_KEY, PROGRESS_KEY_LEGACY } from "./js/app.js";
+             clearProgress, encodeVector, escapeHtml, PROGRESS_KEY, PROGRESS_KEY_LEGACY } from "./js/app.js";
     import { questionsForMode, scoreRun, pendingQuestions, reusableAnswers, itemFingerprints,
              migrateAnswerValue, CLASSIC_ANSWERS, bankSignature } from "./js/scoring.js";
 
@@ -177,8 +177,46 @@
         render();
         return;
       }
-      startFresh(testMode(), answerMode());
-      render();
+      // No in-progress session: show the most recent completed test's answers (with a
+      // "start new" button), or prompt to start if there is none. Don't auto-begin.
+      const finished = loadFinishedRun();
+      if (finished && finished.answers && Object.keys(finished.answers).length) { renderReview(finished); return; }
+      renderStartPrompt();
+    }
+
+    // Read-only review of the most recent completed test's answers.
+    function renderReview(run) {
+      const answers = run.answers || {};
+      const numbered = all.filter((q) => q.type !== "attention").sort((a, b) => a.id - b.id);
+      const rows = [];
+      for (const q of numbered) {
+        const v = answers[q.id];
+        if (v === undefined || v === null) continue;
+        const nv = Number(v);
+        rows.push(`<div class="review-row"><span class="review-q">${escapeHtml(q.text)}</span>
+          <span class="review-a ${nv >= 50 ? "pos" : "neg"}">${escapeHtml(phraseFor(nv))} <span class="muted">(${nv})</span></span></div>`);
+      }
+      const mode = run.answerMode === "precision" ? "precision" : "classic";
+      document.getElementById("stage").innerHTML = `
+        <div class="review-head">
+          <h2 style="margin:0">Your most recent test</h2>
+          <a class="btn btn-primary" href="test.html?fresh=1">Start a new test</a>
+        </div>
+        <p class="muted">Your answers to ${rows.length} question${rows.length === 1 ? "" : "s"} (${mode} mode). <a href="results.html">See your compass →</a></p>
+        <div class="review-list">${rows.join("") || '<p class="muted">No stored answers.</p>'}</div>`;
+    }
+
+    // First-timer prompt (no completed test, no session in progress).
+    function renderStartPrompt() {
+      document.getElementById("stage").innerHTML = `
+        <div class="card" style="text-align:center">
+          <h2 style="margin-top:0">Take the compass test</h2>
+          <p class="muted">Answer a bank of statements and see your position on 22 independent political axes — matched to archetypes and historical figures.</p>
+          <div class="btn-row" style="justify-content:center">
+            <a class="btn btn-primary" href="test.html?fresh=1">Start the test</a>
+            <a class="btn" href="index.html">Choose length &amp; style</a>
+          </div>
+        </div>`;
     }
 
     function renderBankChanged() {

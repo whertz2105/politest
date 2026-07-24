@@ -27,17 +27,31 @@ export function toggleTheme() {
 // ---------------------------------------------------------------------------
 // Shared header / nav
 // ---------------------------------------------------------------------------
-const NAV = [
-  { href: "index.html", label: "Home" },
-  { href: "test.html", label: "Test" },
-  { href: "results.html", label: "Results" },
-  { href: "explore3d.html", label: "3D" },
-  { href: "analyze.html", label: "Analyze" },
-  { href: "candidates.html", label: "Candidates" },
-  { href: "brief.html", label: "Brief" },
-  { href: "data.html", label: "Data" },
-  { href: "account.html", label: "Account" },
+// Five top-level products. Everything else folds into a product's sub-nav. `pages`
+// are the files that belong to each product; `sub` is that product's in-page tab bar.
+const PRODUCTS = [
+  { href: "index.html", label: "Home", pages: ["index.html"] },
+  { href: "brief.html", label: "Brief", pages: ["brief.html"] },
+  { href: "test.html", label: "Compass", pages: ["test.html", "results.html", "explore3d.html", "questions.html"],
+    sub: [["test.html", "The test"], ["results.html", "Results"], ["explore3d.html", "3D explorer"], ["questions.html", "Questions"], ["data.html#test", "Methodology"]] },
+  { href: "analyze.html", label: "Bias Analysis", pages: ["analyze.html", "article.html", "profile.html"],
+    sub: [["analyze.html", "Analyze"], ["data.html#analyzer", "Methodology"]] },
+  { href: "candidates.html", label: "Ballot", pages: ["candidates.html", "race.html", "candidate.html"],
+    sub: [["candidates.html", "Races"], ["data.html#candidates", "Methodology"]] },
 ];
+// Account is a utility, not a product (top-right, not a main tab).
+const ACCOUNT = { href: "account.html", label: "Account", pages: ["account.html", "login.html"] };
+// data.html has no product of its own; its methodology sections belong to a product by hash.
+const METHODOLOGY_PRODUCT = { "#test": "Compass", "#analyzer": "Bias Analysis", "#candidates": "Ballot" };
+
+function currentFile() { return location.pathname.split("/").pop() || "index.html"; }
+function methodologyHash() { return (location.hash.match(/#(analyzer|test|candidates)/) || [])[0] || ""; }
+function activeProduct() {
+  const file = currentFile();
+  if (ACCOUNT.pages.includes(file)) return null;
+  if (file === "data.html") return PRODUCTS.find((p) => p.label === (METHODOLOGY_PRODUCT[methodologyHash()] || "Bias Analysis"));
+  return PRODUCTS.find((p) => p.pages.includes(file)) || PRODUCTS[0];
+}
 
 // Build the site header into <div data-shell></div> (if present) and wire theme toggle.
 // Compass roundel favicon (inline SVG, dependency-free) — navy disc, brass cross.
@@ -53,21 +67,40 @@ function ensureFavicon() {
   document.head.appendChild(link);
 }
 
-export function initShell(activeHref) {
+// The activeHref argument is retained for backward compatibility but ignored — the
+// active product/sub-tab are derived from location, so no page needs editing.
+export function initShell() {
   applyStoredTheme();
   ensureFavicon();
   const mount = document.querySelector("[data-shell]");
   if (!mount) return;
-  const links = NAV.map((n) => {
-    const active = n.href === activeHref ? ' aria-current="page"' : "";
-    return `<a href="${n.href}"${active}>${n.label}</a>`;
-  }).join("");
+  renderShell(mount);
+  // data.html changes product by hash — keep the header in sync as the user switches.
+  if (currentFile() === "data.html") window.addEventListener("hashchange", () => renderShell(mount));
+}
+
+function renderShell(mount) {
+  const prod = activeProduct();
+  const onAccount = ACCOUNT.pages.includes(currentFile());
+  const links = PRODUCTS.map((p) =>
+    `<a href="${p.href}"${prod && prod.label === p.label ? ' aria-current="page"' : ""}>${p.label}</a>`).join("");
+  let sub = "";
+  if (prod && prod.sub) {
+    const curKey = currentFile() === "data.html" ? "data.html" + methodologyHash() : currentFile();
+    const subLinks = prod.sub.map(([href, label]) =>
+      `<a href="${href}"${href === curKey ? ' aria-current="page"' : ""}>${label}</a>`).join("");
+    sub = `<nav class="site-subnav" aria-label="${escapeHtml(prod.label)} sections">${subLinks}</nav>`;
+  }
   mount.innerHTML = `
     <header class="site-header">
       <a class="brand" href="index.html">${escapeHtml(APP_NAME)}</a>
       <nav class="site-nav">${links}</nav>
-      <button class="theme-toggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">◐</button>
-    </header>`;
+      <span class="site-util">
+        <a class="acct-link${onAccount ? " active" : ""}" href="${ACCOUNT.href}" title="Your account">Account</a>
+        <button class="theme-toggle" type="button" aria-label="Toggle light/dark theme" title="Toggle theme">◐</button>
+      </span>
+    </header>
+    ${sub}`;
   const btn = mount.querySelector(".theme-toggle");
   if (btn) btn.addEventListener("click", toggleTheme);
 }

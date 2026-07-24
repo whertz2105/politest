@@ -104,25 +104,32 @@
       const box = document.getElementById("ballot");
       if (!district) { box.innerHTML = ""; return; }
       const races = [raceByKey("governor"), raceByKey("senate"), raceByKey(district.toLowerCase())].filter(Boolean);
-      box.innerHTML = `<h2 class="section-h">Your ballot · ${escapeHtml(district)}</h2>
+      // Recommended ballot FIRST (prominent), then the full race cards to browse.
+      box.innerHTML = `
+        <div id="rec-ballot" class="rec-ballot"></div>
+        <h2 class="section-h">Your ballot · ${escapeHtml(district)}</h2>
         <p class="muted" style="font-size:.8rem">${escapeHtml(HINTS[district] || "")} · statewide races shown to all Alabama voters.
           <a href="#" id="clear-district">change district</a></p>
-        <div id="ballot-races">${races.map((r) => raceCardHtml(r)).join("")}</div>
-        <div id="ballot-match"></div>`;
+        <div id="ballot-races">${races.map((r) => raceCardHtml(r)).join("")}</div>`;
       document.getElementById("clear-district").addEventListener("click", (e) => { e.preventDefault(); try { localStorage.removeItem("dc_district"); } catch {} document.getElementById("zip-result").innerHTML = ""; renderBallot(null); });
 
-      // Match module over the ballot's candidates when a compass vector is available.
+      const rec = document.getElementById("rec-ballot");
       const vec = await userVector();
-      if (!vec) return;
-      const cands = races.flatMap((r) => r.candidates).filter((c) => c.status !== "write_in_unverified" && c.sources && c.sources.length);
-      const entries = await Promise.all(cands.map(async (c) => {
-        try { const d = await (await fetch("/api/candidate?id=" + encodeURIComponent(c.id), { cache: "no-cache" })).json(); return { id: c.id, name: c.name, party: c.party, profile: d.profile }; }
-        catch { return { id: c.id, name: c.name, party: c.party, profile: null }; }
+      if (!vec) {
+        rec.innerHTML = `<div class="rec-ballot-inner"><h2 class="rec-title">Your recommended ballot</h2>
+          <p class="muted" style="margin:.2rem 0 .7rem">Take the compass test and we'll match each race to the candidate whose published words are closest to you.</p>
+          <a class="btn btn-primary" href="test.html?fresh=1">Take the compass test →</a></div>`;
+        return;
+      }
+      // One recommendation PER RACE. Build per-race entries with profiles.
+      const pairs = [];
+      for (const r of races) for (const c of r.candidates) { if (c.status === "write_in_unverified" || !(c.sources && c.sources.length)) continue; pairs.push({ c, r }); }
+      const entries = await Promise.all(pairs.map(async ({ c, r }) => {
+        let profile = null;
+        try { profile = (await (await fetch("/api/candidate?id=" + encodeURIComponent(c.id), { cache: "no-cache" })).json()).profile; } catch { /* thin */ }
+        return { id: c.id, name: c.name, party: c.party, profile, raceKey: r.key, raceLabel: r.office + (r.district ? " · " + r.district : "") };
       }));
-      const mount = document.getElementById("ballot-match");
-      mount.innerHTML = `<h3 class="lb-h" style="margin-top:1rem">Your ballot, matched to your compass</h3>`;
-      const inner = document.createElement("div"); mount.appendChild(inner);
-      renderMatchPanel(inner, vec, entries);
+      renderMatchPanel(rec, vec, entries, { perRace: true, state: "AL", heading: "Your recommended ballot" });
     }
 
     function setDistrict(d) { try { localStorage.setItem("dc_district", d); } catch {} renderBallot(d); }
