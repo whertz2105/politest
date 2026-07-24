@@ -98,6 +98,16 @@ function migrate() {
     CREATE INDEX IF NOT EXISTS idx_apikeys_user ON api_keys(user_id);
     CREATE INDEX IF NOT EXISTS idx_results_user ON test_results(user_id);
   `);
+
+  // Additive columns are lazy ALTERs guarded by a table_info check (SQLite has no
+  // "ADD COLUMN IF NOT EXISTS"), so an existing DB upgrades without a schema-version
+  // dance and old rows keep NULL (treated as legacy by the composite scorer).
+  addColumn("test_results", "precision", "TEXT"); // JSON: { axisKey: {count, sigma} }
+}
+
+function addColumn(table, column, type) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
 }
 
 function handle() {

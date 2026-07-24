@@ -158,8 +158,21 @@ async function handle(req, res, urlPath) {
       const vin = p.vector && typeof p.vector === "object" ? p.vector : {};
       const vector = {}; let n = 0;
       for (const k of Object.keys(vin)) { if (n++ > 50) break; const v = Math.round(Number(vin[k])); if (Number.isFinite(v)) vector[k] = Math.max(-100, Math.min(100, v)); }
+      // Per-axis precision { count, sigma }, coerced and bounded (sigma 0..200).
+      let precision = null;
+      const pin = p.precision && typeof p.precision === "object" ? p.precision : null;
+      if (pin) {
+        precision = {}; let m = 0;
+        for (const k of Object.keys(pin)) {
+          if (m++ > 50) break;
+          const e = pin[k]; if (!e || typeof e !== "object") continue;
+          const sigma = Number(e.sigma), count = Number(e.count);
+          if (!Number.isFinite(sigma)) continue;
+          precision[k] = { count: Number.isFinite(count) ? Math.max(0, Math.min(9999, Math.round(count))) : 0, sigma: Math.max(0, Math.min(200, Math.round(sigma * 10) / 10)) };
+        }
+      }
       const row = U.saveResult(u.id, {
-        enc, vector,
+        enc, vector, precision,
         bank: Number(p.bank) || null,
         answerMode: p.answerMode ? String(p.answerMode).slice(0, 20) : null,
         testMode: p.testMode ? String(p.testMode).slice(0, 20) : null,

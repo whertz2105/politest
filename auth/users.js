@@ -125,18 +125,19 @@ function seedAdmin() {
 function saveResult(userId, r) {
   const db = handle();
   db.prepare(
-    `INSERT OR IGNORE INTO test_results (user_id, enc, vector, bank_version, answer_mode, test_mode, label, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(userId, r.enc, JSON.stringify(r.vector || {}), r.bank || null, r.answerMode || null, r.testMode || null, r.label || null, nowIso());
+    `INSERT OR IGNORE INTO test_results (user_id, enc, vector, bank_version, answer_mode, test_mode, label, precision, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(userId, r.enc, JSON.stringify(r.vector || {}), r.bank || null, r.answerMode || null, r.testMode || null, r.label || null,
+        r.precision ? JSON.stringify(r.precision) : null, nowIso());
   return db.prepare("SELECT * FROM test_results WHERE user_id = ? AND enc = ?").get(userId, r.enc);
 }
 function listResults(userId) {
   return handle().prepare(
-    "SELECT id, enc, vector, bank_version, answer_mode, test_mode, label, created_at FROM test_results WHERE user_id = ? ORDER BY id DESC"
+    "SELECT id, enc, vector, bank_version, answer_mode, test_mode, label, precision, created_at FROM test_results WHERE user_id = ? ORDER BY id DESC"
   ).all(userId).map((row) => ({
     id: row.id, enc: row.enc, vector: JSON.parse(row.vector || "{}"),
     bank_version: row.bank_version, answer_mode: row.answer_mode, test_mode: row.test_mode,
-    label: row.label, created_at: row.created_at,
+    label: row.label, precision: row.precision ? JSON.parse(row.precision) : null, created_at: row.created_at,
   }));
 }
 function deleteResult(userId, id) {

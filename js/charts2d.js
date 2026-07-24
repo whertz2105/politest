@@ -160,6 +160,19 @@ export function quadrantSVG(vector, xKey, yKey, opts = {}) {
 
   const ux = toX(vector[xKey] || 0), uy = toY(vector[yKey] || 0);
 
+  // "The shrinking dot": when per-axis σ is supplied, the halo grows with the mean
+  // uncertainty of the two plotted axes (σ 3 → tight halo, σ 25 → large soft halo),
+  // and the You tooltip carries ±σ. Precise runs literally shrink the dot.
+  const sig = opts.sigma || null;
+  const sx = sig && Number.isFinite(sig[xKey]) ? sig[xKey] : null;
+  const sy = sig && Number.isFinite(sig[yKey]) ? sig[yKey] : null;
+  const haloR = (sx != null && sy != null)
+    ? Math.max(7, Math.min(22, 7 + (((sx + sy) / 2 - 3) / (25 - 3)) * (22 - 7)))
+    : 11;
+  const youDX = sx != null ? `${r1(vector[xKey] || 0)} ±${r1(sx)}` : r1(vector[xKey] || 0);
+  const youDY = sy != null ? `${r1(vector[yKey] || 0)} ±${r1(sy)}` : r1(vector[yKey] || 0);
+  const youTip = `data-name="You" data-x="${youDX}" data-y="${youDY}" data-xa="${escapeHtml(ax.label)}" data-ya="${escapeHtml(ay.label)}"`;
+
   // pole labels (derived; short-label fallback when the full label won't fit) ---
   const halfW = plot / 2 - font;
   const fit = (full, short) => (forceShort || measureText(full, font) > halfW) ? short : full;
@@ -178,8 +191,8 @@ export function quadrantSVG(vector, xKey, yKey, opts = {}) {
     <line x1="${x0}" y1="${midY}" x2="${x0 + plot}" y2="${midY}" class="quad-axis"/>
     <rect x="${x0}" y="${y0}" width="${plot}" height="${plot}" class="quad-frame"/>
     ${cloudMarks}${archMarks}${figMarks}
-    <circle cx="${ux}" cy="${uy}" r="11" class="you-halo"/>
-    <circle cx="${ux}" cy="${uy}" r="6" class="you-dot dot" ${tip("You", vector[xKey] || 0, vector[yKey] || 0)}></circle>
+    <circle cx="${ux}" cy="${uy}" r="${r1(haloR)}" class="you-halo"/>
+    <circle cx="${ux}" cy="${uy}" r="6" class="you-dot dot" ${youTip}></circle>
     <text class="pole-lbl xneg" x="${x0 + plot * 0.25}" y="${xLabY}" style="font-size:${font}px">${escapeHtml(xNeg)}</text>
     <text class="pole-lbl xpos" x="${x0 + plot * 0.75}" y="${xLabY}" style="font-size:${font}px">${escapeHtml(xPos)}</text>
     <text class="pole-lbl ypos" x="${yLx}" y="${yPosY}" transform="rotate(-90 ${yLx} ${yPosY})" style="font-size:${font}px">${escapeHtml(yPos)}</text>

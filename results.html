@@ -37,6 +37,14 @@
 
       <div id="banners"></div>
 
+      <section id="refined-section" hidden>
+        <h2>Refined position</h2>
+        <p class="muted" id="refined-note" style="font-size:0.85rem"></p>
+        <div id="refined-cta"></div>
+        <div id="refined-bars"></div>
+        <div id="refined-drift"></div>
+      </section>
+
       <section>
         <h2>Your 22 axes</h2>
         <p class="muted" id="bars-note" style="font-size:0.85rem"></p>
@@ -93,7 +101,7 @@
   <script type="module">
     import { initShell, loadQuestionData, vectorFromHash, encodeVector, escapeHtml, PROGRESS_KEY, loadAccountResultIntoHash } from "./js/app.js";
     import { AXES, AXIS_KEYS, axisByKey, axisLabel } from "./js/axes.js";
-    import { computeScores, questionsForMode, pendingQuestions, reusableAnswers } from "./js/scoring.js";
+    import { computeScores, questionsForMode, pendingQuestions, reusableAnswers, combineRuns } from "./js/scoring.js";
     import { renderBarReadout, quadrantCard, wireQuadrant, axisLineSVG, runChartDevAssertions } from "./js/charts2d.js";
     import { ARCHETYPES, matchArchetypes, singleAxisMatch } from "./js/archetypes.js";
     import { validateFigures, nearestFigures } from "./js/figures.js";
@@ -105,6 +113,15 @@
     let last = null;           // full local result object (own runs only)
     let crowd = null, crowdError = null;   // /api/compare payload
     let bankVersion = 1, approximated = [];
+    let chartSigma = null;     // per-axis σ for the quadrant "shrinking dot"
+
+    // Per-axis σ from a bootstrap band: half the 95% width. Drives the halo size.
+    function sigmaFromBands(bands) {
+      if (!bands || !bands.lo) return null;
+      const out = {};
+      for (const k of AXIS_KEYS) { const lo = bands.lo[k], hi = bands.hi[k]; if (Number.isFinite(lo) && Number.isFinite(hi)) out[k] = Math.abs(hi - lo) / 2; }
+      return out;
+    }
 
     function resolveVector() {
       const fromHash = vectorFromHash();
@@ -227,7 +244,7 @@
       if (cmpMode === "figures") {
         const near = nearestFigures(vector, figures, 6);
         meta.textContent = figures.length ? `you vs ${figures.length} figures · hover for names · click to expand` : "no figures loaded";
-        wireQuadrant(card, vector, x, y, { figures });
+        wireQuadrant(card, vector, x, y, { figures, sigma: chartSigma });
         if (!figures.length) { detail.innerHTML = `<p class="muted">No figures loaded.</p>`; return; }
         detail.innerHTML = `<h4 style="margin-top:0">Closest historical figures</h4>
           <p class="muted" style="font-size:0.82rem">Full-vector similarity across all 22 axes. Hover any dot for its position; click the chart to enlarge.</p>
@@ -236,13 +253,13 @@
       }
       if (crowdError || !crowd) {
         meta.textContent = "";
-        wireQuadrant(card, vector, x, y, {});
+        wireQuadrant(card, vector, x, y, { sigma: chartSigma });
         detail.innerHTML = `<p class="muted">Crowd comparison needs the live <code>/api</code> backend (deployed site only).</p>`;
         return;
       }
       if (crowd.count === 0) {
         meta.textContent = "0 takers yet";
-        wireQuadrant(card, vector, x, y, {});
+        wireQuadrant(card, vector, x, y, { sigma: chartSigma });
         detail.innerHTML = `<p class="muted">No one else has completed the test on this bank version yet.</p>`;
         return;
       }
@@ -250,7 +267,7 @@
       const cloud = (crowd.sample || []).map((a) => [a[ix], a[iy]]);
       const shown = crowd.sample ? crowd.sample.length : 0;
       meta.textContent = `you vs ${crowd.count} taker${crowd.count === 1 ? "" : "s"} (v${bankVersion} bank)${shown < crowd.count ? ` · cloud shows ${shown}` : ""}`;
-      wireQuadrant(card, vector, x, y, { cloud });
+      wireQuadrant(card, vector, x, y, { cloud, sigma: chartSigma });
       const p = crowd.percentiles || {};
       const line = (k) => { const a = axisByKey(k); if (p[k] == null) return ""; return `<li><span>${escapeHtml(a.label)}</span><span class="sim">higher than ${p[k]}% · leans ${p[k] >= 50 ? escapeHtml(a.posLabel) : escapeHtml(a.negLabel)}</span></li>`; };
       const gate = crowd.count >= 30 ? "" : `<p class="muted" style="font-size:0.8rem">Percentiles firm up at n≥30 (currently ${crowd.count}).</p>`;
@@ -350,7 +367,46 @@
 
     // Small multiples: short pole labels always; click to expand (modal has PNG export).
     function galleryCard(vector, x, y) {
-      return quadrantCard(vector, x, y, { archetypes: ARCHETYPES, shortLabels: true });
+      return quadrantCard(vector, x, y, { archetypes: ARCHETYPES, shortLabels: true, sigma: chartSigma });
+    }
+
+    // Refined position: inverse-variance composite of the signed-in user's saved
+    // runs. Precise, deeper runs tighten each axis; drifted axes use only the
+    // latest stable epoch and are badged with old→new.
+    async function renderRefined() {
+      let me;
+      try { me = await (await fetch("/api/auth/me", { cache: "no-cache" })).json(); } catch { return; }
+      if (me.accounts_available === false || !me.user) return;
+      let results = [];
+      try { results = (await (await fetch("/api/auth/results", { cache: "no-cache" })).json()).results || []; } catch { return; }
+      if (results.length < 2) return;
+
+      const comp = combineRuns(results);
+      const bands = { lo: {}, hi: {}, spansZero: {} }, counts = {};
+      for (const k of AXIS_KEYS) {
+        const s = comp.vector[k], sg = comp.sigma[k];
+        bands.lo[k] = Math.round((s - sg) * 10) / 10;
+        bands.hi[k] = Math.round((s + sg) * 10) / 10;
+        bands.spansZero[k] = bands.lo[k] <= 0 && bands.hi[k] >= 0;
+        counts[k] = comp.perAxis[k] ? comp.perAxis[k].count : 0;
+      }
+      document.getElementById("refined-section").hidden = false;
+      renderBarReadout(document.getElementById("refined-bars"), comp.vector, { bands, counts });
+
+      const meanSigma = AXIS_KEYS.reduce((a, k) => a + comp.sigma[k], 0) / AXIS_KEYS.length;
+      document.getElementById("refined-note").textContent =
+        `Combined from ${comp.runsUsed} saved run${comp.runsUsed === 1 ? "" : "s"} by inverse-variance weighting — sharper answer modes (Precision) and longer tests (Deep) shrink each axis's uncertainty band. Mean band ±${meanSigma.toFixed(1)}.`;
+
+      const drifted = AXIS_KEYS.filter((k) => comp.perAxis[k].drifted);
+      const drift = document.getElementById("refined-drift");
+      drift.innerHTML = drifted.length ? `<div class="card"><h3 style="margin-top:0">Movement</h3>
+        <p class="muted" style="font-size:.82rem">On these axes your recent answers no longer agree with older runs, so only your latest stable period is averaged — a person shouldn't be averaged with their past self.</p>
+        <ul class="arch-list">${drifted.map((k) => { const p = comp.perAxis[k], a = axisByKey(k), since = (p.since || "").slice(0, 10);
+          return `<li><span>${escapeHtml(a.label)} <span class="tag warn">moved${since ? ` since ${since}` : ""}</span></span><span class="sim">${p.from > 0 ? "+" : ""}${p.from} → ${p.to > 0 ? "+" : ""}${p.to}</span></li>`; }).join("")}</ul></div>` : "";
+
+      const cta = document.getElementById("refined-cta");
+      cta.innerHTML = meanSigma > 12 ? `<div class="card banner-info"><b>Sharpen your position.</b> Your measurement is still wide (mean band ±${meanSigma.toFixed(1)}). A longer test in Precision mode tightens it.
+        <div class="btn-row" style="margin-top:.5rem"><a class="btn btn-primary" href="index.html?len=deep&style=precision">Take the Deep test in Precision mode</a></div></div>` : "";
     }
 
     async function boot() {
@@ -389,6 +445,9 @@
         ? "95% confidence whiskers — they widen with low answer consistency; axes whose band spans zero show “leans”." + (percentiles ? " Percentiles are vs the crowd." : "")
         : "Shared result — validity detail (confidence bands, consistency) is only available to the person who took it.";
 
+      // Single-run σ (for the quadrant halo) comes from this run's own bands.
+      chartSigma = sigmaFromBands(last && last.bands);
+
       renderBanners(last && last.attention, last && last.consistency);
       renderTopUp(data, own);
       renderBarReadout(document.getElementById("bars"), vector, {
@@ -409,7 +468,7 @@
 
       await loadFigures();
       setupCompare(vector);
-      if (own) setupContribute(vector);
+      if (own) { setupContribute(vector); renderRefined(); }
 
       document.getElementById("explore-3d").href = `explore3d.html${location.hash}`;
       document.getElementById("copy-link").addEventListener("click", async () => {

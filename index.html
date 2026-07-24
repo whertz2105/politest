@@ -65,6 +65,14 @@
     const note = document.getElementById("count-note");
     const LEN_NOTE = { quick: "Quick — about 100 questions.", normal: "Normal — about 250 questions.", deep: "Deep — all 400 questions." };
 
+    // Deep-link preselect (e.g. the results "Sharpen your position" CTA):
+    // ?len=deep&style=precision preselects the pickers before they render.
+    {
+      const qs = new URLSearchParams(location.search);
+      const qLen = qs.get("len"); if (["quick", "normal", "deep"].includes(qLen)) { try { localStorage.setItem("dc_mode", qLen); } catch {} }
+      const qStyle = qs.get("style"); if (["classic", "precision"].includes(qStyle)) { try { localStorage.setItem("dc_answer_mode", qStyle); } catch {} }
+    }
+
     // answer-style picker
     const AMODE_KEY = "dc_answer_mode";
     const styleBtns = [...document.querySelectorAll("[data-mode]")];

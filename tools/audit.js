@@ -274,6 +274,32 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
       : ok(`modes: quick ${numbered(quick)} / normal ${numbered(normal)} / deep ${numbered(deep)} numbered (+${attn.length} unnumbered attention checks each); all axes covered`);
   }
 
+  // ---- precision composite: inverse-variance meta-analysis (the shrinking dot) ----
+  {
+    const run = (s, sigma, date) => ({ vector: { mkt: s }, precision: sigma == null ? undefined : { mkt: { count: 5, sigma } }, created_at: date });
+    const bad = [];
+
+    // (1) two equal-σ runs → simple mean, σ* = sqrt(1/Σ(1/σ²)).
+    const iv = S.combineRuns([run(40, 10, "2026-01-01"), run(60, 10, "2026-02-01")]).perAxis.mkt;
+    if (!near(iv.score, 50, 0.1) || !near(iv.sigma, 7.07, 0.2) || iv.drifted) bad.push(`inverse-variance: score=${iv.score} σ=${iv.sigma} drifted=${iv.drifted} (want 50 / 7.07 / false)`);
+
+    // (2) σ-floor: a 0.5 band must be floored to 3.0, not allowed to dominate.
+    const fl = S.combineRuns([run(50, 0.5, "2026-01-01"), run(50, 10, "2026-02-01")]).perAxis.mkt;
+    if (!near(fl.sigma, 2.87, 0.2)) bad.push(`σ-floor: σ=${fl.sigma} (want ≈2.87 floored; unfloored ≈0.5)`);
+
+    // (3) drift guard: conflicting runs → latest epoch wins, axis flagged.
+    const dr = S.combineRuns([run(-80, 5, "2026-01-01"), run(80, 5, "2026-06-01")]);
+    const dm = dr.perAxis.mkt;
+    if (!dm.drifted || !near(dm.score, 80, 0.1) || dm.from !== -80 || dm.to !== 80 || dm.count !== 1) bad.push(`drift: drifted=${dm.drifted} score=${dm.score} from=${dm.from} to=${dm.to} count=${dm.count} (want true / 80 / -80 / 80 / 1)`);
+
+    // (4) legacy run (no precision) → σ=25 and tagged.
+    const lg = S.combineRuns([run(50, null, "2026-01-01")]).perAxis.mkt;
+    if (!lg.legacy || !near(lg.sigma, 25, 0.1) || !near(lg.score, 50, 0.1)) bad.push(`legacy: legacy=${lg.legacy} σ=${lg.sigma} score=${lg.score} (want true / 25 / 50)`);
+
+    bad.length ? fail("combineRuns: " + bad.join("; "))
+      : ok("combineRuns: inverse-variance, σ-floor 3.0, drift epoch, legacy σ=25");
+  }
+
   // ---- analyzer store: time-series bucketing (outlet/writer drift) ----
   {
     // init only to wire AXIS_KEYS + the left–right fn; bucketByMonth is a pure

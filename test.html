@@ -312,7 +312,7 @@
       try {
         localStorage.setItem("dc_last_result", JSON.stringify({
           vector: scored.vector, counts: scored.counts, bands: scored.bands,
-          consistency: scored.consistency, attention,
+          consistency: scored.consistency, attention, precision: scored.precision,
           answers, testMode: state.testMode, answerMode: state.answerMode,
           bankVersion: data.bankVersion || 1, approximatedAxes: data.approximatedAxes || [], enc,
           // Fingerprint what was answered so a future bank edit can be topped up
