@@ -51,7 +51,7 @@
   <div class="toast" id="toast"></div>
 
   <script type="module">
-    import { initShell, vectorFromHash } from "./js/app.js";
+    import { initShell, vectorFromHash, loadAccountResultIntoHash } from "./js/app.js";
     import { AXES, AXIS_KEYS, axisByKey } from "./js/axes.js";
     import { ARCHETYPES } from "./js/archetypes.js";
     import { createExplorer, isWebGLAvailable } from "./js/charts3d.js";
@@ -69,7 +69,9 @@
       });
       return out;
     };
+    (async () => {   // wrapped so we can await the account's saved result before resolving the vector
     const hp = hashParams();
+    await loadAccountResultIntoHash();
     const vector = vectorFromHash() || tryLastResult() || zeroVector();
 
     function tryLastResult() {
@@ -199,6 +201,7 @@
       try { await navigator.clipboard.writeText(url); toast("View link copied"); }
       catch { prompt("Copy this link:", url); }
     });
+    })();
   </script>
 </body>
 </html>

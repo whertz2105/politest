@@ -141,8 +141,19 @@ export function quadrantSVG(vector, xKey, yKey, opts = {}) {
         .reduce((last, d) => { d.ly = d.y - 5 < last + gap ? last + gap : d.y - 5; return d.ly; }, -Infinity);
     }
     figMarks = labelled.map((d) => {
-      const ly = d.ly != null ? d.ly : d.y - 5;
-      const lbl = d.show ? `<text x="${d.x + 5}" y="${ly}" class="fig-lbl" style="font-size:${Math.max(8, font - 1)}px">${escapeHtml(d.f.name)}</text>` : "";
+      let lbl = "";
+      if (d.show) {
+        // Anchor the label toward center so it never runs off the frame edge:
+        // right-half dots label leftward (text-anchor:end), left-half rightward.
+        const rightHalf = d.x > midX;
+        const lx = rightHalf ? d.x - 6 : d.x + 6;
+        const anchor = rightHalf ? "end" : "start";
+        let ly = d.ly != null ? d.ly : d.y - 5;
+        const topLimit = y0 + font, botLimit = y0 + plot - 2;
+        if (ly < topLimit) ly = d.y + font + 2; // too near the top → place below the dot
+        if (ly > botLimit) ly = botLimit;        // clamp inside the bottom of the frame
+        lbl = `<text x="${lx}" y="${ly}" text-anchor="${anchor}" class="fig-lbl" style="font-size:${Math.max(8, font - 1)}px">${escapeHtml(d.f.name)}</text>`;
+      }
       return `<g><circle cx="${d.x}" cy="${d.y}" r="4" class="fig-dot dot" ${tip(d.f.name, d.f.v[xKey] || 0, d.f.v[yKey] || 0)}></circle>${lbl}</g>`;
     }).join("");
   }

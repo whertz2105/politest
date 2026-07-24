@@ -91,7 +91,7 @@
   <div class="toast" id="toast"></div>
 
   <script type="module">
-    import { initShell, loadQuestionData, vectorFromHash, encodeVector, escapeHtml, PROGRESS_KEY } from "./js/app.js";
+    import { initShell, loadQuestionData, vectorFromHash, encodeVector, escapeHtml, PROGRESS_KEY, loadAccountResultIntoHash } from "./js/app.js";
     import { AXES, AXIS_KEYS, axisByKey, axisLabel } from "./js/axes.js";
     import { computeScores, questionsForMode } from "./js/scoring.js";
     import { renderBarReadout, quadrantCard, wireQuadrant, axisLineSVG, runChartDevAssertions } from "./js/charts2d.js";
@@ -211,8 +211,8 @@
 
       if (cmpMode === "figures") {
         const near = nearestFigures(vector, figures, 6);
-        meta.textContent = figures.length ? `you vs ${figures.length} figures · nearest 3 labelled · click to expand` : "no figures loaded";
-        wireQuadrant(card, vector, x, y, { figures, labelNames: near.slice(0, 3).map((f) => f.name) });
+        meta.textContent = figures.length ? `you vs ${figures.length} figures · hover for names · click to expand` : "no figures loaded";
+        wireQuadrant(card, vector, x, y, { figures });
         if (!figures.length) { detail.innerHTML = `<p class="muted">No figures loaded.</p>`; return; }
         detail.innerHTML = `<h4 style="margin-top:0">Closest historical figures</h4>
           <p class="muted" style="font-size:0.82rem">Full-vector similarity across all 22 axes. Hover any dot for its position; click the chart to enlarge.</p>
@@ -340,7 +340,8 @@
 
     async function boot() {
       if (location.search.includes("devcharts")) runChartDevAssertions();
-      const resolved = resolveVector();
+      let resolved = resolveVector();
+      if (!resolved && await loadAccountResultIntoHash()) resolved = resolveVector();
       if (!resolved) { document.getElementById("empty").hidden = false; return; }
       const { vector, own } = resolved;
 

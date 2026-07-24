@@ -211,6 +211,23 @@ export function escapeHtml(s) {
 export function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
 // Read the results vector from location.hash (#r=...). Returns vector or null.
+// If the page has no result loaded (no #r= hash and no local cached result) but
+// the signed-in user has saved results, load their most recent one into the hash.
+// Returns true if it set the hash. Enables Results/3D to auto-populate from the
+// account on a fresh browser/device.
+export async function loadAccountResultIntoHash() {
+  if (/[#&]r=/.test(location.hash)) return false;
+  try { const l = JSON.parse(localStorage.getItem("dc_last_result") || "null"); if (l && l.vector) return false; } catch { /* ignore */ }
+  try {
+    const res = await fetch("/api/auth/results", { cache: "no-cache" });
+    if (!res.ok) return false; // 401 (signed out) or accounts unavailable
+    const list = (await res.json()).results || [];
+    if (!list.length) return false;
+    history.replaceState(null, "", "#r=" + encodeURIComponent(list[0].enc));
+    return true;
+  } catch { return false; }
+}
+
 export function vectorFromHash() {
   const m = /[#&]r=([^&]+)/.exec(location.hash || "");
   if (!m) return null;
