@@ -40,6 +40,7 @@
       <div class="btn-row" style="justify-content:center">
         <a class="btn btn-primary" id="start-btn" href="test.html">Take the test</a>
         <a class="btn" id="resume-btn" href="test.html" hidden>Resume in progress</a>
+        <a class="btn" id="topup-btn" href="test.html?topup=1" hidden></a>
         <a class="btn" href="data.html#test">Questions &amp; methodology</a>
       </div>
       <p class="muted" id="count-note" style="font-size:0.85rem"></p>
@@ -104,6 +105,25 @@
       const answered = prog.answers ? Object.keys(prog.answers).length : 0;
       btn.textContent = `Resume (${answered}/${prog.order.length})`;
     }
+
+    // Someone who already took the test only needs the questions added since —
+    // offered here as well as on the results page. Loaded lazily and after paint:
+    // the landing page must not wait on the question bank to render.
+    (async () => {
+      let run = null;
+      try { run = JSON.parse(localStorage.getItem("dc_last_result") || "null"); } catch { return; }
+      if (!run || !run.answers || !run.vector || !("auth_pw" in run.vector)) return;
+      const { loadQuestionData } = await import("./js/app.js");
+      const { questionsForMode, pendingQuestions, reusableAnswers } = await import("./js/scoring.js");
+      let data;
+      try { data = await loadQuestionData(); } catch { return; }
+      const served = questionsForMode(data.questions, run.testMode || "deep");
+      const n = pendingQuestions(reusableAnswers(run, data.questions), served).length;
+      if (!n) return;
+      const btn = document.getElementById("topup-btn");
+      btn.textContent = `Add ${n} new question${n === 1 ? "" : "s"} to my result`;
+      btn.hidden = false;
+    })();
   </script>
 </body>
 </html>

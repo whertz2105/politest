@@ -93,7 +93,7 @@
   <script type="module">
     import { initShell, loadQuestionData, vectorFromHash, encodeVector, escapeHtml, PROGRESS_KEY, loadAccountResultIntoHash } from "./js/app.js";
     import { AXES, AXIS_KEYS, axisByKey, axisLabel } from "./js/axes.js";
-    import { computeScores, questionsForMode } from "./js/scoring.js";
+    import { computeScores, questionsForMode, pendingQuestions, reusableAnswers } from "./js/scoring.js";
     import { renderBarReadout, quadrantCard, wireQuadrant, axisLineSVG, runChartDevAssertions } from "./js/charts2d.js";
     import { ARCHETYPES, matchArchetypes, singleAxisMatch } from "./js/archetypes.js";
     import { validateFigures, nearestFigures } from "./js/figures.js";
@@ -154,6 +154,21 @@
         html += `<div class="card banner-info"><b>v1 question bank.</b> Four axes were split in v2; on this bank they are approximated from their fused parent (marked <span class="tag approx">v1 approx</span>). Their siblings show “awaiting items”.</div>`;
       }
       el.innerHTML = html;
+    }
+
+    // ---- top-up prompt: questions added to the bank since this run was taken ----
+    // Offered only for our own run, because merging needs its stored answers. The
+    // count is what's actually missing from the current served set, so a taker
+    // answers those and keeps everything else — never a retake.
+    function renderTopUp(data, own) {
+      if (!own || !last || !last.answers || !data) return;
+      const served = questionsForMode(data.questions, last.testMode || "deep");
+      const n = pendingQuestions(reusableAnswers(last, data.questions), served).length;
+      if (!n) return;
+      const s = n === 1 ? "" : "s";
+      document.getElementById("banners").insertAdjacentHTML("afterbegin", `<div class="card banner-info">
+        <b>${n} new question${s} since you took this.</b> Answer just ${n === 1 ? "it" : "them"} and your result updates in place — the rest of your answers are kept exactly as they were.
+        <div class="btn-row" style="margin-top:0.6rem"><a class="btn btn-primary" href="test.html?topup=1">Answer the new question${s} →</a></div></div>`);
     }
 
     // ---- archetypes (with co-equal top two) ----
@@ -375,6 +390,7 @@
         : "Shared result — validity detail (confidence bands, consistency) is only available to the person who took it.";
 
       renderBanners(last && last.attention, last && last.consistency);
+      renderTopUp(data, own);
       renderBarReadout(document.getElementById("bars"), vector, {
         counts, bands: last && last.bands, consistency: last && last.consistency, percentiles, approximated,
       });

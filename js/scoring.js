@@ -208,16 +208,56 @@ export function questionsForMode(questions, mode) {
 // item). Used to REFUSE resuming a session whose bank differs from the loaded one
 // — ids can collide across bank versions while the underlying question changed,
 // which would silently mis-score answers.
-export function bankSignature(questions) {
+function fnv1a(str) {
   let h = 2166136261 >>> 0;
-  const feed = (s) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } };
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h >>> 0;
+}
+
+export function bankSignature(questions) {
   const sorted = questions.slice().sort((a, b) => a.id - b.id);
-  feed("n=" + sorted.length + ";");
+  let s = "n=" + sorted.length + ";";
   for (const q of sorted) {
     const ax = Object.keys(q.axes || {}).sort().map((k) => k + ":" + q.axes[k]).join(",");
-    feed(q.id + "|" + ax + "|" + (q.type || "") + "|" + (q.expect == null ? "" : q.expect) + "|" + (q.pair || "") + ";");
+    s += q.id + "|" + ax + "|" + (q.type || "") + "|" + (q.expect == null ? "" : q.expect) + "|" + (q.pair || "") + ";";
   }
-  return h >>> 0;
+  return fnv1a(s);
+}
+
+// Per-item fingerprint — changes whenever an item's wording, keying or role does.
+// A finished run stores these next to its answers so a later top-up can tell which
+// stored answers still mean what they meant. Ids get REUSED across bank edits (398
+// was an attention check and is now a real question), and merging an answer across
+// such a change would silently score it against the wrong item.
+export function itemFingerprint(q) {
+  const ax = Object.keys(q.axes || {}).sort().map((k) => k + ":" + q.axes[k]).join(",");
+  return fnv1a(`${q.id}|${q.text}|${ax}|${q.type || ""}|${q.expect == null ? "" : q.expect}`);
+}
+export function itemFingerprints(questions) {
+  const out = {};
+  for (const q of questions) out[q.id] = itemFingerprint(q);
+  return out;
+}
+
+// Ids reused by the bank edit that added questions 398–400 and moved the attention
+// checks to 901–903. Runs finished before that edit carry no fingerprints, so their
+// answers to these three ids are attention-check responses and must be dropped;
+// every other id (1–397) came through that edit unchanged and stays valid.
+const PRE_FINGERPRINT_REUSED_IDS = [398, 399, 400];
+
+// The subset of a finished run's answers that is still safe to merge into a new
+// scoring pass. Anything whose item changed is dropped, so it comes back as a
+// pending question and gets asked again rather than silently mis-scored.
+export function reusableAnswers(run, questions) {
+  const current = itemFingerprints(questions);
+  const stored = run && run.itemFp;
+  const out = {};
+  for (const [k, v] of Object.entries((run && run.answers) || {})) {
+    const id = Number(k);
+    if (stored) { if (stored[id] !== undefined && stored[id] === current[id]) out[id] = v; }
+    else if (!PRE_FINGERPRINT_REUSED_IDS.includes(id)) out[id] = v;
+  }
+  return out;
 }
 
 // Items that actually load axes (exclude attention checks).
@@ -274,6 +314,20 @@ export function computeScores(answers, servedQuestions) {
     vector[k] = m === 0 ? 0 : clamp(round1((raw[k] / m) * 100), -100, 100);
   }
   return { vector, raw, max, counts, answered };
+}
+
+// Numbered questions in the served set that a stored run has no answer for —
+// i.e. what a returning taker must answer to bring an older run up to the current
+// bank, instead of retaking it. Attention checks are deliberately excluded: they
+// measure the session they were answered in, so the original verdict carries over
+// rather than being re-tested by a handful of top-up items.
+export function pendingQuestions(answers, servedQuestions) {
+  const get = answers instanceof Map ? (id) => answers.get(id) : (id) => answers[id];
+  return servedQuestions.filter((q) => {
+    if (q.type === "attention") return false;
+    const v = get(q.id);
+    return v === undefined || v === null;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -384,4 +438,17 @@ export function bootstrapConfidence(answers, servedQuestions, opts = {}) {
     spansZero[k] = lo[k] <= 0 && hi[k] >= 0;
   }
   return { lo, hi, spansZero };
+}
+
+// The whole scored payload for one run. Shared by finishing a test and by merging
+// a top-up into an earlier run, so the two paths can't compute a result differently.
+export function scoreRun(answers, servedQuestions, opts = {}) {
+  const scored = computeScores(answers, servedQuestions);
+  return {
+    vector: scored.vector,
+    counts: scored.counts,
+    attention: computeAttention(answers, servedQuestions),
+    consistency: computeConsistency(answers, servedQuestions),
+    bands: bootstrapConfidence(answers, servedQuestions, { seed: opts.seed >>> 0, iters: opts.iters || 200 }),
+  };
 }

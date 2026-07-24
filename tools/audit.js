@@ -199,6 +199,34 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
     else fail(`attention test wrong: mkt=${sc.mkt}, att1=${att1.failures}/${att1.failed}, att2=${att2.failures}/${att2.failed}`);
   }
 
+  // Top-up merge safety. A finished run is extended with the questions added
+  // since, so an answer may only carry over if ITS ITEM is unchanged — ids get
+  // reused across bank edits (398 was an attention check, now a real question)
+  // and merging across that would score an answer against the wrong item.
+  {
+    const bank = [
+      { id: 1, text: "a", axes: { mkt: 2 } },
+      { id: 2, text: "b", axes: { mkt: -1 } },
+      { id: 9, text: "check", type: "attention", expect: 100 },
+    ];
+    const bad = [];
+    const pend = S.pendingQuestions({ 1: 100 }, bank).map((q) => q.id);
+    if (JSON.stringify(pend) !== "[2]") bad.push(`pending=${JSON.stringify(pend)} (want [2]; attention never re-asked)`);
+    // fingerprinted run: item 2 reworded since -> its answer is dropped, not merged
+    const edited = bank.map((q) => (q.id === 2 ? { ...q, text: "b, reworded" } : q));
+    const carried = S.reusableAnswers({ answers: { 1: 100, 2: 0 }, itemFp: S.itemFingerprints(bank) }, edited);
+    if (carried[1] !== 100 || carried[2] !== undefined) bad.push(`carried=${JSON.stringify(carried)} (want only id 1)`);
+    // pre-fingerprint run: the ids the 398-400 edit reused are dropped
+    const legacy = S.reusableAnswers({ answers: { 5: 75, 398: 0, 399: 100, 400: 100 } }, edited);
+    if (JSON.stringify(legacy) !== '{"5":75}') bad.push(`legacy=${JSON.stringify(legacy)} (want only id 5)`);
+    // scoreRun is the single scoring path: it must agree with its parts
+    const A = { 1: 100, 2: 0 };
+    const run = S.scoreRun(A, bank, { seed: 1 });
+    if (run.vector.mkt !== computeScores(A, bank).vector.mkt) bad.push("scoreRun vector differs from computeScores");
+    bad.length ? fail("top-up merge: " + bad.join("; "))
+      : ok("top-up: pending excludes attention; reused/changed ids dropped, not merged");
+  }
+
   // Order-independence regression: scoring joins by id, never by array index.
   {
     const Q = [

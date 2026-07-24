@@ -25,8 +25,8 @@
   <script type="module">
     import { initShell, loadQuestionData, makeSeed, shuffleWithSeed, saveProgress, loadProgress,
              clearProgress, encodeVector, PROGRESS_KEY, PROGRESS_KEY_LEGACY } from "./js/app.js";
-    import { questionsForMode, computeScores, computeAttention, computeConsistency,
-             bootstrapConfidence, migrateAnswerValue, CLASSIC_ANSWERS, bankSignature } from "./js/scoring.js";
+    import { questionsForMode, scoreRun, pendingQuestions, reusableAnswers, itemFingerprints,
+             migrateAnswerValue, CLASSIC_ANSWERS, bankSignature } from "./js/scoring.js";
 
     initShell("test.html");
 
@@ -77,6 +77,49 @@
       buildNumbering();
     }
 
+    // ---- top-up: extend a finished run with questions added to the bank since ---
+    // Only the missing items are asked; the stored answers are merged, not replaced,
+    // so a returning taker never redoes the whole test. Nothing is written to the
+    // in-progress key, so an unfinished full test is never clobbered by a top-up.
+    function loadFinishedRun() {
+      let r = null;
+      try { r = JSON.parse(localStorage.getItem("dc_last_result") || "null"); } catch { return null; }
+      if (!r || !r.answers || !r.vector || !("auth_pw" in r.vector)) return null;   // absent or pre-v2
+      return r;
+    }
+    function startTopUp(run) {
+      served = questionsForMode(all, run.testMode || "deep");
+      if (!served.length) served = all;
+      // Only answers whose item is unchanged carry over; anything reworded or
+      // re-keyed since comes back as pending and is asked again.
+      const carried = reusableAnswers(run, all);
+      const pending = pendingQuestions(carried, served);
+      if (!pending.length) return false;
+      const seed = makeSeed();
+      state = {
+        topup: true, base: { ...run, answers: carried }, testMode: run.testMode || "deep",
+        answerMode: run.answerMode === "precision" ? "precision" : answerMode(),
+        seed, order: shuffleWithSeed(pending.map((q) => q.id), seed),
+        pos: 0, answers: {}, bankSig: currentSig, bankVersion,
+      };
+      buildNumbering();
+      return true;
+    }
+    function renderUpToDate() {
+      document.getElementById("stage").innerHTML = `<div class="card">
+        <h3 style="margin-top:0">Your result is already up to date</h3>
+        <p class="muted">Every question in your test length has an answer — there's nothing to add.</p>
+        <div class="btn-row"><a class="btn btn-primary" href="results.html">Back to results</a>
+        <a class="btn" href="test.html?fresh=1">Retake the test</a></div></div>`;
+    }
+    function renderNoRun() {
+      document.getElementById("stage").innerHTML = `<div class="card">
+        <h3 style="margin-top:0">No earlier test on this device</h3>
+        <p class="muted">Topping up needs the answers from a previous run, which are stored in this browser. If you took the test elsewhere, you'll need to take it here.</p>
+        <div class="btn-row"><a class="btn btn-primary" href="test.html?fresh=1">Take the test</a>
+        <a class="btn" href="index.html">Home</a></div></div>`;
+    }
+
     // Migrate a v1 (dc_progress_v1, -2..+2 answers) session into v2 once.
     function migrateOldProgress() {
       try {
@@ -110,6 +153,14 @@
       const stored = loadProgress();
       const validStored = stored && Array.isArray(stored.order) && stored.order.length && stored.order.every((id) => byId.has(id));
 
+      // A finished run only needs the questions added since — never the whole test.
+      if (params.has("topup")) {
+        const run = loadFinishedRun();
+        if (!run) return renderNoRun();
+        if (!startTopUp(run)) return renderUpToDate();
+        render();
+        return;
+      }
       if (params.has("fresh")) { startFresh(testMode(), answerMode()); render(); return; }
       // REFUSE to resume a session whose bank differs from the loaded one — ids can
       // collide across bank versions while the underlying question changed, which
@@ -147,11 +198,13 @@
       // count never appears to stall on an item that isn't one of the questions.
       document.getElementById("progress-text").textContent =
         q.type === "attention" ? "Attention check" : `${numOf.get(id)} / ${numTotal}`;
-      document.getElementById("mode-badge").textContent =
-        `· ${state.answerMode === "precision" ? "precision" : "classic"} · ${LEN_LABEL[state.testMode] || state.testMode}`;
+      document.getElementById("mode-badge").textContent = state.topup
+        ? `· ${state.answerMode === "precision" ? "precision" : "classic"} · new questions only`
+        : `· ${state.answerMode === "precision" ? "precision" : "classic"} · ${LEN_LABEL[state.testMode] || state.testMode}`;
       document.getElementById("progress-fill").style.width = `${(state.pos / total) * 100}%`;
       document.getElementById("q-text").textContent = q.text;
       document.getElementById("back-btn").disabled = state.pos === 0;
+      document.getElementById("restart-btn").hidden = !!state.topup;
       if (state.answerMode === "precision") renderSlider(id); else renderClassic(id);
     }
 
@@ -219,37 +272,52 @@
       document.getElementById("q-text").textContent = "All questions answered.";
       const area = document.getElementById("answer-area");
       area.className = "";
-      area.innerHTML = `<div class="card" style="text-align:center">
-        <p>You answered all ${numTotal} questions (${state.answerMode === "precision" ? "precision" : "classic"} mode). Ready to see your compass?</p>
-        <button id="finish-btn" class="btn btn-primary" style="min-width:240px">Finish and see results →</button></div>`;
+      area.innerHTML = state.topup
+        ? `<div class="card" style="text-align:center">
+            <p>That's ${numTotal} new question${numTotal === 1 ? "" : "s"} answered. They'll be added to your earlier test — the rest of your answers are kept as they were.</p>
+            <button id="finish-btn" class="btn btn-primary" style="min-width:240px">Add to my result →</button></div>`
+        : `<div class="card" style="text-align:center">
+            <p>You answered all ${numTotal} questions (${state.answerMode === "precision" ? "precision" : "classic"} mode). Ready to see your compass?</p>
+            <button id="finish-btn" class="btn btn-primary" style="min-width:240px">Finish and see results →</button></div>`;
       area.querySelector("#finish-btn").addEventListener("click", finish);
       document.getElementById("back-btn").disabled = false;   // go back to revise the last answer
       document.getElementById("kbd-hint").textContent = "Press Enter (or the button) to see your results · ← Back to revise.";
     }
 
+    // A top-up is an in-memory mini-session: persisting it would overwrite an
+    // unfinished full test under the same key.
+    function persist() { if (!state.topup) saveProgress(state); }
+
     function record(v) {
       const id = state.order[state.pos];
       state.answers[id] = v;
       state.pos += 1;
-      saveProgress(state);
+      persist();
       render();
     }
-    function back() { if (state.pos === 0) return; state.pos -= 1; saveProgress(state); render(); }
+    function back() { if (state.pos === 0) return; state.pos -= 1; persist(); render(); }
 
     function finish() {
+      // A top-up merges onto the earlier run's answers; a normal run starts clean.
       const answers = {};
+      if (state.topup) for (const [k, v] of Object.entries(state.base.answers || {})) answers[Number(k)] = v;
       for (const [k, v] of Object.entries(state.answers)) answers[Number(k)] = v;
-      const scored = computeScores(answers, served);
-      const attention = computeAttention(answers, served);
-      const consistency = computeConsistency(answers, served);
-      const bands = bootstrapConfidence(answers, served, { seed: state.seed >>> 0, iters: 200 });
+      const scored = scoreRun(answers, served, { seed: state.seed >>> 0, iters: 200 });
       const enc = encodeVector(scored.vector);
       const data = window.__dc_data || {};
+      // The earlier run's attention verdict stands: it measured that sitting, and a
+      // handful of top-up items can't re-measure it (pendingQuestions omits the
+      // checks, so recomputing here would quietly erase a failed run's flag).
+      const attention = state.topup ? (state.base.attention || scored.attention) : scored.attention;
       try {
         localStorage.setItem("dc_last_result", JSON.stringify({
-          vector: scored.vector, counts: scored.counts, bands, consistency, attention,
+          vector: scored.vector, counts: scored.counts, bands: scored.bands,
+          consistency: scored.consistency, attention,
           answers, testMode: state.testMode, answerMode: state.answerMode,
           bankVersion: data.bankVersion || 1, approximatedAxes: data.approximatedAxes || [], enc,
+          // Fingerprint what was answered so a future bank edit can be topped up
+          // precisely, rather than falling back to the one-off id rule in scoring.js.
+          bankSig: currentSig, itemFp: itemFingerprints(served),
         }));
       } catch {}
       location.href = `results.html#r=${enc}`;
@@ -257,6 +325,9 @@
 
     document.getElementById("back-btn").addEventListener("click", back);
     document.getElementById("restart-btn").addEventListener("click", () => {
+      // In a top-up, "restart" would mean discarding the earlier run and taking the
+      // whole test again — the one thing the flow exists to avoid. It's hidden there.
+      if (state.topup) return;
       if (Object.keys(state.answers).length && !confirm("Discard your answers and restart?")) return;
       clearProgress(); startFresh(testMode(), answerMode()); render();
     });
