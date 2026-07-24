@@ -395,6 +395,9 @@
 {"id":395,"text":"The peaceful transfer of power matters more than any policy outcome.","axes":{"meth_means":-2},"sev":3},
 {"id":396,"text":"Sabotage of property, without harm to people, can be justified in extreme causes.","axes":{"meth_means":2},"sev":3},
 {"id":397,"text":"Norms that are not written into law still deserve obedience.","axes":{"meth_means":-1},"sev":1},
-{"id":398,"text":"To show you are reading carefully, select Completely disagree for this statement.","type":"attention","expect":0},
-{"id":399,"text":"For this statement, please select Completely agree.","type":"attention","expect":100},
-{"id":400,"text":"This item checks attention; please select Completely agree.","type":"attention","expect":100}]
+{"id":398,"text":"Ordinary citizens should have no vote in choosing who governs.","axes":{"dem_fr":1},"sev":3},
+{"id":399,"text":"A hereditary or appointed ruler is preferable to any elected government.","axes":{"dem_fr":1},"sev":3},
+{"id":400,"text":"Even a small, highly qualified electorate is worse than holding no elections at all.","axes":{"dem_fr":1},"sev":3},
+{"id":901,"text":"To show you are reading carefully, select Completely disagree for this statement.","type":"attention","expect":0},
+{"id":902,"text":"For this statement, please select Completely agree.","type":"attention","expect":100},
+{"id":903,"text":"This item checks attention; please select Completely agree.","type":"attention","expect":100}]

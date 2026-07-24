@@ -103,7 +103,9 @@ tools/
 data/
   analyzer_system_prompt.md   PROPRIETARY scoring rubric (v-hashed; NEVER served)
   rubric_summary.md           PUBLIC methodology summary (served at /api/rubric)
-  questions.json              400-item question bank (v2, 22 axes)
+  questions.json              400 numbered questions (v2, 22 axes) + 3 attention
+                              checks (ids 901–903, never numbered; served on top
+                              of every mode's target, so quick = 100 + 3)
   archetypes.json, figures.json
 
 deploy/  RUNBOOK.md (ops), politest.service (systemd), *.Caddyfile

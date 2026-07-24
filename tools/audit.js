@@ -220,15 +220,22 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
     const cov = (set) => AXES.every((a) => itemCount(set, a.key) > 0);
     const attn = questions.filter((q) => q.type === "attention");
     const attnIn = (set) => attn.every((a) => set.some((q) => q.id === a.id));
+    // Mode sizes count NUMBERED questions; attention checks ride on top and must
+    // never eat into the target (that would silently shorten every mode).
+    const numbered = (set) => set.filter((q) => q.type !== "attention").length;
+    const numberedFull = numbered(full);
     const bad = [];
-    if (Math.abs(quick.length - 100) > 8) bad.push(`quick=${quick.length}`);
-    if (Math.abs(normal.length - 250) > 10) bad.push(`normal=${normal.length}`);
-    if (deep.length !== full.length) bad.push(`deep=${deep.length}≠${full.length}`);
+    if (Math.abs(numbered(quick) - 100) > 8) bad.push(`quick=${numbered(quick)} numbered`);
+    if (Math.abs(numbered(normal) - 250) > 10) bad.push(`normal=${numbered(normal)} numbered`);
+    if (numbered(deep) !== numberedFull) bad.push(`deep=${numbered(deep)}≠${numberedFull}`);
     if (!cov(quick)) bad.push("quick misses an axis");
     if (!cov(normal)) bad.push("normal misses an axis");
     if (!attnIn(quick) || !attnIn(normal)) bad.push("a mode dropped attention checks");
+    for (const [name, set] of [["quick", quick], ["normal", normal], ["deep", deep]]) {
+      if (set.length - numbered(set) !== attn.length) bad.push(`${name} carries ${set.length - numbered(set)} of ${attn.length} attention checks`);
+    }
     bad.length ? fail("mode sampling: " + bad.join("; "))
-      : ok(`modes: quick ${quick.length} / normal ${normal.length} / deep ${deep.length}; all axes covered, attention kept`);
+      : ok(`modes: quick ${numbered(quick)} / normal ${numbered(normal)} / deep ${numbered(deep)} numbered (+${attn.length} unnumbered attention checks each); all axes covered`);
   }
 
   // Nation normalization (revised bank).

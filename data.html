@@ -128,7 +128,8 @@
           <ul>${warnings.slice(0, 200).map((w) => `<li>${escapeHtml(w)}</li>`).join("")}</ul></details>`;
       }
       if (!errors.length && !warnings.length) {
-        html = `<div class="card"><span class="good">✓</span> No validation problems. ${questions.length} valid questions.</div>`;
+        const numbered = questions.filter((q) => q.type !== "attention").length;
+        html = `<div class="card"><span class="good">✓</span> No validation problems. ${numbered} valid questions.</div>`;
       }
       el.innerHTML = html;
     }
@@ -138,7 +139,10 @@
       const core = questionsForMode(questions, "quick");
       const attentionN = full.filter((q) => q.type === "attention").length;
       const pairN = new Set(full.filter((q) => q.pair).map((q) => q.pair)).size;
-      const note = `<div class="card" style="grid-column:1/-1"><b>Bank v${bankVersion}</b> · ${full.length} items · ${attentionN} attention checks · ${pairN} consistency pairs`
+      // Attention checks are not numbered questions — they ride along in every
+      // mode on top of the target, so they're counted separately here too.
+      const numberedN = full.length - attentionN;
+      const note = `<div class="card" style="grid-column:1/-1"><b>Bank v${bankVersion}</b> · ${numberedN} questions · ${attentionN} unnumbered attention checks · ${pairN} consistency pairs`
         + (approximated.length ? ` · <span class="muted">split axes approximated: ${approximated.map(escapeHtml).join(", ")}</span>` : "")
         + (hasSev ? "" : ` · <span class="muted">no severity (sev) tags</span>`) + `</div>`;
       const cells = AXES.map((a) => {

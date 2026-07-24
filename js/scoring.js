@@ -143,13 +143,15 @@ function zip(a, b) {
 // axes (round-robin), keying-balanced (+/- interleaved), severity-spread, always
 // including attention checks, and keeping consistency pairs intact. Stable (no
 // randomness) so every taker in a mode answers the same set.
+//
+// `target` counts NUMBERED (scored) questions only. Attention checks always ride
+// along on top of it — they are not part of the numbered bank and are never shown
+// with a question number, so counting them would silently shorten every mode.
 export function selectQuestionSet(questions, target) {
-  if (!Number.isFinite(target) || questions.length <= target) return questions.slice();
-  const byId = new Map(questions.map((q) => [q.id, q]));
+  const isAttention = (q) => q.type === "attention";
+  const numbered = questions.filter((q) => !isAttention(q));
+  if (!Number.isFinite(target) || numbered.length <= target) return questions.slice();
   const chosen = new Set();
-
-  // attention checks always included
-  for (const q of questions) if (q.type === "attention") chosen.add(q.id);
 
   // pair partner lookup (to keep pairs whole)
   const pairs = new Map();
@@ -160,8 +162,8 @@ export function selectQuestionSet(questions, target) {
   // per-primary-axis buckets, sign+sev interleaved
   const buckets = new Map();
   const perAxis = {};
-  for (const q of questions) {
-    if (q.type === "attention" || !q.axes) continue;
+  for (const q of numbered) {
+    if (!q.axes) continue;
     const a = primaryAxisOf(q); if (!a) continue;
     (perAxis[a] = perAxis[a] || []).push(q);
   }
@@ -192,7 +194,7 @@ export function selectQuestionSet(questions, target) {
     if (!progressed) break;
     guard++;
   }
-  return questions.filter((q) => chosen.has(q.id));
+  return questions.filter((q) => isAttention(q) || chosen.has(q.id));
 }
 
 // The subset served for a given length mode.

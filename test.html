@@ -32,6 +32,19 @@
 
     let all = [], served = [], byId = new Map(), state = null, currentSig = null, bankVersion = 2;
 
+    // Attention checks are served mixed into the order but are NOT numbered
+    // questions: the counter, the denominator and the completion copy all count
+    // scored items only, so "250" means 250 real questions plus the checks.
+    let numOf = new Map(), numTotal = 0;
+    function buildNumbering() {
+      numOf = new Map(); numTotal = 0;
+      for (const id of state.order) {
+        const q = byId.get(id);
+        if (q && q.type === "attention") continue;
+        numOf.set(id, ++numTotal);
+      }
+    }
+
     function testMode() {
       let m; try { m = localStorage.getItem("dc_mode"); } catch {}
       if (m === "quick" || m === "normal" || m === "deep") return m;
@@ -56,9 +69,13 @@
       const seed = makeSeed();
       const order = shuffleWithSeed(served.map((q) => q.id), seed);
       state = { testMode: tMode, answerMode: aMode, seed, order, pos: 0, answers: {}, bankSig: currentSig, bankVersion };
+      buildNumbering();
       saveProgress(state);
     }
-    function restoreServed() { served = questionsForMode(all, state.testMode); if (!served.length) served = all; }
+    function restoreServed() {
+      served = questionsForMode(all, state.testMode); if (!served.length) served = all;
+      buildNumbering();
+    }
 
     // Migrate a v1 (dc_progress_v1, -2..+2 answers) session into v2 once.
     function migrateOldProgress() {
@@ -126,7 +143,10 @@
       if (state.pos >= total) return renderCompletion();
       const id = state.order[state.pos];
       const q = byId.get(id);
-      document.getElementById("progress-text").textContent = `${state.pos + 1} / ${total}`;
+      // An attention check gets no number — the counter names it instead, so the
+      // count never appears to stall on an item that isn't one of the questions.
+      document.getElementById("progress-text").textContent =
+        q.type === "attention" ? "Attention check" : `${numOf.get(id)} / ${numTotal}`;
       document.getElementById("mode-badge").textContent =
         `· ${state.answerMode === "precision" ? "precision" : "classic"} · ${LEN_LABEL[state.testMode] || state.testMode}`;
       document.getElementById("progress-fill").style.width = `${(state.pos / total) * 100}%`;
@@ -193,15 +213,14 @@
     }
 
     function renderCompletion() {
-      const total = state.order.length;
-      document.getElementById("progress-text").textContent = `${total} / ${total}`;
+      document.getElementById("progress-text").textContent = `${numTotal} / ${numTotal}`;
       document.getElementById("mode-badge").textContent = "· complete";
       document.getElementById("progress-fill").style.width = "100%";
       document.getElementById("q-text").textContent = "All questions answered.";
       const area = document.getElementById("answer-area");
       area.className = "";
       area.innerHTML = `<div class="card" style="text-align:center">
-        <p>You answered all ${total} questions (${state.answerMode === "precision" ? "precision" : "classic"} mode). Ready to see your compass?</p>
+        <p>You answered all ${numTotal} questions (${state.answerMode === "precision" ? "precision" : "classic"} mode). Ready to see your compass?</p>
         <button id="finish-btn" class="btn btn-primary" style="min-width:240px">Finish and see results →</button></div>`;
       area.querySelector("#finish-btn").addEventListener("click", finish);
       document.getElementById("back-btn").disabled = false;   // go back to revise the last answer
