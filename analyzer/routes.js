@@ -113,6 +113,23 @@ async function handle(req, res, urlPath) {
     return true;
   }
 
+  // Drift over time. Public: aggregate means/counts only, no operator detail.
+  if (urlPath === "/api/source-trend" && req.method === "GET") {
+    const q = new URL(req.url, "http://x").searchParams;
+    const t = store.timeSeries("source", (q.get("domain") || "").toLowerCase());
+    if (!t) { sendJson(res, 404, { error: "no such source" }); return true; }
+    sendJson(res, 200, { trend: t });
+    return true;
+  }
+
+  if (urlPath === "/api/writer-trend" && req.method === "GET") {
+    const q = new URL(req.url, "http://x").searchParams;
+    const t = store.timeSeries("writer", q.get("key") || "");
+    if (!t) { sendJson(res, 404, { error: "no such writer" }); return true; }
+    sendJson(res, 200, { trend: t });
+    return true;
+  }
+
   if (urlPath === "/api/analyze" && req.method === "POST") {
     try {
       const p = JSON.parse((await readBody(req)) || "{}");

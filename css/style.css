@@ -248,6 +248,35 @@ input[type="range"].slider:focus-visible { box-shadow: 0 0 0 4px var(--ring); }
 .chart-modal-foot { padding: var(--s3) var(--s4); border-top: 1px solid var(--border); text-align: right; }
 @media (max-width: 560px) { .chart-modal { padding: 0; } .chart-modal-inner { max-width: 100vw; max-height: 100vh; height: 100vh; width: 100vw; border-radius: 0; } }
 
+/* Time-series line chart (outlet / writer drift) */
+.line-chart { width: 100%; height: auto; display: block; }
+.lc-grid { stroke: var(--border); stroke-width: 1; }
+.lc-zero { stroke: var(--border-strong); stroke-width: 1.2; }
+.lc-ytick { fill: var(--fg-faint); font-size: 10px; text-anchor: end; font-variant-numeric: tabular-nums; }
+.lc-xtick { fill: var(--fg-dim); font-size: 10px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.lc-line { stroke-width: 2; fill: none; }
+.lc-dot { stroke: var(--bg); stroke-width: 0.8; }
+.lc-pole { fill: var(--fg-faint); font-size: 10px; font-weight: 600; text-anchor: middle; }
+
+/* Genre-mix strip: composition per bucket (the "op-ed-heavy month" disclosure) */
+.genre-strip { display: flex; flex-direction: column; gap: .35rem; margin: .6rem 0; }
+.gs-row { display: grid; grid-template-columns: 4.2rem 1fr; align-items: center; gap: .5rem; font-size: var(--fs-xs); }
+.gs-period { font-variant-numeric: tabular-nums; color: var(--fg-dim); }
+.gs-bars { display: flex; height: 12px; border-radius: var(--radius-pill); overflow: hidden; border: 1px solid var(--border); background: var(--bg-elev3); }
+.gs-seg { height: 100%; }
+.gs-seg.report { background: var(--good); }
+.gs-seg.analysis { background: var(--accent); }
+.gs-seg.opinion { background: var(--pos); }
+.gs-seg.mixed { background: var(--warn); }
+.gs-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; font-size: var(--fs-xs); color: var(--fg-dim); margin-top: .2rem; }
+.gs-key { display: inline-flex; align-items: center; gap: .3rem; }
+.gs-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.gs-swatch.report { background: var(--good); }
+.gs-swatch.analysis { background: var(--accent); }
+.gs-swatch.opinion { background: var(--pos); }
+.gs-swatch.mixed { background: var(--warn); }
+.trend-controls { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; margin: .4rem 0 .8rem; }
+
 /* Single-axis number line */
 .axis-line { width: 100%; height: auto; display: block; }
 .axl-axis { stroke: var(--border-strong); stroke-width: 1.5; }

@@ -7,6 +7,7 @@
 // Imports the SAME ES modules the browser uses so audit and app can't drift.
 
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { pathToFileURL } = require("url");
 
@@ -26,6 +27,8 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
           CLASSIC_MAP } = S;
   const { matchArchetypes, ARCHETYPES } = await importer("js/archetypes.js");
   const { shuffleWithSeed } = await importer("js/app.js");
+  const { leftRightScore } = await importer("js/leftright.js");
+  const store = require("../analyzer/store");
 
   // ---- load + migrate questions.json ----
   const qpath = path.join(ROOT, "data", "questions.json");
@@ -269,6 +272,31 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
     }
     bad.length ? fail("mode sampling: " + bad.join("; "))
       : ok(`modes: quick ${numbered(quick)} / normal ${numbered(normal)} / deep ${numbered(deep)} numbered (+${attn.length} unnumbered attention checks each); all axes covered`);
+  }
+
+  // ---- analyzer store: time-series bucketing (outlet/writer drift) ----
+  {
+    // init only to wire AXIS_KEYS + the left–right fn; bucketByMonth is a pure
+    // function over hand-built records, so the store's on-disk state is irrelevant.
+    store.init(AXIS_KEYS, path.join(os.tmpdir(), "politeion-audit-store.jsonl"), leftRightScore);
+    const recs = [
+      { ts: "2026-06-03T00:00:00Z", genre: "report", flagged: false, axes: { mkt: { score: 10 } } },
+      { ts: "2026-06-10T00:00:00Z", genre: "report", flagged: false, axes: { mkt: { score: 20 } } },
+      { ts: "2026-06-20T00:00:00Z", genre: "opinion", flagged: false, axes: { mkt: { score: 60 } } },
+      { ts: "2026-07-05T00:00:00Z", genre: "report", flagged: false, axes: { mkt: { score: 0 } } },
+      { ts: "2026-07-06T00:00:00Z", genre: "report", flagged: false, axes: { mkt: { score: 0 } } },
+    ];
+    const bk = store.bucketByMonth(recs);
+    const bad = [];
+    if (bk.length !== 1) bad.push(`got ${bk.length} buckets (July n=2 must be omitted → expect 1)`);
+    const b = bk[0] || {};
+    if (b.period !== "2026-06") bad.push(`period ${b.period} (want 2026-06)`);
+    if (b.n !== 3) bad.push(`n ${b.n} (want 3)`);
+    if (!b.byGenre || b.byGenre.report !== 2 || b.byGenre.opinion !== 1) bad.push(`byGenre ${JSON.stringify(b.byGenre)} (want report 2 / opinion 1)`);
+    if (!b.axes || !b.axes.mkt || b.axes.mkt.mean !== 30) bad.push(`mkt mean ${b.axes && b.axes.mkt && b.axes.mkt.mean} (want 30)`);
+    if (b.lr !== 30) bad.push(`lr ${b.lr} (want 30 = mean of 10/20/60)`);
+    bad.length ? fail("timeSeries bucketing: " + bad.join("; "))
+      : ok("timeSeries: n≥3 buckets kept, sparse month omitted, genre-mix + mean + lr correct");
   }
 
   // Nation normalization (revised bank).

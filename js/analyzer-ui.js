@@ -4,7 +4,7 @@
 
 import { AXES, AXIS_KEYS, axisByKey } from "./axes.js";
 import { escapeHtml } from "./app.js";
-import { renderBarReadout, wireQuadrant } from "./charts2d.js";
+import { renderBarReadout, wireQuadrant, lineChartCard } from "./charts2d.js";
 import { leftRightScore, lrLabel } from "./leftright.js";
 
 export { leftRightScore };
@@ -208,6 +208,77 @@ function articleCard(c) {
     <span class="article-card-title">${escapeHtml(c.title || c.url || "Untitled")}</span>
     ${miniLeftRightBar(c.lr)}
   </a>`;
+}
+
+// ---- drift trend (writer / source profiles) ------------------------------
+// `trend` is the /api/*-trend payload: { kind, key, all:[bucket], byGenre:{…} }.
+// Renders the left↔right line + an axis picker + a genre filter + the genre-mix
+// strip (the composition disclosure). Re-renders in place on any control change.
+function genreStripHtml(buckets) {
+  if (!buckets.length) return `<p class="muted">No buckets.</p>`;
+  const genres = ["report", "analysis", "opinion", "mixed"];
+  const rows = buckets.map((b) => {
+    const total = genres.reduce((s, g) => s + (b.byGenre[g] || 0), 0) || 1;
+    const segs = genres.map((g) => {
+      const c = b.byGenre[g] || 0;
+      return c ? `<span class="gs-seg ${g}" style="width:${(c / total * 100).toFixed(1)}%" title="${g}: ${c}"></span>` : "";
+    }).join("");
+    return `<div class="gs-row"><span class="gs-period">${escapeHtml(b.period)}</span><span class="gs-bars">${segs}</span></div>`;
+  }).join("");
+  const legend = genres.map((g) => `<span class="gs-key"><span class="gs-swatch ${g}"></span>${g}</span>`).join("");
+  return `<div class="genre-strip">${rows}</div><div class="gs-legend">${legend}</div>`;
+}
+
+export function renderTrend(el, trend) {
+  const subject = trend.kind === "writer" ? "Writer" : "Outlet";
+  const genres = ["all", "report", "analysis", "opinion"];
+  let genre = "all";
+  let axisKey = "";
+
+  const bucketsFor = () => (genre === "all" ? trend.all : (trend.byGenre[genre] || []));
+  const seriesFor = (bk) => {
+    const out = [{ name: "Left–right", color: "var(--accent)", unit: "LR", points: bk.map((b) => ({ label: b.period, value: b.lr })) }];
+    if (axisKey) {
+      const m = axisByKey(axisKey);
+      out.push({ name: m.label, color: "var(--pos)", unit: m.label, points: bk.map((b) => ({ label: b.period, value: b.axes[axisKey] ? b.axes[axisKey].mean : null })) });
+    }
+    return out;
+  };
+  const poles = () => {
+    if (!axisKey) return { posLabel: "Right", negLabel: "Left" };
+    const m = axisByKey(axisKey);
+    return { posLabel: m.posShort || m.posLabel, negLabel: m.negShort || m.negLabel };
+  };
+
+  function draw() {
+    const bk = bucketsFor();
+    const genreOpts = genres.map((g) => `<option value="${g}"${g === genre ? " selected" : ""}>${g === "all" ? "All genres" : g[0].toUpperCase() + g.slice(1)}</option>`).join("");
+    const axisOpts = `<option value="">Left–right only</option>` +
+      AXES.map((a) => `<option value="${a.key}"${a.key === axisKey ? " selected" : ""}>+ ${escapeHtml(a.label)}</option>`).join("");
+    el.innerHTML = `
+      <h2 class="section-h">${subject} drift over time</h2>
+      <div class="trend-controls">
+        <label style="display:inline-flex;align-items:center;gap:.4rem">Genre <select id="tr-genre">${genreOpts}</select></label>
+        <label style="display:inline-flex;align-items:center;gap:.4rem">Plot axis <select id="tr-axis">${axisOpts}</select></label>
+      </div>
+      <div id="tr-chart"></div>
+      <p class="muted" style="font-size:.8rem">Bucketed monthly; months with fewer than 3 analyses are omitted; genre mix shown because composition shifts can look like position shifts.</p>
+      <h3 class="lb-h" style="margin-top:1rem">Genre mix per month</h3>
+      ${genreStripHtml(bk)}`;
+    const chart = el.querySelector("#tr-chart");
+    if (bk.length >= 2) {
+      chart.appendChild(lineChartCard(seriesFor(bk), {
+        title: `${subject} drift`,
+        caption: axisKey ? `Left–right + ${axisByKey(axisKey).label}` : "Left–right over time",
+        filename: "politeion-drift.png", ...poles(),
+      }));
+    } else {
+      chart.innerHTML = `<p class="muted">Not enough monthly buckets in this genre to plot (need ≥2).</p>`;
+    }
+    el.querySelector("#tr-genre").addEventListener("change", (e) => { genre = e.target.value; draw(); });
+    el.querySelector("#tr-axis").addEventListener("change", (e) => { axisKey = e.target.value; draw(); });
+  }
+  draw();
 }
 
 export function hashParams() {

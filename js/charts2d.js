@@ -313,6 +313,74 @@ export function quadrantCard(vector, xKey, yKey, opts = {}) { return paintQuadra
 export function wireQuadrant(figEl, vector, xKey, yKey, opts = {}) { return paintQuadrant(figEl, vector, xKey, yKey, opts); }
 
 // ---------------------------------------------------------------------------
+// Time-series line chart. One shared renderer for outlet/writer drift.
+// `series`: [{ name, color, unit?, points:[{ label, value }] }]. x is the union of
+// bucket labels (categorical, evenly spaced); y is −100..+100 with a zero line.
+// Every point is a .dot[data-name] so attachTooltips shows "<name> — <label>: value".
+// ---------------------------------------------------------------------------
+export function lineChartSVG(series, opts = {}) {
+  const W = opts.width || 640, H = opts.height || 300;
+  const padL = 52, padR = 18, padT = 18, padB = 44;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const yMin = opts.yMin != null ? opts.yMin : -100, yMax = opts.yMax != null ? opts.yMax : 100;
+  const labels = opts.labels || [...new Set(series.flatMap((s) => s.points.map((p) => p.label)))].sort();
+  const n = labels.length;
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const xAt = (label) => padL + (n <= 1 ? plotW / 2 : (labels.indexOf(label) / (n - 1)) * plotW);
+  const yAt = (v) => padT + (1 - (v - yMin) / (yMax - yMin || 1)) * plotH;
+
+  let grid = "";
+  for (const gv of [yMax, 0, yMin]) {
+    const gy = yAt(gv);
+    grid += `<line x1="${padL}" y1="${r1(gy)}" x2="${padL + plotW}" y2="${r1(gy)}" class="lc-grid${gv === 0 ? " lc-zero" : ""}"/>`;
+    grid += `<text x="${padL - 7}" y="${r1(gy) + 3}" class="lc-ytick">${gv > 0 ? "+" : ""}${gv}</text>`;
+  }
+  let xlabs = "";
+  for (const lb of labels) xlabs += `<text x="${r1(xAt(lb))}" y="${H - padB + 18}" class="lc-xtick">${escapeHtml(lb)}</text>`;
+
+  let lines = "";
+  for (const s of series) {
+    const pts = s.points.filter((p) => Number.isFinite(p.value));
+    if (!pts.length) continue;
+    const col = s.color || "var(--accent)";
+    const poly = pts.map((p) => `${r1(xAt(p.label))},${r1(yAt(p.value))}`).join(" ");
+    lines += `<polyline points="${poly}" fill="none" class="lc-line" style="stroke:${col}"/>`;
+    lines += pts.map((p) =>
+      `<circle cx="${r1(xAt(p.label))}" cy="${r1(yAt(p.value))}" r="4" class="lc-dot dot" style="fill:${col}"` +
+      ` data-name="${escapeHtml(s.name + " — " + p.label)}" data-xa="${escapeHtml(s.unit || "score")}" data-x="${r1(p.value)}"></circle>`).join("");
+  }
+
+  const posL = opts.posLabel || "", negL = opts.negLabel || "";
+  const poles = (posL || negL) ? `
+    <text x="13" y="${r1(padT + plotH * 0.25)}" transform="rotate(-90 13 ${r1(padT + plotH * 0.25)})" class="lc-pole">${escapeHtml(posL)}</text>
+    <text x="13" y="${r1(padT + plotH * 0.75)}" transform="rotate(-90 13 ${r1(padT + plotH * 0.75)})" class="lc-pole">${escapeHtml(negL)}</text>` : "";
+
+  return `<svg class="line-chart" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeHtml(opts.title || "trend")}">
+    <rect x="0" y="0" width="${W}" height="${H}" class="quad-bg"/>
+    ${grid}${poles}${xlabs}${lines}
+  </svg>`;
+}
+
+function paintLineChart(fig, series, opts) {
+  fig.className = "chart-card zoomable";
+  fig.innerHTML = lineChartSVG(series, opts) +
+    `<button class="chart-expand" type="button" title="Expand" aria-label="Expand chart">⤢</button>` +
+    (opts.caption ? `<figcaption>${escapeHtml(opts.caption)}</figcaption>` : "");
+  attachTooltips(fig);
+  const open = () => openChartModal({
+    title: opts.title || "Trend",
+    filename: opts.filename || "politeion-trend.png",
+    render: (s) => lineChartSVG(series, { ...opts, width: Math.round(s * 1.5), height: Math.round(s * 0.72) }),
+  });
+  fig.querySelector(".chart-expand").addEventListener("click", (e) => { e.stopPropagation(); open(); });
+  const svg = fig.querySelector("svg");
+  svg.addEventListener("click", (e) => { if (!(e.target.closest && e.target.closest(".dot[data-name]"))) open(); });
+  return fig;
+}
+export function lineChartCard(series, opts = {}) { return paintLineChart(document.createElement("figure"), series, opts); }
+export function wireLineChart(figEl, series, opts = {}) { return paintLineChart(figEl, series, opts); }
+
+// ---------------------------------------------------------------------------
 // Dev assertions (call with ?devcharts or from tests). Verifies (1) each pole
 // label matches the axes.js pole for its position, and (3) no marker falls
 // outside the plot rect for any score in [−100,100].

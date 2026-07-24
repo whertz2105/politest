@@ -166,6 +166,53 @@ function articleCard(r) {
   return card;
 }
 
+// ---- time series (outlet / writer drift) ---------------------------------
+// Buckets analyses over time so a source's or writer's position can be tracked.
+// The honest reading is WITHIN a genre: composition drift (an op-ed-heavy month)
+// otherwise masquerades as position drift in the all-genre line. A bucket renders
+// only at n >= MIN_ARTICLES; sparser months are omitted, not shown thin.
+const GENRE_LIST = ["report", "analysis", "opinion", "mixed"];
+
+function monthKeyOf(ts) {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return null;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+// Group already-non-flagged records into ordered monthly buckets (n >= MIN_ARTICLES).
+// Each bucket: { period, n, byGenre:{report,…}, lr:mean, axes:{key:{mean,n}} }.
+function bucketByMonth(records) {
+  const map = new Map();
+  for (const r of records) {
+    const p = monthKeyOf(r.ts);
+    if (!p) continue;
+    if (!map.has(p)) map.set(p, []);
+    map.get(p).push(r);
+  }
+  const out = [];
+  for (const [period, recs] of [...map.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
+    if (recs.length < MIN_ARTICLES) continue;
+    const byGenre = {};
+    for (const g of GENRE_LIST) byGenre[g] = 0;
+    for (const r of recs) if (byGenre[r.genre] !== undefined) byGenre[r.genre]++;
+    out.push({ period, n: recs.length, byGenre, lr: aggregateLR(recs).x, axes: aggregate(recs) });
+  }
+  return out;
+}
+
+// Public trend for a source (kind="source", key=domain) or writer (kind="writer",
+// key=writerKey). Returns both the all-genre series and per-genre series (each
+// bucketed independently, each honoring the n>=MIN_ARTICLES floor), or null if the
+// subject has no non-flagged analyses. Carries only aggregate means/counts — no
+// bodies, no usage, no operator detail.
+function timeSeries(kind, key, opts = {}) {
+  const recs = analyses.filter((r) => !r.flagged && (kind === "writer" ? r.writerKey === key : r.source === key));
+  if (!recs.length) return null;
+  const byGenre = {};
+  for (const g of GENRE_LIST) byGenre[g] = bucketByMonth(recs.filter((r) => r.genre === g));
+  return { kind, key, bucket: opts.bucket || "month", all: bucketByMonth(recs), byGenre };
+}
+
 function writerProfile(writerKey) {
   const recs = analyses.filter((r) => r.writerKey === writerKey);
   if (!recs.length) return null;
@@ -238,4 +285,5 @@ function counts() {
 module.exports = {
   init, addAnalysis, getById, getByUrl, normalizeUrl, writerKeyOf, normalizeName,
   writerProfile, sourceProfile, recentList, counts, rankSources, rankWriters, MIN_ARTICLES,
+  timeSeries, bucketByMonth, monthKeyOf,
 };

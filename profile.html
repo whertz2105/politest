@@ -17,15 +17,15 @@
 
   <script type="module">
     import { initShell } from "./js/app.js";
-    import { renderProfile, hashParams } from "./js/analyzer-ui.js";
+    import { renderProfile, renderTrend, hashParams } from "./js/analyzer-ui.js";
     initShell("analyze.html");
 
     const view = document.getElementById("view");
     async function load() {
       const p = hashParams();
-      let endpoint = null, label = "";
-      if (p.writer) { endpoint = "/api/writer?key=" + encodeURIComponent(p.writer); label = "writer"; }
-      else if (p.source) { endpoint = "/api/source?domain=" + encodeURIComponent(p.source); label = "source"; }
+      let endpoint = null, trendEndpoint = null, label = "";
+      if (p.writer) { endpoint = "/api/writer?key=" + encodeURIComponent(p.writer); trendEndpoint = "/api/writer-trend?key=" + encodeURIComponent(p.writer); label = "writer"; }
+      else if (p.source) { endpoint = "/api/source?domain=" + encodeURIComponent(p.source); trendEndpoint = "/api/source-trend?domain=" + encodeURIComponent(p.source); label = "source"; }
       if (!endpoint) { view.innerHTML = '<div class="notice notice-warn">No writer or source in the link.</div>'; return; }
       try {
         const r = await fetch(endpoint, { cache: "no-cache" });
@@ -33,7 +33,23 @@
         const d = await r.json();
         renderProfile(view, d.profile);
         document.title = (d.profile.name || d.profile.domain || "Profile") + " — Politeion";
+        loadTrend(trendEndpoint);
       } catch (e) { view.innerHTML = '<div class="notice notice-warn">Could not load profile: ' + e.message + '</div>'; }
+    }
+
+    // Trend renders only when there are >=2 qualifying monthly buckets; otherwise
+    // the section is silently omitted (a short history isn't drift).
+    async function loadTrend(endpoint) {
+      if (!endpoint) return;
+      try {
+        const r = await fetch(endpoint, { cache: "no-cache" });
+        if (!r.ok) return;
+        const trend = (await r.json()).trend;
+        if (!trend || !trend.all || trend.all.length < 2) return;
+        const sec = document.createElement("section");
+        view.appendChild(sec);
+        renderTrend(sec, trend);
+      } catch { /* trend is optional — never blocks the profile */ }
     }
     window.addEventListener("hashchange", load);
     load();
