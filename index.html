@@ -53,13 +53,6 @@
       </div>
       <div id="home-brief-items"></div>
     </section>
-
-    <section class="feature-grid">
-      <div class="card"><h3>22 axes</h3><p class="muted">Not left–right. Twenty-two independent dimensions — economy, culture, liberty, state power, foreign policy, environment and more.</p></div>
-      <div class="card"><h3>Honest labels</h3><p class="muted">Archetype matching is full-vector and salience-weighted, with confidence bands and consistency checks. Every label lists what you actually disagree with.</p></div>
-      <div class="card"><h3>2D &amp; 3D</h3><p class="muted">Read your scores as bars, pair any two axes as a quadrant, or explore three axes in an interactive cube.</p></div>
-      <div class="card"><h3>Anonymous</h3><p class="muted">No accounts, no analytics, no cookies. Your 22 scores (no name, no personal data) are shared to the crowd comparison <b>by default</b> — you can opt out, or clear your local results, on the results page. Sharing a result <em>link</em> is always your own choice.</p></div>
-    </section>
   </main>
 
   <div class="intro-modal" id="intro-modal" hidden>
@@ -101,27 +94,24 @@
       document.getElementById("intro-dismiss").focus();
     })();
 
-    // Latest Daily Brief on the home page (loaded after paint; degrades to hidden
-    // when the API isn't reachable, e.g. a static/local preview).
+    // A preview of the latest Daily Brief — shown ONLY once a brief is published
+    // (otherwise the box stays hidden). Loaded after paint.
     (async () => {
-      const sec = document.getElementById("home-brief");
-      try {
-        const r = await fetch("/api/brief/latest", { cache: "no-cache" });
-        if (!r.ok) return;
-        const b = (await r.json()).brief;
-        sec.hidden = false;
-        const items = document.getElementById("home-brief-items");
-        if (!b || !(b.items || []).length) {
-          items.innerHTML = `<p class="muted">The first Daily Brief is coming soon — a neutral daily read, every item machine-checked for no detectable stance. <a href="brief.html">Preview →</a></p>`;
-          return;
-        }
-        document.getElementById("home-brief-date").textContent = "· " + b.date;
-        const top = b.items.slice(0, 5);
-        items.innerHTML =
-          `<ul class="home-brief-list">${top.map((it) =>
-            `<li><a href="brief.html?date=${encodeURIComponent(b.date)}">${escapeHtml(it.headline)}</a></li>`).join("")}</ul>
-           <p class="home-brief-cert">✓ All ${b.items.length} item${b.items.length === 1 ? "" : "s"} scored no detectable stance under rubric ${escapeHtml(b.rubric_version || "v?")}.</p>`;
-      } catch { /* leave hidden */ }
+      let b = null;
+      try { const r = await fetch("/api/brief/latest", { cache: "no-cache" }); if (r.ok) b = (await r.json()).brief; } catch { return; }
+      if (!b || !(b.items || []).length) return; // no published brief yet → keep hidden
+      const href = `brief.html?date=${encodeURIComponent(b.date)}`;
+      const items = b.items.slice(0, 4);
+      const first = items[0];
+      const snippet = first.summary ? (first.summary.length > 220 ? first.summary.slice(0, 220).trim() + "…" : first.summary) : "";
+      document.getElementById("home-brief-date").textContent = "· " + b.date;
+      document.getElementById("home-brief-items").innerHTML = `
+        <a class="home-brief-lead" href="${href}">
+          <span class="home-brief-lead-h">${escapeHtml(first.headline)}</span>
+          ${snippet ? `<span class="home-brief-lead-s">${escapeHtml(snippet)}</span>` : ""}
+        </a>
+        ${items.length > 1 ? `<ul class="home-brief-list">${items.slice(1).map((it) => `<li><a href="${href}">${escapeHtml(it.headline)}</a></li>`).join("")}</ul>` : ""}`;
+      document.getElementById("home-brief").hidden = false;
     })();
     document.title = APP_NAME;
     document.getElementById("app-title").textContent = APP_NAME;

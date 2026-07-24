@@ -616,12 +616,15 @@ details.card summary { cursor: pointer; }
   padding: var(--s5); box-shadow: var(--shadow-1); }
 .home-brief-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
 .home-brief-head h2 { font-family: var(--serif); margin: 0; font-size: var(--fs-lg); }
-.home-brief-list { list-style: none; padding: 0; margin: var(--s3) 0 0; }
+.home-brief-lead { display: block; text-decoration: none; color: var(--fg); padding: var(--s3) 0 .6rem; border-bottom: 1px solid var(--border); }
+.home-brief-lead-h { display: block; font-family: var(--serif); font-weight: 600; font-size: var(--fs-md); }
+.home-brief-lead:hover .home-brief-lead-h { color: var(--accent); }
+.home-brief-lead-s { display: block; color: var(--fg-dim); font-size: var(--fs-sm); margin-top: .3rem; line-height: 1.5; }
+.home-brief-list { list-style: none; padding: 0; margin: 0; }
 .home-brief-list li { padding: .5rem 0; border-bottom: 1px solid var(--border); }
 .home-brief-list li:last-child { border-bottom: none; }
 .home-brief-list a { font-family: var(--serif); color: var(--fg); }
 .home-brief-list a:hover { color: var(--accent); }
-.home-brief-cert { font-size: var(--fs-xs); color: var(--good); margin: .6rem 0 0; }
 
 /* ===== Daily Brief ====================================================== */
 .brief-wrap { max-width: 760px; }
