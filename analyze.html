@@ -208,11 +208,16 @@
       const sub = kind === "writer" && e.domain ? ` <span class="muted lb-sub">${escapeHtml(e.domain)}</span>` : "";
       const dir = lr.x < 0 ? "neg" : "pos";
       const s = (lr.x > 0 ? "+" : "") + lr.x;
-      return `<a class="lb-row" href="${href}">
-        <span class="lb-name">${escapeHtml(name)}${sub}</span>
-        ${miniLeftRightBar(lr)}
-        <span class="lb-lean ${dir}">${escapeHtml(lrLabel(lr.x))} <span class="lb-num">${s}</span></span>
-        <span class="muted lb-n" title="analyzed articles with a detected stance">${lr.n || 0}</span>
+      const n = lr.n || 0;
+      return `<a class="lb-row" href="${href}" title="${escapeHtml(lrLabel(lr.x))} (${s})">
+        <span class="lb-top">
+          <span class="lb-name">${escapeHtml(name)}${sub}</span>
+          <span class="lb-num ${dir}">${s}</span>
+        </span>
+        <span class="lb-bot">
+          ${miniLeftRightBar(lr)}
+          <span class="lb-n muted">${n} article${n === 1 ? "" : "s"}</span>
+        </span>
       </a>`;
     }
     function renderLeaderboard(lb) {

@@ -19,7 +19,7 @@ const { URL } = require("url");
 
 const ANTHROPIC_VERSION = "2023-06-01";
 const REQUEST_TIMEOUT_MS = 60_000;
-const MAX_TOKENS = 1500;
+const MAX_TOKENS = 2000;
 const TEMPERATURE = 0;
 
 function config() {
@@ -84,21 +84,27 @@ async function callModel({ system, user }) {
     // like `temperature` with a 400; older ones (Haiku 4.5, Sonnet 4.6, Opus 4.6
     // and earlier) accept them and benefit from temperature:0 for stable scoring.
     const rejectsSampling = /(opus-4-[78]|sonnet-5|fable|mythos)/i.test(c.model);
-    const build = (withTemp) => {
+    // This is a structured JSON-extraction task, so disable extended thinking:
+    // on models where thinking is on by default (Sonnet 5, Opus 4.x) the thinking
+    // tokens count against max_tokens and truncate the JSON on longer articles
+    // (the "invalid JSON after a repair attempt" error). Fable/Mythos always think
+    // and reject {type:"disabled"} — omit it there.
+    const canDisableThinking = !/(fable|mythos)/i.test(c.model);
+    const build = ({ temp, noThink } = {}) => {
       const b = {
         model: c.model,
         max_tokens: MAX_TOKENS,
         system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: user }],
       };
-      if (withTemp) b.temperature = TEMPERATURE;
+      if (temp) b.temperature = TEMPERATURE;
+      if (noThink) b.thinking = { type: "disabled" };
       return b;
     };
-    let { status: code, body } = await postJson(url, headers, build(!rejectsSampling));
-    // Self-heal: if a model rejects temperature anyway (e.g. a future model not
-    // matched above), retry once without it.
-    if (code === 400 && !rejectsSampling && /temperature/i.test(body)) {
-      ({ status: code, body } = await postJson(url, headers, build(false)));
+    let { status: code, body } = await postJson(url, headers, build({ temp: !rejectsSampling, noThink: canDisableThinking }));
+    // Self-heal: if the model rejects a sampling/thinking param, retry with a bare body.
+    if (code === 400 && /temperature|thinking/i.test(body)) {
+      ({ status: code, body } = await postJson(url, headers, build({})));
     }
     let parsed;
     try { parsed = JSON.parse(body); } catch { throw new Error(`model HTTP ${code}: non-JSON response`); }

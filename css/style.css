@@ -518,7 +518,15 @@ details.card summary { cursor: pointer; }
 .lb-row { min-width: 0; }
 .split-exp-recent .split-pane[data-pane="lb"] { padding: var(--s3); }
 .split-exp-recent .split-pane[data-pane="lb"] .lb-cols { grid-template-columns: 1fr; gap: .6rem; }
-.split-exp-recent .split-pane[data-pane="lb"] .lb-lean,
-.split-exp-recent .split-pane[data-pane="lb"] .lb-n { display: none; }
 .split-exp-recent .split-pane[data-pane="lb"] .lr-mini { width: 54px; }
+
+/* Leaderboard rows are two lines so the outlet/author name is never squeezed
+   out: name + lean value on top, bias bar + labeled article count below. */
+.lb-row { flex-direction: column; align-items: stretch; gap: .3rem; }
+.lb-top { display: flex; align-items: baseline; gap: .5rem; }
+.lb-num { font-family: var(--mono); font-weight: 700; margin-left: auto; white-space: nowrap; }
+.lb-num.neg { color: var(--neg); } .lb-num.pos { color: var(--pos); }
+.lb-bot { display: flex; align-items: center; gap: .5rem; }
+.lb-bot .lr-mini { margin-left: 0; }
+.lb-n { font-size: var(--fs-xs); white-space: nowrap; margin-left: auto; }
 .split-exp-lb .split-pane[data-pane="recent"] { padding: var(--s3); }
