@@ -181,7 +181,8 @@ dedupe (re-submitting a URL returns the stored analysis, spending no tokens).
 
 **SSRF.** URL fetches resolve DNS first and refuse private/reserved/link-local and
 `100.64.0.0/10` (CGNAT) addresses — IP-literal hosts included — allow http(s) only,
-re-validate every redirect (max 3), cap the body at 5 MB, and time out at 15 s.
+re-validate every redirect (max 3), cap the body at 25 MB (memory-safety backstop,
+not an article-size limit), and time out at 15 s.
 
 ### Recalibration (rubric v1 → vN, or a MODEL change)
 The rubric is `data/analyzer_system_prompt.md`, installed verbatim as **v1**; its

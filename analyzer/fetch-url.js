@@ -21,7 +21,11 @@ const net = require("net");
 const { URL } = require("url");
 
 const MAX_REDIRECTS = 3;
-const MAX_BYTES = 5 * 1024 * 1024;
+// Generous body ceiling: bloated news pages (inline scripts, ad tech) routinely
+// exceed a few MB of raw HTML even for a short article. This is a memory-safety
+// backstop against a URL pointing at a huge file, not an article-size limit —
+// only the first 60k extracted chars are ever sent to the model.
+const MAX_BYTES = 25 * 1024 * 1024;
 const TIMEOUT_MS = 15_000;
 
 // ---- IP range validation -------------------------------------------------
@@ -127,7 +131,7 @@ function once(urlStr) {
         if (ct && !/text\/html|application\/xhtml/i.test(ct)) { res.resume(); return reject(new Error(`unsupported content-type: ${ct}`)); }
         let size = 0;
         const chunks = [];
-        res.on("data", (c) => { size += c.length; if (size > MAX_BYTES) { req.destroy(new Error("article exceeds 5MB cap")); return; } chunks.push(c); });
+        res.on("data", (c) => { size += c.length; if (size > MAX_BYTES) { req.destroy(new Error("page exceeds 25MB fetch limit")); return; } chunks.push(c); });
         res.on("end", () => resolve({ html: Buffer.concat(chunks).toString("utf8"), finalUrl: u.href }));
       }
     );
