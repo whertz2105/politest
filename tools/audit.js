@@ -259,8 +259,13 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
     if (!cov(quick)) bad.push("quick misses an axis");
     if (!cov(normal)) bad.push("normal misses an axis");
     if (!attnIn(quick) || !attnIn(normal)) bad.push("a mode dropped attention checks");
+    // Anchors set each axis's ceiling — a mode that drops one lets that axis top
+    // out on consistency alone, which is the calibration bug they exist to fix.
+    const anchors = questions.filter((q) => q.anchor);
     for (const [name, set] of [["quick", quick], ["normal", normal], ["deep", deep]]) {
       if (set.length - numbered(set) !== attn.length) bad.push(`${name} carries ${set.length - numbered(set)} of ${attn.length} attention checks`);
+      const missing = anchors.filter((a) => !set.some((q) => q.id === a.id)).map((a) => a.id);
+      if (missing.length) bad.push(`${name} drops anchor item(s) ${missing.join(", ")}`);
     }
     bad.length ? fail("mode sampling: " + bad.join("; "))
       : ok(`modes: quick ${numbered(quick)} / normal ${numbered(normal)} / deep ${numbered(deep)} numbered (+${attn.length} unnumbered attention checks each); all axes covered`);

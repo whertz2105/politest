@@ -83,6 +83,8 @@ export function validateQuestions(raw) {
 
     // optional fields
     if (q.core !== undefined && typeof q.core !== "boolean") warnings.push(`${where}: "core" should be a boolean.`);
+    if (q.anchor !== undefined && typeof q.anchor !== "boolean") warnings.push(`${where}: "anchor" should be a boolean.`);
+    if (q.anchor && isAttention) warnings.push(`${where}: attention items cannot be anchors.`);
     if (q.sev !== undefined && ![1, 2, 3].includes(q.sev)) warnings.push(`${where}: "sev" should be 1, 2 or 3.`);
     if (q.pair !== undefined && (typeof q.pair !== "string" || !q.pair.trim())) warnings.push(`${where}: "pair" should be a non-empty string id.`);
 
@@ -153,6 +155,13 @@ export function selectQuestionSet(questions, target) {
   if (!Number.isFinite(target) || numbered.length <= target) return questions.slice();
   const chosen = new Set();
 
+  // Anchor items fix where an axis's scale tops out, so every mode must serve
+  // them. A short mode normalises over its own served set: drop the anchors and
+  // the ceiling is reached by answering consistently rather than by holding the
+  // extreme position — which is how an epistocrat outscored a monarchist on
+  // Franchise. They are taken before the round-robin and count toward `target`.
+  for (const q of numbered) if (q.anchor) chosen.add(q.id);
+
   // pair partner lookup (to keep pairs whole)
   const pairs = new Map();
   for (const q of questions) if (q.pair) { if (!pairs.has(q.pair)) pairs.set(q.pair, []); pairs.get(q.pair).push(q); }
@@ -168,10 +177,16 @@ export function selectQuestionSet(questions, target) {
     (perAxis[a] = perAxis[a] || []).push(q);
   }
   for (const a of Object.keys(perAxis)) {
-    const items = perAxis[a];
+    // Anchors are already chosen, so they're kept out of the bucket rather than
+    // skipped inside it — skipping would knock the +/- interleave out of step.
+    // They all key one way, so lead the axis with the pole they under-represent;
+    // otherwise a short mode ends up one-sided on exactly the axis they anchor.
+    const items = perAxis[a].filter((q) => !chosen.has(q.id));
     const pos = orderBySevThenId(items.filter((q) => q.axes[a] > 0));
     const neg = orderBySevThenId(items.filter((q) => q.axes[a] < 0));
-    buckets.set(a, zip(pos, neg));
+    let skew = 0;
+    for (const q of perAxis[a]) if (chosen.has(q.id)) skew += q.axes[a] > 0 ? 1 : -1;
+    buckets.set(a, skew > 0 ? zip(neg, pos) : zip(pos, neg));
   }
 
   const axes = AXIS_KEYS.filter((a) => buckets.has(a));

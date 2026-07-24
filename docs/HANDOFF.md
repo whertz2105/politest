@@ -120,6 +120,15 @@ store/   (gitignored, on droplet) results.jsonl, analyses.jsonl, analyzer-usage.
 **Compass axes** live in `js/axes.js` — 22 keys, positive pole first. Everything
 derives from it; growing/renaming axes is a data edit there.
 
+**Anchor items** (`"anchor": true` in `questions.json`) are served in *every*
+length mode. Each mode normalizes over its own served set, so without an item
+stating an axis's extreme position, a short mode's scale tops out on answering
+consistently rather than on holding the extreme — that's how a 15%-franchise
+epistocrat outscored the Monarchist archetype on Franchise. Keep them rare (one
+per axis is enough): they're pre-seeded ahead of the +/- interleave, so each one
+skews its axis's keying balance in the shortest mode. `selectQuestionSet` leads
+an anchored axis with the opposite pole to compensate.
+
 **Left↔right composite** (`js/leftright.js`) maps partisan-coded axes to a single
 −100..+100 score (+ = right). It is the **one source** shared by front and back;
 the article bar, the profile bar, the recent mini-bars, and the leaderboard all use
