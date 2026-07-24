@@ -510,3 +510,15 @@ details.card summary { cursor: pointer; }
 .ac-meta { display: flex; align-items: center; gap: .5rem; }
 .ac-meta .lr-mini { margin-left: auto; }
 .recent-scroll { max-height: 22rem; }
+
+/* Let the leaderboard actually shrink when it's on the narrow (20%) side:
+   without this its two-column grid + fixed bias bars set a min-content floor
+   that prevents the 20/80 split from taking effect. */
+.lb-cols > div { min-width: 0; }
+.lb-row { min-width: 0; }
+.split-exp-recent .split-pane[data-pane="lb"] { padding: var(--s3); }
+.split-exp-recent .split-pane[data-pane="lb"] .lb-cols { grid-template-columns: 1fr; gap: .6rem; }
+.split-exp-recent .split-pane[data-pane="lb"] .lb-lean,
+.split-exp-recent .split-pane[data-pane="lb"] .lb-n { display: none; }
+.split-exp-recent .split-pane[data-pane="lb"] .lr-mini { width: 54px; }
+.split-exp-lb .split-pane[data-pane="recent"] { padding: var(--s3); }
