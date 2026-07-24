@@ -145,6 +145,20 @@ function aggregate(records) {
   return axes;
 }
 
+// Aggregate left–right for a set of records = the MEAN of each non-flagged
+// article's own left–right position (over its full axis set). Articles with no
+// detected lean are excluded so straight reports don't drag the mean to center.
+function aggregateLR(records) {
+  if (!leftRightFn) return { x: 0, hasSignal: false, n: 0 };
+  let sum = 0, n = 0;
+  for (const r of records) {
+    if (r.flagged) continue;
+    const s = leftRightFn(r.axes || {});
+    if (s && s.hasSignal) { sum += s.x; n++; }
+  }
+  return { x: n ? Math.round(sum / n) : 0, hasSignal: n > 0, n };
+}
+
 function articleCard(r) {
   const card = { id: r.id, title: r.title, url: r.url, genre: r.genre, stance_detected: r.stance_detected, flagged: r.flagged, ts: r.ts };
   // Precomputed left↔right position for list mini-bars (flagged excluded — no lean shown).
@@ -165,6 +179,7 @@ function writerProfile(writerKey) {
     articleCount: contributing.length,
     minArticles: MIN_ARTICLES,
     axes: aggregate(recs),
+    lr: aggregateLR(recs),
     articles: recs.map(articleCard).reverse(),
   };
 }
@@ -179,6 +194,7 @@ function sourceProfile(domain) {
     articleCount: contributing.length,
     minArticles: MIN_ARTICLES,
     axes: aggregate(recs),
+    lr: aggregateLR(recs),
     articles: recs.map(articleCard).reverse(),
   };
 }

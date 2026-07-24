@@ -32,9 +32,10 @@ export function miniLeftRightBar(lr) {
   return `<span class="lr-mini" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"><span class="lr-mini-marker" style="left:${pos}%"></span></span>`;
 }
 
-// A left↔right barline shown on every analysis, even with no detected lean.
-export function renderLeftRightBar(axesMap) {
-  const { x, hasSignal } = leftRightScore(axesMap);
+// A left↔right barline. Render either from an axes map (a single analysis) or
+// from a precomputed { x, hasSignal } score (writer/source aggregate).
+function lrBarHtml(x, hasSignal, note) {
+  x = Math.max(-100, Math.min(100, Number(x) || 0));
   const pos = (x + 100) / 2;
   const label = hasSignal ? lrLabel(x) : "Centrist";
   const caption = hasSignal
@@ -44,7 +45,16 @@ export function renderLeftRightBar(axesMap) {
     <figcaption class="lr-caption">${caption}</figcaption>
     <div class="lr-track"><span class="lr-marker" style="left:${pos}%" title="${sign(x)}"></span></div>
     <div class="lr-scale"><span>Left · progressive</span><span>Center</span><span>Right · conservative</span></div>
+    ${note ? `<p class="ns-note muted" style="margin:.35rem 0 0">${escapeHtml(note)}</p>` : ""}
   </figure>`;
+}
+export function renderLeftRightBar(axesMap) {
+  const { x, hasSignal } = leftRightScore(axesMap);
+  return lrBarHtml(x, hasSignal);
+}
+export function renderLeftRightBarScore(score, note) {
+  score = score || { x: 0, hasSignal: false };
+  return lrBarHtml(score.x, !!score.hasSignal, note);
 }
 
 // One scored axis, evidence-forward. `a` = {score, confidence, evidence, evidenceOk?, extreme?}.
@@ -165,9 +175,15 @@ export function renderProfile(el, prof) {
   }
   const anyAxes = Object.values(prof.axes).some((a) => a.n >= min);
 
-  // Left–right composite from the aggregate means (axes at/above the threshold).
-  const lrMap = {};
-  for (const k of AXIS_KEYS) { const a = prof.axes[k]; if (a && a.n >= min) lrMap[k] = { score: a.mean, confidence: 1 }; }
+  // Left–right for the whole source/writer = the MEAN of each article's own
+  // left–right position (computed server-side over each article's full axis set),
+  // NOT a recompute from only the axes that reached the aggregate threshold. This
+  // is why a source whose every article leans far-left reads far-left overall,
+  // even when its signal is spread across many different axes.
+  const lr = prof.lr || { x: 0, hasSignal: false };
+  const lrNote = lr.hasSignal && lr.n
+    ? `Average lean across ${lr.n} analyzed article${lr.n === 1 ? "" : "s"} with a detected stance.`
+    : "";
 
   el.innerHTML = `
     <div class="analysis-head">
@@ -177,7 +193,7 @@ export function renderProfile(el, prof) {
         axes aggregate at ${min}+ articles</p>
     </div>
     ${DISCLAIMER}
-    ${renderLeftRightBar(lrMap)}
+    ${renderLeftRightBarScore(lr, lrNote)}
     ${anyAxes ? `<div data-bars></div>` : `<div class="notice">Insufficient data: no axis has reached ${min} analyzed articles yet.</div>`}
     <h2 class="section-h">Analyzed articles</h2>
     <div class="article-list">${prof.articles.map(articleCard).join("")}</div>`;

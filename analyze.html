@@ -141,6 +141,9 @@
       }
     }
     go.addEventListener("click", submit);
+    // Returning via Back/Forward can restore the page from the bfcache with the
+    // Analyze button still disabled from a prior submit — re-enable it on restore.
+    window.addEventListener("pageshow", () => { go.disabled = false; setStatus("", "muted"); });
 
     // Live stats line + recent list. Public sees a friendly count; the operator
     // detail (spend, tokens, model) appears only in admin mode.
