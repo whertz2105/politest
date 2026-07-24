@@ -18,14 +18,21 @@ Two products in one codebase, sharing one 22-axis political model:
 1. **The compass self-test.** A user answers a bank of statements; the app scores
    them on 22 independent political axes (−100..+100 each), matches them to
    ideological archetypes and historical figures, draws 2D/3D charts, and compares
-   them anonymously against everyone else who took it.
+   them anonymously against everyone else who took it. Repeated, sharper runs refine
+   a signed-in user's position via inverse-variance meta-analysis (the "shrinking
+   dot", §5.8 / §14.3).
 2. **The Analyzer.** Paste a URL or article text; a language model scores the
    *stance of the article* (its framing, not its subject) on the same 22 axes with a
    verbatim quote behind every score, plus a traditional left↔right placement, and
-   aggregates results per writer and per source into a "most biased" leaderboard.
+   aggregates results per writer and per source into a "most biased" leaderboard and
+   monthly **drift** charts (§14.9).
+3. **The Daily Brief.** One neutral page per day — yesterday's news clustered from
+   wire sources + today's expected events — where every item is machine-certified for
+   *no detectable stance* by the Analyzer before it can be published, with the
+   receipts on the page (§16.9 / §14.13).
 
 Plus **accounts** (email+password) that save test results and unlock an admin role
-for the Analyzer's operator tools.
+for the Analyzer's operator tools and the Daily Brief review/publish surface.
 
 **Live at** `https://politeion.com`.
 
@@ -75,11 +82,16 @@ account.html          Account details + saved results + admin note
 
 server.js             stdlib HTTP server: static fallback + /api dispatch
 
+brief.html            Daily Brief (public): one neutral, self-certified page per day
+
 js/                   Frontend ES modules (also imported by tools/audit.js)
   axes.js             SINGLE SOURCE OF TRUTH: 22 axes, labels, poles, app name
   leftright.js        SINGLE SOURCE OF TRUTH: US left↔right composite
   scoring.js          Validation, scoring, mode selection, attention, consistency,
                       bootstrap bands, bank signature, item fingerprints, top-up
+  precision.js        Precision composite ("shrinking dot"): inverse-variance
+                      meta-analysis across saved runs + drift guard (re-exported
+                      by scoring.js)
   app.js              Shared shell/nav/theme, question loader, seeded shuffle,
                       progress persistence, shareable-vector codec, helpers
   archetypes.js       Salience-weighted RMS archetype matcher
@@ -91,14 +103,25 @@ js/                   Frontend ES modules (also imported by tools/audit.js)
   analyzer-ui.js      Renders article/profile views + left↔right bars
 
 analyzer/             Analyzer backend (CommonJS)
-  routes.js           HTTP surface (/api/analyze, /api/analysis/:id, etc.)
+  routes.js           HTTP surface (/api/analyze, /api/analysis/:id, trends, etc.)
   analyze.js          Serial worker queue, rate limit, dedupe, pipeline
   provider.js         Anthropic Messages API over raw https; prompt caching
-  fetch-url.js        SSRF-hardened fetch + readability extraction + byline
+  fetch-url.js        SSRF-hardened fetch + readability extraction + byline;
+                      exports fetchText (raw feed/calendar fetch, same guards)
   validate.js         Evidence-substring check, axis-count/±100 caps, injection
   store.js            JSONL analyses store + writer/source aggregation + ranking
-  budget.js           Token/usage logging, monthly spend estimate + hard cap
+                      + timeSeries (monthly drift buckets)
+  budget.js           Token/usage logging, monthly spend + hard cap, per-kind split
   rubric.js           Loads the private prompt, content hash, RUBRIC_VERSION
+
+brief/                Daily Brief backend (CommonJS)
+  draft.js            Drafting pipeline: fetch → cluster → draft → self-certify →
+                      assemble Today → save as a DRAFT (never auto-publishes)
+  cluster.js          Title-token clustering (a story needs ≥2 outlets); no model
+  sources.js          Dependency-free RSS/Atom parsing + feed collection
+  certify.js          The self-certification loop (injectable, unit-testable)
+  store.js            briefs.jsonl store + item-schema validation + RSS 2.0 feed
+  routes.js           /api/brief/* (public + admin) and /feed.xml
 
 auth/                 Accounts backend (CommonJS)
   db.js               node:sqlite schema (users, sessions, subscriptions,
@@ -112,10 +135,13 @@ tools/
   set-role.js         Promote/demote an account (CLI, direct on the DB)
   centroids.js        Reporting: mean vector per self-chosen crowd label
   itemstats.js        Reporting: per-item psychometrics from crowd answers
+  brief-draft.js      CLI/timer entry point: draft one Daily Brief (never publishes)
 
 data/
   analyzer_system_prompt.md   PROPRIETARY scoring prompt (never served)
   rubric_summary.md           Public methodology summary (served at /api/rubric)
+  brief_system_prompt.md      Daily Brief drafting prompt (BRIEF_VERSION v1)
+  brief_sources.json          Public feed/calendar config for the Daily Brief
   questions.json              Question bank (403 items = 400 numbered + 3 checks)
   archetypes.json             28 ideological archetypes (22-axis vector + salience)
   figures.json                24 historical figures (22-axis vectors)
@@ -123,7 +149,9 @@ data/
 css/style.css         The entire design system + every component's styles
 
 deploy/
-  politest.service            systemd unit
+  politest.service            systemd unit (API)
+  politest-brief.service       systemd oneshot (draft the Daily Brief)
+  politest-brief.timer         daily 10:00 UTC trigger for the draft
   politeion.com.Caddyfile      production Caddy config (+ older variants)
   RUNBOOK.md                   step-by-step ops
 
@@ -132,6 +160,8 @@ store/                (gitignored, created at runtime on the droplet)
   analyses.jsonl              article analyses
   analyzer-usage.jsonl        token/spend log
   politeion.db (+ -wal/-shm)  accounts SQLite
+  briefs.jsonl                Daily Brief drafts + published editions
+  feed.xml                    generated RSS (served at /feed.xml)
 ```
 
 Total application code is ~7,200 lines. Nothing else is required.
@@ -390,8 +420,34 @@ seeded `mulberry32` PRNG, so bands are **deterministic under a fixed seed**.
 - `pendingQuestions(answers, served)` — numbered served items with no answer (never
   attention checks). This is "what a returning taker must answer."
 - `scoreRun(answers, served, {seed, iters})` — the single scoring path
-  (`{ vector, counts, attention, consistency, bands }`), used by both finishing a
-  test and merging a top-up so they can't diverge.
+  (`{ vector, counts, attention, consistency, bands, precision }`), used by both
+  finishing a test and merging a top-up so they can't diverge.
+
+### 5.8 Precision composite — "the shrinking dot" (`js/precision.js`)
+
+Repeated, sharper runs (Precision > Classic answers, Deep > Quick lengths) *tighten*
+a user's measured position. Split into its own module (meta-analysis across runs,
+distinct from single-run scoring) and re-exported from `scoring.js` so importers are
+unaffected.
+
+- `precisionFromBands(bands, counts)` → per-axis `{ count, sigma }` where
+  `sigma = |hi − lo|/2` (half the 95% bootstrap band). Part of `scoreRun`'s output;
+  persisted with every saved run.
+- `combineRuns(runs)` → `{ vector, sigma, perAxis, runsUsed }`. Inverse-variance
+  meta-analysis per axis:
+  `score* = Σ(sᵢ/σᵢ²) / Σ(1/σᵢ²)`, `σ* = sqrt(1 / Σ(1/σᵢ²))`.
+  Every `σᵢ` is floored at **`SIGMA_FLOOR = 3.0`** so one lucky tight band can't
+  dominate; a run saved with no precision block is **legacy** and contributes at
+  **`LEGACY_SIGMA = 25`**.
+- **Drift guard** ("you are not your past self"): per axis, runs are ordered by date;
+  the latest *epoch* is built newest→oldest, admitting a run only while it stays
+  within `σᵢ+σⱼ` of every already-admitted run. The first violator is a drift
+  boundary — older runs are excluded and the axis is marked
+  `{ drifted:true, from, to, since }`. Only the epoch is averaged.
+
+Consumed by the results page's "Refined position" (§14.3) and by the quadrant halo
+(§10). Audited with hand-computed inverse-variance, σ-floor, drift-epoch, and
+legacy-σ fixtures.
 
 ---
 
@@ -511,6 +567,16 @@ All inline SVG, no dependencies.
   halo. Rotated y-axis pole labels live in the SVG (`transform="rotate(-90…)"`), so
   they survive PNG export. Short-label fallback when the full label won't fit
   (measured via a canvas `measureText`, with a length-estimate headless fallback).
+  **σ halo** ("the shrinking dot"): when `opts.sigma` (a per-axis σ map) is present,
+  the "You" halo radius scales with the mean σ of the two plotted axes (σ 3 → r≈7
+  tight, σ 25 → r≈22 soft) and the dot tooltip shows `±σ`. Wired from the single
+  run's bands on the results gallery/compare charts (§14.3).
+- **`lineChartSVG(series, opts)`** — one shared time-series renderer (outlet/writer
+  drift, §14.9). `series` = `[{ name, color, unit?, points:[{label, value}] }]`; x is
+  the union of bucket labels (categorical), y is −100..+100 with a zero line; a
+  polyline + hover dots per metric (`.dot[data-name]`, reusing `attachTooltips`),
+  pole labels from `axes.js`, plus `lineChartCard`/`wireLineChart` with the same
+  expand-modal + PNG export.
 - **`axisLineSVG(userVec, axisKey, archetypes, labelNames)`** — single-axis number
   line: every archetype's tick + the user's marker.
 - **Interactivity**: `attachTooltips(container)` wires hover/tap tooltips on any
@@ -576,7 +642,7 @@ Strongly left/right.
 
 - **Theme**: `applyStoredTheme()` reads `localStorage["dc_theme"]` (default dark),
   sets `data-theme`; `toggleTheme()` flips and persists.
-- **Header/nav**: `NAV` = Home, Test, Results, 3D, Analyze, Data, Account.
+- **Header/nav**: `NAV` = Home, Test, Results, 3D, Analyze, Brief, Data, Account.
   `initShell(activeHref)` renders the sticky header into `<div data-shell>`, injects
   a dependency-free inline-SVG compass favicon, marks the active link, wires the
   theme toggle. Every page calls `initShell(...)`.
@@ -644,6 +710,12 @@ restart prompt. Otherwise renders:
   account / Sign in to save (if accounts available), Clear my results (local only),
   run metadata.
 - **Top-up banner** if `pendingQuestions` > 0.
+- **Refined position** (signed-in users with ≥2 saved runs): fetches
+  `/api/auth/results`, calls `combineRuns` (§5.8), and renders a composite bar
+  readout with σ* bands *above* the single-run readout, drifted axes badged "moved
+  since &lt;date&gt;" old→new, and a "Sharpen your position" CTA
+  (`index.html?len=deep&style=precision`, which preselects the pickers) when the mean
+  band exceeds ±12. The single run's own bands drive the quadrant σ halo (§10).
 - Validity banners (attention/consistency/v1-approx).
 - The 22-axis bar readout with bands, consistency warnings, and crowd percentiles.
 - Closest archetypes (handles "between two within 3 points", "no strong match", and
@@ -699,7 +771,12 @@ reloads.
 
 ### 14.9 `profile.html` — writer/source aggregate
 Reads `#writer=<key>` or `#source=<domain>`, fetches `/api/writer` or `/api/source`,
-renders via `analyzer-ui.renderProfile`.
+renders via `analyzer-ui.renderProfile`. Then fetches `/api/{writer,source}-trend`;
+if the subject has **≥2 qualifying monthly buckets**, appends a **Trend** section
+(`analyzer-ui.renderTrend`): the left↔right drift line, an axis picker, a genre filter
+(All/report/analysis/opinion), and a per-month genre-mix strip — with the composition
+caveat spelled out ("composition shifts can look like position shifts"). The
+within-genre series is the honest one.
 
 ### 14.10 `login.html`
 Tabbed Sign in / Create account. Posts `/api/auth/login` or `/api/auth/register`
@@ -709,7 +786,11 @@ Tabbed Sign in / Create account. Posts `/api/auth/login` or `/api/auth/register`
 ### 14.11 `account.html`
 Fetches `/api/auth/me`; redirects to login if signed out; shows details table, saved
 results (with per-result Remove → `DELETE /api/auth/results/:id`), a subscription
-scaffold placeholder, an admin note if `role === "admin"`, and Sign out.
+scaffold placeholder, and Sign out. For `role === "admin"`: an admin note **and the
+Daily Brief review surface** — lists all briefs (`/api/brief/admin/list`); each item
+is editable inline (edit forces re-certification: `edit` marks it uncertified,
+`recertify` re-runs the neutrality check), and **Approve & publish** is enabled only
+when every item is certified (`approve` publishes + writes `feed.xml`).
 
 ### 14.12 `analyzer-ui.js` (shared renderer)
 `renderArticle(el, rec)`: genre chip + caution, title, writer/source links, url,
@@ -719,8 +800,19 @@ the left↔right barline, up to 3 mini quadrant charts of the strongest axes, an
 evidence-forward `axisRow`s (pole, signed score, confidence %, unverified/extreme
 tags, the ≤25-word quote). `renderProfile(el, prof)`: aggregate vector bars (axes
 below the 3-article threshold render "awaiting"), the source/writer left↔right (mean
-of article leans), and the article list. `miniLeftRightBar`, `renderLeftRightBar`,
-`hashParams` helpers.
+of article leans), and the article list. `renderTrend(el, trend)` (§14.9) builds the
+drift chart + genre-mix strip and re-renders in place on control changes.
+`miniLeftRightBar`, `renderLeftRightBar`, `hashParams` helpers.
+
+### 14.13 `brief.html` — the Daily Brief (public)
+In the nav. Reads `?date=` (or the latest), fetches `/api/brief?date=` /
+`/api/brief/latest`. Renders: dateline, **Yesterday** items (headline, 40–80-word
+summary, ≤30-word "why it matters", source links, and a **"✓ no detectable stance"
+receipt** linking the item's certification analysis at `article.html#id=`), the
+**Today** section (expected events from the calendars), a **certification footer**
+("All N items scored no detectable stance under rubric vX"), and dated archive links.
+Carries OG meta, an RSS `<link rel="alternate" href="/feed.xml">`, and a print
+stylesheet (`@media print`) — it's meant to be read.
 
 ---
 
@@ -728,13 +820,14 @@ of article leans), and the article list. `miniLeftRightBar`, `renderLeftRightBar
 
 A single stdlib `http` server. Config from env: `HOST` (default `127.0.0.1`),
 `PORT` (3200), `STORE_FILE`. On start it dynamically imports `js/axes.js` (for
-`AXIS_KEYS`, `LEGACY_AXIS_MAP`) and `js/leftright.js`, initializes auth + analyzer
-routes (handing the LR function to the analyzer store), loads the crowd store, and
-listens.
+`AXIS_KEYS`, `LEGACY_AXIS_MAP`) and `js/leftright.js`, initializes auth + analyzer +
+brief routes (handing the LR function to the analyzer store), loads the crowd store,
+and listens.
 
 Request dispatch order: `OPTIONS` → CORS 204; then `authRoutes.handle` (owns
-`/api/auth/*`); then `analyzerRoutes.handle`; then the crowd endpoints; then any
-other `/api/*` → 404 JSON; then static file serving for GET.
+`/api/auth/*`); then `analyzerRoutes.handle`; then `briefRoutes.handle` (owns
+`/api/brief/*` and `/feed.xml`); then the crowd endpoints; then any other `/api/*` →
+404 JSON; then static file serving for GET.
 
 **Crowd endpoints** (records store only anonymous data — 22 scores, answer mode,
 bank version, per-item answers, optional self-label; **no names, IPs, or timestamps**;
@@ -771,6 +864,8 @@ files directly; this fallback is for standalone/local runs.)
 - `GET  /api/analysis/:id` → the stored analysis with operator provenance stripped
   (model, full hash, usage, raw injection field removed; keeps `rubric.version`).
 - `GET  /api/writer?key=…`, `GET /api/source?domain=…` → aggregate profiles.
+- `GET  /api/source-trend?domain=…`, `GET /api/writer-trend?key=…` → `{ trend }`
+  (monthly drift buckets; §16.6). Public — aggregate means/counts only.
 - `POST /api/analyze { url } | { text, byline?, outlet?, title? }` → enqueues a job;
   returns `{ ok, id, existing }`. Errors map to codes: rate→429, queue→503,
   budget→503, else 400.
@@ -778,7 +873,9 @@ files directly; this fallback is for standalone/local runs.)
 **Admin** = a matched `x-analyzer-admin: ANALYZER_ADMIN_KEY` header **or** an admin
 cookie session (`auth/routes.isAdminSession`). Admin bypasses the per-IP rate limit
 and may `force` a fresh re-scan. `MAX_BODY = 200KB` (articles are larger than crowd
-bodies).
+bodies). `submit` also accepts an internal `kind` (budget tag: `analyzer`|`brief`)
+and `origin` (stored on the analysis; `brief` for self-certification calls) — threaded
+to `budget.record` and `store.addAnalysis`.
 
 ### 16.2 `analyze.js` — pipeline + abuse controls
 Constants: rate limit **5 submissions/hour per IP**, global **queue cap 50**, a
@@ -885,14 +982,22 @@ non-flagged article's own left↔right** (over its full axis set; articles with 
 detected lean excluded) — not a recompute from thresholded aggregate axes. That is
 why MSNBC reads far-left rather than centrist. `rankSources`/`rankWriters` order by
 distance of that mean from center (the leaderboard). `recentList(limit)`, `counts()`.
+Analyses tagged `origin: "brief"` (internal Daily-Brief self-certification) are
+**excluded** from `recentList`/`counts` (they carry no source/writer so they're
+already absent from aggregates/leaderboards) while remaining fetchable by id as
+receipts. `timeSeries(kind, key)` (§Part A drift) buckets non-flagged analyses by
+month using each analysis's stored date — a bucket renders only at ≥3 — and returns
+both an all-genre series and per-genre series; each bucket carries `{ period, n,
+byGenre, lr (mean), axes:{key:{mean,n}} }`.
 
 ### 16.7 `budget.js` — usage + spend cap
 Per-analysis usage logged to JSONL. Pricing $/1M tokens by model-id prefix
 (`claude-haiku-4-5` 1.0/5.0, `claude-sonnet` 3.0/15.0, `claude-opus` 5.0/25.0; env
 overridable), cache-read ×0.1, cache-creation ×1.25. `MONTHLY_BUDGET_USD` is a **hard
-cap** enforced *before* a job runs. `monthStats()` reports month, analyses, tokens,
-`costUsd`, `capUsd`, `pctOfCap`, `warn` (≥80%), `exhausted`. `overBudget()` gates the
-pipeline.
+cap** enforced *before* a job runs. `record(usage, model, kind)` tags each entry
+`kind` (`analyzer`|`brief`). `monthStats()` reports month, analyses, tokens, a
+per-kind `byKind` breakdown, `costUsd`, `capUsd`, `pctOfCap`, `warn` (≥80%),
+`exhausted`. `overBudget()` gates both the analyzer pipeline and brief drafting.
 
 ### 16.8 `rubric.js` — the private prompt
 Loads `data/analyzer_system_prompt.md` (**proprietary**, ~73 lines; never served),
@@ -910,6 +1015,53 @@ strict JSON `{ genre, stance_detected, summary, neutral_summary, axes:{ key:{sco
 scoring the **stance of the piece** (not its subject), ≤8 axes, no ±100, every scored
 axis carrying a real quote, quoted voices counted only through the article's framing.
 
+### 16.9 Daily Brief subsystem (`brief/`)
+
+One self-certified neutral page per day. Drafting is automated (CLI + systemd timer);
+**publication is always a human approval**. No new inference or fetch paths — it
+reuses `provider.callModel`, the SSRF fetcher, and the analyzer pipeline.
+
+- **`cluster.js`** — `clusterStories(candidates, {minOutlets=2, minShared=2})`. Pure.
+  Greedy single-link clustering on meaningful title tokens (lowercased, stopwords and
+  <3-char tokens dropped); a cluster is *selected* only when it spans ≥2 distinct
+  outlets. No model call. Returns `{ clusters, selected }`.
+- **`sources.js`** — `parseRss(xml)` (dependency-free RSS 2.0 / Atom reader) and
+  `collectYesterday(config, fetchText, warn)` which pulls each `yesterday` feed via
+  the injected fetcher and flattens to `{ source, title, url }` candidates. A dead
+  feed is warned and skipped, never fatal.
+- **`certify.js`** — the self-certification loop. `isNeutral(a)` = stance not detected
+  **and** no flags. `certifyItem(item, { certify, rewrite, maxRewrites=1 })`: certify
+  the text; if not neutral, rewrite once with the failing axes+evidence fed back; a
+  second failure returns `needsHuman`. Injected callbacks ⇒ unit-testable without a
+  model.
+- **`store.js`** — `briefs.jsonl` upsert store (rewritten wholesale — low volume),
+  `validateItem` (headline ≤90 chars, summary 40–80 words, why ≤30 words, links
+  non-empty http(s)), and `feedXml(list, {origin})` (escaped, well-formed RSS 2.0).
+  `publicBrief` strips token usage + the review queue. `writeFeed(dir)` writes
+  `feed.xml` into the **writable store dir** (the web root is read-only under the
+  hardening) — served by the app at `/feed.xml`.
+- **`draft.js`** — the pipeline. `draft({date, config, log})`: budget gate → fetch →
+  cluster → for each of ≤10 selected stories, `draftOne` (one `provider.callModel`
+  with `data/brief_system_prompt.md`, `BRIEF_VERSION` **v1**, → validated
+  `{headline, summary, why_it_matters, links}`) → `certifyItem` (whose `certify` runs
+  the item text through `analyze.submit({admin:true, kind:"brief", origin:"brief"})`
+  and reads the resulting analysis) → certified items vs a `review` queue → assemble
+  `Today` mechanically from the calendars → **save as `status:"draft"`** (never
+  published). `recertify(brief)` re-checks edited items (no rewrite) for the admin
+  approve flow. Every model call is budget-tagged `brief`; a hit cap aborts cleanly.
+- **`routes.js`** — public `GET /api/brief/latest`, `GET /api/brief?date=` (usage
+  stripped, review hidden) and `GET /feed.xml`; admin (same gate as the Analyzer)
+  `GET /api/brief/admin/list`, `POST /api/brief/admin/{edit,recertify,approve}`.
+  `edit` marks an item uncertified; `approve` requires **all** items certified, then
+  publishes and rewrites `feed.xml`.
+
+**Output contract for `brief_system_prompt.md`** (enforced downstream by the
+certification pass): strict JSON `{ headline ≤90 chars, summary 40–80 words,
+why_it_matters ≤30 words, links:[urls] }`; synthesize from multiple sources in
+original wording; no verbatim source sentences; no judgment adjectives; attribute
+contested claims; never adopt one outlet's framing. It is reviewed/versioned like the
+rubric.
+
 ---
 
 ## 17. Accounts subsystem (`auth/`)
@@ -924,7 +1076,10 @@ Node without `node:sqlite` doesn't crash the whole server. Tables:
 - **subscriptions** and **api_keys** — scaffolded for a future paid tier (not wired
   to any payment provider; api_keys stores only a key hash).
 - **test_results** `(id PK, user_id FK, enc, vector JSON, bank_version, answer_mode,
-  test_mode, label, created_at, UNIQUE(user_id, enc))`.
+  test_mode, label, precision JSON NULL, created_at, UNIQUE(user_id, enc))`. The
+  `precision` column (per-axis `{count, sigma}` for the composite, §5.8) is added by a
+  lazy `ALTER TABLE` on boot, guarded by a `PRAGMA table_info` check — an existing DB
+  upgrades in place and old rows stay NULL (treated as legacy, σ=25).
 - Indexes on each `user_id`.
 
 ### 17.2 `users.js` — operations
@@ -961,9 +1116,13 @@ results/:id`. Exposes `currentUser(req)` and `isAdminSession(req)` for the Analy
   fixtures (all-50→0, keying signature, classic map, legacy migration, consistency,
   bootstrap determinism, attention exclusion), the **top-up merge safety** fixtures
   (pending excludes attention; changed/reused ids dropped not merged; scoreRun agrees
-  with computeScores), mode sizing (quick 100 / normal 250 / deep 400 numbered + 3
-  unnumbered checks each; every mode serves all anchors), nation coverage, and the
-  calibration check. Run before every deploy.
+  with computeScores), the **precision composite** fixtures (inverse-variance,
+  σ-floor 3.0, drift epoch, legacy σ=25), the **drift bucketing** fixture (n≥3
+  omission + genre-mix + mean + lr), the **Daily Brief** fixtures (clustering,
+  rewrite→pass / persistent→park, item schema, feed.xml well-formed + escaped), mode
+  sizing (quick 100 / normal 250 / deep 400 numbered + 3 unnumbered checks each; every
+  mode serves all anchors), nation coverage, and the calibration check. Run before
+  every deploy.
 - **`calibrate.js`** — asserts, from **stored analyses only** (no live calls), that
   reference outlets' mean `mkt` scores hold the expected ascending order
   (Jacobin < The Nation < NYT < WSJ < National Review < Reason) within a 3-point
@@ -974,6 +1133,9 @@ results/:id`. Exposes `currentUser(req)` and `isAdminSession(req)` for the Analy
   (for future archetype recalibration). Never mutates.
 - **`itemstats.js`** — reporting: per-item n/mean/sd + item-total correlation, flags
   weak items (r<0.15 at n≥100) as pruning candidates. Never mutates.
+- **`brief-draft.js`** — CLI/timer entry point: inits the analyzer pipeline + brief
+  store, then drafts **one** Daily Brief for a date (default today, UTC). Only ever
+  writes a **draft**; never publishes. Exit 0 on success or a clean budget abort.
 
 ---
 
@@ -991,19 +1153,26 @@ results/:id`. Exposes `currentUser(req)` and `isAdminSession(req)` for the Analy
   `ProtectHome`, `PrivateTmp`, `ReadWritePaths=/opt/politest/store`, restart on
   failure.
 - **`deploy/politeion.com.Caddyfile`**: `politeion.com` serves `/opt/politest`
-  statically (`file_server`, zstd/gzip), reverse-proxies `path /api/*` to
+  statically (`file_server`, zstd/gzip), reverse-proxies `path /api/* /feed.xml` to
   `127.0.0.1:3200`, and sets `Cache-Control: no-cache` on `*.html/js/css/json`.
   `www` and the old hostnames 301-redirect to the apex (the `#r=…` fragment survives
   the redirect client-side).
+- **Daily Brief units**: `deploy/politest-brief.service` (oneshot, runs
+  `node tools/brief-draft.js` as the same user, same EnvironmentFile, same hardening
+  incl. `ReadWritePaths=/opt/politest/store`) + `deploy/politest-brief.timer`
+  (`OnCalendar=*-*-* 10:00:00 UTC`, `Persistent=true`). Drafting **never** publishes;
+  `feed.xml` is written into the writable store dir and served by the app at
+  `/feed.xml`.
 - **Env** (`/etc/politeion/analyzer.env`): `ANTHROPIC_API_KEY`, `PROVIDER=anthropic`,
   `MODEL` (e.g. `claude-sonnet-5`), `MONTHLY_BUDGET_USD`, first-boot `ADMIN_EMAIL`/
-  `ADMIN_PASSWORD`, optional `ANALYZER_ADMIN_KEY`.
+  `ADMIN_PASSWORD`, optional `ANALYZER_ADMIN_KEY`. Optional `FEED_ORIGIN` (defaults
+  `https://politeion.com`).
 - **Deploy**: `cd /opt/politest && git pull && sudo systemctl restart politest`.
   Static-only changes need just `git pull` (Caddy serves from disk; hard-refresh for
   cached JS/CSS). The droplet has a **read-only** deploy key (can't push). Durable
   `store/` survives pulls and restarts.
-- Full step-by-step: `deploy/RUNBOOK.md` (Steps 1–11, including the Node 22.5+ upgrade
-  for accounts and the recalibration procedure).
+- Full step-by-step: `deploy/RUNBOOK.md` (Steps 1–12, including the Node 22.5+ upgrade
+  for accounts, the recalibration procedure, and the Daily Brief setup).
 
 ---
 
@@ -1030,6 +1199,12 @@ results/:id`. Exposes `currentUser(req)` and `isAdminSession(req)` for the Analy
 7. **No secrets in git.** `store/`, `.env*`, `*.log`, `.claude*` are gitignored.
 8. **Crowd data is anonymous** — 22 scores + mode + bank + per-item answers + optional
    self-label; no names, IPs, or timestamps; v1/v2 clouds never mixed.
+9. **Daily Brief never auto-publishes** — drafting produces a `draft`; a human admin
+   approves each edition. Certification analyses (`origin:"brief"`) are internal
+   receipts, excluded from public analyzer lists. `feed.xml` is written into the
+   writable `store/` (never the read-only web root) and served by the app. The brief
+   drafting prompt (`brief_system_prompt.md`, `BRIEF_VERSION`) is reviewed/versioned
+   like the rubric. No source article bodies persist (same transient rule).
 
 ---
 
@@ -1051,6 +1226,13 @@ results/:id`. Exposes `currentUser(req)` and `isAdminSession(req)` for the Analy
    `analyzer-ui.js` and `data.html` / `questions.html`.
 10. Accounts: `auth/db.js` → `users.js` → `routes.js`; then `login.html` /
     `account.html` and the results-page save flow.
-11. Deploy: systemd unit, Caddyfile, env file, DNS; `RUNBOOK.md`.
+11. Drift (Part A): `store.timeSeries` + trend routes → `charts2d.lineChartSVG` →
+    `analyzer-ui.renderTrend` in `profile.html`.
+12. Precision composite (Part B): `js/precision.js` (`combineRuns`) + `precision`
+    column + `results.html` "Refined position" + the σ halo.
+13. Daily Brief (Part C): `brief/{cluster,sources,certify,store,draft,routes}.js` +
+    `brief_system_prompt.md` + `brief_sources.json` → `brief.html` + the
+    `account.html` admin surface → `tools/brief-draft.js` + the systemd timer.
+14. Deploy: systemd units (API + brief timer), Caddyfile, env file, DNS; `RUNBOOK.md`.
 
 Every step keeps `node tools/audit.js` passing and honors §1 and §20.

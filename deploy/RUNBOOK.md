@@ -260,6 +260,82 @@ node tools/set-role.js you@example.com user            # demote
 Then sign out and back in (or wait ~30s) for the role to take effect. There is no
 password-reset UI yet — ask me to add one if needed.
 
+## Step 12 — The Daily Brief (drafted daily, human-approved)
+
+One page per day (`brief.html`, in the nav): "Yesterday" clustered from wire-service
+RSS + "Today" from public calendars. **Every item is machine-certified for neutrality
+by the same Analyzer before it can be published**, and each published item links its
+neutrality receipt. Drafting is automated; **publication is always a human approval**
+from `account.html` (admin). No second service and no npm deps — brief routes and
+`/feed.xml` are served by the same `server.js`, and drafting is a systemd oneshot.
+
+**Config (public, in git):** `data/brief_sources.json` — `yesterday` RSS feeds and
+`today` calendars. It's config, not code; edit and `git pull` (no restart needed to
+change the source list — it's read at draft time). A dead feed is skipped, never
+fatal. **Prompt:** `data/brief_system_prompt.md` (the drafting prompt, `BRIEF_VERSION`
+in `brief/draft.js`, currently **v1**) — treat like the rubric: review before it runs
+for real; a change is a versioning event.
+
+**Uses the existing secrets/budget.** Drafting and certification both call the model
+via the same `/etc/politeion/analyzer.env` (`ANTHROPIC_API_KEY`, `MODEL`,
+`MONTHLY_BUDGET_USD`). Brief model usage is budget-counted with `kind:"brief"` and
+shows in the admin stats line's per-kind breakdown. If the monthly cap is already hit,
+a draft **aborts cleanly and produces nothing** (exit 0).
+
+1. **Pick up the brief routes** (already in `server.js`; a plain restart is enough):
+   ```bash
+   cd /opt/politest && git pull && sudo systemctl restart politest
+   curl -s https://politeion.com/api/brief/latest        # {"brief":null,...} until one is published
+   ```
+2. **Route `/feed.xml` to the app.** In `/etc/caddy/Caddyfile`, the apex block's
+   reverse-proxy matcher must include `/feed.xml` alongside `/api/*` (see
+   `deploy/politeion.com.Caddyfile` — `@app path /api/* /feed.xml`). The feed is
+   written into the **writable** store dir (`store/feed.xml`) because the web root is
+   read-only under the systemd hardening, and served by the app at `/feed.xml`. Edit
+   the pasted apex block to add `/feed.xml`, then:
+   ```bash
+   sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+   sudo systemctl reload caddy
+   ```
+3. **Install the drafting timer** (drafts daily at 10:00 UTC; `Persistent=true` catches
+   a missed run):
+   ```bash
+   sudo cp /opt/politest/deploy/politest-brief.service /etc/systemd/system/
+   sudo cp /opt/politest/deploy/politest-brief.timer   /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now politest-brief.timer
+   systemctl list-timers politest-brief.timer            # confirm next run
+   sudo systemctl start politest-brief.service           # draft one NOW (manual test)
+   journalctl -u politest-brief -n 30 --no-pager         # watch it fetch → cluster → certify
+   ```
+4. **Approve & publish (admin, in the browser).** Sign in as admin → `account.html` →
+   **Daily Brief — review & publish**. Each drafted item shows ✓ certified or ✗ needs
+   human edit. Edit any item inline (editing marks it uncertified) → **Re-certify
+   edits** → when every item is certified, **Approve & publish**. Approval flips the
+   brief to `published` and writes `store/feed.xml`. Then:
+   ```bash
+   curl -sI https://politeion.com/feed.xml               # 200, application/rss+xml
+   curl -s  https://politeion.com/api/brief/latest | head -c 120
+   ```
+   Open `https://politeion.com/brief.html` — dateline, Yesterday items with per-item
+   "✓ no detectable stance" receipts (linking the analysis), Today, and the
+   certification footer.
+
+**Durable store (gitignored, survives deploys):** `/opt/politest/store/briefs.jsonl`
+(drafts + published) and `/opt/politest/store/feed.xml`. The brief timer unit sets
+`BRIEFS_FILE`; the main service uses the same default path, so both agree.
+
+**Draft on demand / for a specific date** (from `/opt/politest`):
+```bash
+node tools/brief-draft.js                 # draft for today (UTC)
+node tools/brief-draft.js 2026-07-24      # draft for a specific date
+```
+This only ever produces a **draft** — it never publishes.
+
+**Privacy:** the certification analyses are internal receipts (`origin:"brief"`) —
+excluded from the public recent list, counts, and leaderboards. No source article
+bodies are stored (same transient rule as the Analyzer).
+
 ---
 
 ## The API (for reference)
@@ -272,8 +348,14 @@ Analyzer endpoints:
 - `POST /api/analyze` `{url}` | `{text, byline?, outlet?, title?}` — queue an analysis (or return an existing one for a duplicate URL). → `{ok, id, existing}`. Errors: 429 rate limit, 503 queue full / budget reached.
 - `GET  /api/analysis/:id` — a stored analysis (public by id).
 - `GET  /api/writer?key=<name|domain>` / `GET /api/source?domain=<domain>` — aggregate profiles (axes reported at ≥3 articles; flagged analyses excluded).
-- `GET  /api/analyzer/stats` — `{provider, rubric, month, counts, queue, recent}` (drives the stats line).
+- `GET  /api/source-trend?domain=<domain>` / `GET /api/writer-trend?key=<name|domain>` — monthly drift buckets (all-genre + within-genre; a bucket renders only at ≥3 analyses). Powers the profile-page Trend section. Public; aggregate means/counts only.
+- `GET  /api/analyzer/stats` — `{provider, rubric, month, counts, queue, recent}` (drives the stats line; admin adds a per-kind spend breakdown incl. `brief`).
 - `GET  /api/rubric` — the published methodology summary (rendered on the Data page).
+
+Daily Brief endpoints:
+- `GET  /api/brief/latest` / `GET /api/brief?date=YYYY-MM-DD` — the latest / a dated **published** brief (public; token usage stripped, review queue hidden).
+- `GET  /feed.xml` — RSS 2.0 of the last 20 published briefs (served from `store/feed.xml`).
+- `GET  /api/brief/admin/list`, `POST /api/brief/admin/{edit,recertify,approve}` — admin only (admin session or `ANALYZER_ADMIN_KEY`). Editing an item forces re-certification; approve publishes and rewrites `feed.xml`.
 
 Account endpoints:
 - `POST /api/auth/register` `{full_name, email, password, birth_year}` — create an account; sets the session cookie. → `{user}`. 400 on validation error, 409 if email taken.
@@ -281,6 +363,7 @@ Account endpoints:
 - `POST /api/auth/logout` — clear the session.
 - `GET  /api/auth/me` — `{user|null}` (profile is cached in memory for fast reads).
 - `GET  /api/auth/subscription` — `{tier, status, available:false}` (scaffold; not built).
+- `GET/POST /api/auth/results`, `DELETE /api/auth/results/:id` — saved test results. Saved results now also carry per-axis **precision** `{count, sigma}`; with ≥2 saved runs the results page shows a **Refined position** (inverse-variance composite — sharper/longer runs shrink each axis's band; drifted axes are averaged only over the latest stable epoch). The `precision` column is added by a lazy `ALTER TABLE` on boot — old rows stay NULL (legacy, σ=25).
 
 An admin session (role `admin`) unlocks the analyzer admin features server-side, the same as the `ANALYZER_ADMIN_KEY` header.
 
@@ -291,9 +374,12 @@ clear their local results (browser-only) from the results page; already-submitte
 data is retained server-side and cannot be individually removed.
 
 ## Reporting tools (run on the droplet as needed; reporting only, never mutate data)
-- `node tools/audit.js` — deploy gate (per-axis health + unit tests); exits nonzero on any flag.
+- `node tools/audit.js` — deploy gate (per-axis health + unit tests); exits nonzero on any flag. Now also covers drift bucketing, the precision composite (inverse-variance / σ-floor / drift / legacy), and the brief (clustering / rewrite loop / item schema / feed well-formedness).
 - `node tools/itemstats.js` — per-item n / mean / sd / corrected item-total correlation; flags `r<0.15` at `n≥100` as pruning candidates.
 - `node tools/centroids.js` — mean vector per self-chosen label, for future archetype recalibration.
+
+**Not a reporting tool** — `node tools/brief-draft.js [YYYY-MM-DD]` writes a Daily
+Brief **draft** (never publishes); it is what the `politest-brief.timer` runs. See Step 12.
 
 If the API is ever down, the site still works: the test, results, figures comparison,
 charts, and 3D all function; only the "Everyone" toggle shows an "unavailable" note.
