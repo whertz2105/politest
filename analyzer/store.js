@@ -308,28 +308,38 @@ function hasCandidateAnalysis(url, candidateId) {
 function candidateProfile(candidateId, opts = {}) {
   const axisMin = opts.axisMin || 2;
   const recs = analyses.filter((r) => r.origin === "candidate" && r.candidateId === candidateId);
-  const contributing = recs.filter((r) => !r.flagged);
+  // Aggregate PER AXIS over the axes whose OWN evidence quote verified. We exclude
+  // only injection-compromised analyses — NOT whole analyses flagged for one
+  // paraphrased/stitched quote or for spanning >8 axes (a candidate platform page
+  // legitimately covers 10+; the article-analyzer's caps are calibrated for news).
+  // Every rendered axis still carries a verified quote — receipts strengthened.
+  const usable = recs.filter((r) => !r.injection);
   const acc = {};
   for (const k of AXIS_KEYS) acc[k] = { sum: 0, n: 0, evidence: [] };
-  for (const r of contributing) {
+  const contributed = new Set();
+  let lrSum = 0, lrN = 0;
+  for (const r of usable) {
+    const verified = {};
     for (const k of Object.keys(r.axes || {})) {
-      if (!acc[k]) continue;
       const a = r.axes[k];
-      if (typeof a.score !== "number") continue;
+      if (!acc[k] || typeof a.score !== "number" || a.evidenceOk === false) continue;
       acc[k].sum += a.score; acc[k].n += 1;
+      contributed.add(r.id);
+      verified[k] = { score: a.score, confidence: a.confidence };
       if (a.evidence && acc[k].evidence.length < 4) acc[k].evidence.push({ quote: a.evidence, url: r.url, title: r.title, score: a.score, analysisId: r.id });
     }
+    if (leftRightFn) { const s = leftRightFn(verified); if (s && s.hasSignal) { lrSum += s.x; lrN++; } }
   }
   const axes = {};
   for (const k of AXIS_KEYS) if (acc[k].n >= axisMin) axes[k] = { mean: Math.round(acc[k].sum / acc[k].n), n: acc[k].n, evidence: acc[k].evidence };
   return {
     candidateId,
-    articleCount: contributing.length,
+    articleCount: contributed.size,
     axisMin,
     profileMin: 3,
     axes,
-    lr: aggregateLR(recs),
-    sources: recs.map((r) => ({ id: r.id, url: r.url, title: r.title, flagged: r.flagged })),
+    lr: { x: lrN ? Math.round(lrSum / lrN) : 0, hasSignal: lrN > 0, n: lrN },
+    sources: usable.map((r) => ({ id: r.id, url: r.url, title: r.title, flagged: r.flagged })),
   };
 }
 

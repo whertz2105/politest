@@ -424,6 +424,20 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
     if (store.rankSources(20).some((s) => s.domain === "senate.gov")) bad.push("candidate analysis entered rankSources");
     if (store.recentList(20).length !== 0) bad.push("candidate analysis appeared in the public recent list");
 
+    // (5) per-axis aggregation: a flagged analysis still contributes its VERIFIED
+    // axes (an unverified/stitched quote drops only that axis); injection is excluded.
+    const mk = (axesObj, flagged, injection) => ({ analysis: { genre: "opinion", stance_detected: true, axes: axesObj, neutral_summary: "", summary: "", flags: [] }, flagged, injection, rubric: stamp, usage: {} });
+    store.addAnalysis({ url: "https://a.example/1", domain: "a.example", origin: "candidate", candidateId: "cand-agg",
+      ...mk({ mkt: { score: 50, confidence: .8, evidence: "ok", evidenceOk: true }, soc: { score: 80, confidence: .8, evidence: "stitched…quote", evidenceOk: false } }, true, false) }); // flagged (one bad axis)
+    store.addAnalysis({ url: "https://b.example/2", domain: "b.example", origin: "candidate", candidateId: "cand-agg",
+      ...mk({ mkt: { score: 60, confidence: .8, evidence: "ok2", evidenceOk: true } }, false, false) });
+    store.addAnalysis({ url: "https://c.example/3", domain: "c.example", origin: "candidate", candidateId: "cand-agg",
+      ...mk({ mkt: { score: -100, confidence: .8, evidence: "x", evidenceOk: true } }, true, true) }); // injection → excluded entirely
+    const cp = store.candidateProfile("cand-agg", { axisMin: 2 });
+    if (!cp.axes.mkt || cp.axes.mkt.mean !== 55 || cp.axes.mkt.n !== 2) bad.push(`candidate mkt agg ${JSON.stringify(cp.axes.mkt)} (want mean 55 / n 2; injection -100 excluded)`);
+    if (cp.axes.soc) bad.push("unverified axis (evidenceOk false) was aggregated");
+    if (cp.articleCount !== 2) bad.push(`candidate articleCount ${cp.articleCount} (want 2 contributing; injection excluded)`);
+
     bad.length ? fail("candidates: " + bad.join("; "))
       : ok("candidates: registries valid + bad status rejected, crosswalk split preserved, sparse match + mute + thin, leaderboard exclusion");
   }
