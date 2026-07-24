@@ -92,15 +92,22 @@
       }
     })();
     const adminKey = () => { try { return localStorage.getItem(ADMIN_LS) || ""; } catch { return ""; } };
+    let sessionAdmin = false;               // set from /api/auth/me (admin account)
+    const adminActive = () => !!adminKey() || sessionAdmin;
     function renderAdmin() {
-      const el = $("admin-note"), k = adminKey();
-      el.innerHTML = k ? `● Admin mode active (rate-limit bypass + force re-scan) — <a href="#" id="admin-off">turn off</a>` : "";
+      const el = $("admin-note"), k = adminKey(), on = adminActive();
+      el.innerHTML = on
+        ? `● Admin mode active (rate-limit bypass + force re-scan)${k ? ` — <a href="#" id="admin-off">turn off key</a>` : " — signed in as admin"}`
+        : "";
       const fw = $("force-wrap");
-      if (fw) fw.style.display = k ? "block" : "none";
+      if (fw) fw.style.display = on ? "block" : "none";
       const off = document.getElementById("admin-off");
       if (off) off.addEventListener("click", (e) => { e.preventDefault(); try { localStorage.removeItem(ADMIN_LS); } catch {} renderAdmin(); });
     }
     renderAdmin();
+    // An admin account (cookie session) also unlocks admin mode.
+    fetch("/api/auth/me", { cache: "no-cache" }).then((r) => r.json())
+      .then((d) => { sessionAdmin = !!(d.user && d.user.role === "admin"); renderAdmin(); }).catch(() => {});
 
     async function submit() {
       go.disabled = true;
@@ -118,7 +125,7 @@
         body.title = $("in-title").value.trim() || undefined;
       }
       const k = adminKey();
-      if (k && $("force-rerun") && $("force-rerun").checked) body.force = true;
+      if (adminActive() && $("force-rerun") && $("force-rerun").checked) body.force = true;
       setStatus("Analyzing… this can take up to a minute.", "muted");
       try {
         const headers = { "content-type": "application/json" };

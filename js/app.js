@@ -34,6 +34,7 @@ const NAV = [
   { href: "explore3d.html", label: "3D" },
   { href: "analyze.html", label: "Analyze" },
   { href: "data.html", label: "Data" },
+  { href: "account.html", label: "Account" },
 ];
 
 // Build the site header into <div data-shell></div> (if present) and wire theme toggle.

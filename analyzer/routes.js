@@ -43,12 +43,13 @@ function clientIp(req) {
   if (typeof xff === "string" && xff.length) return xff.split(",")[0].trim();
   return (req.socket && req.socket.remoteAddress) || "unknown";
 }
-// Owner/operator requests carry x-analyzer-admin matching ANALYZER_ADMIN_KEY.
-// Operator-only detail (model, token usage, spend, hashes) is gated on this so it
-// never appears on the public site or in public API responses.
+// Admin = a signed-in admin account (cookie session) OR a request carrying
+// x-analyzer-admin matching ANALYZER_ADMIN_KEY. Operator-only detail (model,
+// token usage, spend, hashes) and force re-runs are gated on this.
 function isAdmin(req) {
   const k = (process.env.ANALYZER_ADMIN_KEY || "").trim();
-  return k.length > 0 && req.headers["x-analyzer-admin"] === k;
+  if (k.length > 0 && req.headers["x-analyzer-admin"] === k) return true;
+  try { return require("../auth/routes").isAdminSession(req); } catch { return false; }
 }
 
 // Returns true if this request was (or will be) handled here.

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in — Politeion</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap" style="max-width:460px">
+    <div class="mode-picker" role="tablist" aria-label="Sign in or create account" style="margin-bottom:1rem">
+      <button class="mode-opt active" type="button" data-tab="login"><b>Sign in</b></button>
+      <button class="mode-opt" type="button" data-tab="register"><b>Create account</b></button>
+    </div>
+
+    <section class="card" data-panel="login">
+      <label class="fld"><span>Email</span><input id="li-email" type="email" autocomplete="username"></label>
+      <label class="fld"><span>Password</span><input id="li-pass" type="password" autocomplete="current-password"></label>
+      <div class="btn-row"><button class="btn btn-primary" id="li-go" type="button">Sign in</button>
+        <span id="li-status" class="muted" role="status" aria-live="polite"></span></div>
+    </section>
+
+    <section class="card" data-panel="register" hidden>
+      <label class="fld"><span>Full name</span><input id="re-name" type="text" autocomplete="name"></label>
+      <label class="fld"><span>Email</span><input id="re-email" type="email" autocomplete="email"></label>
+      <div class="fld-row">
+        <label class="fld"><span>Password</span><input id="re-pass" type="password" autocomplete="new-password"></label>
+        <label class="fld"><span>Birth year</span><input id="re-year" type="number" min="1900" max="2026" inputmode="numeric"></label>
+      </div>
+      <p class="fld-note muted">Password must be at least 8 characters. We store your name, email, birth year, and a hashed password — never the plain password.</p>
+      <div class="btn-row"><button class="btn btn-primary" id="re-go" type="button">Create account</button>
+        <span id="re-status" class="muted" role="status" aria-live="polite"></span></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initShell } from "./js/app.js";
+    initShell("account.html");
+    const $ = (id) => document.getElementById(id);
+
+    const tabs = [...document.querySelectorAll("[data-tab]")];
+    tabs.forEach((t) => t.addEventListener("click", () => {
+      tabs.forEach((b) => b.classList.toggle("active", b === t));
+      document.querySelector('[data-panel="login"]').hidden = t.dataset.tab !== "login";
+      document.querySelector('[data-panel="register"]').hidden = t.dataset.tab !== "register";
+    }));
+
+    const dest = new URL(location.href).searchParams.get("next") || "account.html";
+
+    async function post(url, body, statusEl, btn) {
+      btn.disabled = true; statusEl.textContent = "…"; statusEl.className = "muted";
+      try {
+        const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+        const d = await res.json();
+        if (!res.ok) { statusEl.textContent = d.error || ("Error " + res.status); statusEl.className = "err"; btn.disabled = false; return; }
+        location.href = dest;
+      } catch (e) { statusEl.textContent = "Network error: " + e.message; statusEl.className = "err"; btn.disabled = false; }
+    }
+
+    $("li-go").addEventListener("click", () =>
+      post("/api/auth/login", { email: $("li-email").value.trim(), password: $("li-pass").value }, $("li-status"), $("li-go")));
+    $("re-go").addEventListener("click", () =>
+      post("/api/auth/register", {
+        full_name: $("re-name").value.trim(), email: $("re-email").value.trim(),
+        password: $("re-pass").value, birth_year: $("re-year").value,
+      }, $("re-status"), $("re-go")));
+
+    // Enter-to-submit
+    $("li-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") $("li-go").click(); });
+    $("re-year").addEventListener("keydown", (e) => { if (e.key === "Enter") $("re-go").click(); });
+  </script>
+</body>
+</html>

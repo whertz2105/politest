@@ -19,6 +19,7 @@ const fs = require("fs");
 const path = require("path");
 const { pathToFileURL } = require("url");
 const analyzerRoutes = require("./analyzer/routes"); // Politeion Analyzer (/api/analyze, etc.)
+const authRoutes = require("./auth/routes");          // accounts / sessions (/api/auth/*)
 
 const ROOT = __dirname;
 const HOST = process.env.HOST || "127.0.0.1";
@@ -145,7 +146,8 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  // Analyzer endpoints take priority over the crowd endpoints and the /api 404.
+  // Auth endpoints first, then analyzer, then the crowd endpoints / /api 404.
+  if (await authRoutes.handle(req, res, url)) return;
   if (await analyzerRoutes.handle(req, res, url)) return;
 
   if (url === "/api/stats" && req.method === "GET") {
@@ -196,6 +198,7 @@ const server = http.createServer(async (req, res) => {
   AXIS_KEYS = axes.AXIS_KEYS;
   LEGACY_MAP = axes.LEGACY_AXIS_MAP;
   const lr = await import(pathToFileURL(path.join(ROOT, "js", "leftright.js")).href);
+  authRoutes.init();
   analyzerRoutes.init(AXIS_KEYS, lr.leftRightScore);
   loadStore();
   server.listen(PORT, HOST, () => console.log(`Politeion API on http://${HOST}:${PORT} (store: ${STORE_FILE})`));

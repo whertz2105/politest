@@ -41,23 +41,26 @@
     });
 
     const adminKey = () => { try { return localStorage.getItem("dc_analyzer_admin") || ""; } catch { return ""; } };
+    let sessionAdmin = false;                 // set from /api/auth/me (admin account)
+    const adminActive = () => !!adminKey() || sessionAdmin;
     const view = document.getElementById("view");
     const rerunBtn = document.getElementById("rerun-btn");
     const rerunStatus = document.getElementById("rerun-status");
 
-    // Admin-only: force a fresh scan of this article's URL, then open the new one.
+    // Admin-only: force a fresh scan of this article's URL, then reload it.
     function wireRerun(rec) {
-      const k = adminKey();
-      if (!k || !rec.url) { rerunBtn.hidden = true; return; }
+      if (!adminActive() || !rec.url) { rerunBtn.hidden = true; return; }
       rerunBtn.hidden = false;
       rerunBtn.disabled = false;
       rerunBtn.onclick = async () => {
         rerunBtn.disabled = true;
         rerunStatus.textContent = "Re-running fresh scan…";
         try {
+          const headers = { "content-type": "application/json" };
+          const k = adminKey(); if (k) headers["x-analyzer-admin"] = k; // else cookie session authorizes
           const res = await fetch("/api/analyze", {
             method: "POST",
-            headers: { "content-type": "application/json", "x-analyzer-admin": k },
+            headers,
             body: JSON.stringify({ url: rec.url, force: true }),
           });
           const d = await res.json();
@@ -85,7 +88,10 @@
       } catch (e) { view.innerHTML = '<div class="notice notice-warn">Could not load analysis: ' + e.message + '</div>'; }
     }
     window.addEventListener("hashchange", load);
-    load();
+    // Resolve admin session before the first render so the re-run button shows.
+    fetch("/api/auth/me", { cache: "no-cache" }).then((r) => r.json())
+      .then((d) => { sessionAdmin = !!(d.user && d.user.role === "admin"); })
+      .catch(() => {}).finally(load);
   </script>
 </body>
 </html>

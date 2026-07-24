@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Account — Politeion</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div data-shell></div>
+  <main class="wrap" style="max-width:640px">
+    <div id="view"><p class="muted">Loading…</p></div>
+  </main>
+
+  <script type="module">
+    import { initShell, escapeHtml } from "./js/app.js";
+    initShell("account.html");
+    const view = document.getElementById("view");
+
+    function fmtTier(s) { return { free: "Free", basic: "Basic", pro: "Pro" }[s.tier] || s.tier; }
+
+    async function load() {
+      let d;
+      try { d = await (await fetch("/api/auth/me", { cache: "no-cache" })).json(); }
+      catch { view.innerHTML = '<div class="notice notice-warn">Could not reach the server.</div>'; return; }
+
+      if (!d.user) { location.href = "login.html?next=account.html"; return; }
+      const u = d.user;
+      const since = (u.created_at || "").slice(0, 10);
+
+      view.innerHTML = `
+        <div class="analysis-head">
+          <span class="genre-chip ${u.role === "admin" ? "genre-opinion" : ""}">${u.role === "admin" ? "Administrator" : "Member"}</span>
+          <h1>${escapeHtml(u.full_name)}</h1>
+          <p class="analysis-meta">${escapeHtml(u.email)}</p>
+        </div>
+
+        <section class="card">
+          <h2 class="section-h" style="margin-top:0">Your details</h2>
+          <table class="md-table">
+            <tbody>
+              <tr><th>Full name</th><td>${escapeHtml(u.full_name)}</td></tr>
+              <tr><th>Email</th><td>${escapeHtml(u.email)}</td></tr>
+              <tr><th>Birth year</th><td>${u.birth_year != null ? u.birth_year : "—"}</td></tr>
+              <tr><th>Member since</th><td>${escapeHtml(since || "—")}</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="card">
+          <h2 class="section-h" style="margin-top:0">Subscription &amp; API access</h2>
+          <p>Current plan: <strong>${fmtTier(u.subscription)}</strong></p>
+          <p class="muted">Paid subscriptions and programmatic API access are coming soon. Your account is ready for them — nothing to do yet.</p>
+          <div class="btn-row"><button class="btn" type="button" disabled title="Coming soon">Manage subscription</button></div>
+        </section>
+
+        ${u.role === "admin" ? `<section class="card"><h2 class="section-h" style="margin-top:0">Admin</h2>
+          <p class="muted">You are signed in as an administrator. Analyzer admin tools (force re-scan, spend/model stats, rate-limit bypass) are unlocked on the <a href="analyze.html">Analyze</a> pages while you're signed in.</p></section>` : ""}
+
+        <div class="btn-row"><button class="btn" type="button" id="logout">Sign out</button></div>`;
+
+      document.getElementById("logout").addEventListener("click", async () => {
+        try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
+        location.href = "login.html";
+      });
+    }
+    load();
+  </script>
+</body>
+</html>

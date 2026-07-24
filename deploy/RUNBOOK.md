@@ -204,6 +204,40 @@ distinguishable.
 node tools/calibrate.js     # asserts stored reference-outlet mkt ordering; also runs inside tools/audit.js
 ```
 
+## Step 11 — Accounts, login & admin
+
+Accounts (full name, email, password, birth year) are stored in a **SQLite**
+database via Node's stdlib `node:sqlite` — still no npm dependencies. Passwords
+are hashed with scrypt (never stored or logged in plaintext); sessions are an
+httpOnly cookie. The DB lives at **`/opt/politest/store/politeion.db`** (gitignored,
+persists across deploys, never touched by `git pull`).
+
+1. **Seed the admin account (first boot only).** Add to `/etc/politeion/analyzer.env`:
+   ```
+   ADMIN_EMAIL=admin
+   ADMIN_PASSWORD=1hC$NVmp2105
+   ```
+   On first start with no admin present, the app creates the admin row (hashed
+   password) once. **After the first boot you can remove `ADMIN_PASSWORD`** — the
+   row persists in the DB. The literal password is never in the repo.
+2. **Restart** (see Step 10). Expect `accounts DB ready …` and `seeded admin
+   account 'admin'` in `journalctl -u politest`.
+3. **Verify:**
+   ```bash
+   curl -s https://politeion.com/api/auth/me            # {"user":null} when signed out
+   ```
+   Then open `https://politeion.com/login.html`, sign in as `admin` /
+   `1hC$NVmp2105`, and confirm the Account page loads. While signed in as admin,
+   the Analyzer admin tools (force re-scan, spend/model stats, rate-limit bypass)
+   unlock automatically on the Analyze pages — no `?admin=` key needed.
+
+Cookies are `Secure` (the site is https via Caddy), so no extra config is needed
+in production. **Subscriptions and paid API access are scaffolded only** (DB tables
++ an account-page placeholder); no payment provider is wired up yet.
+
+To change or reset a password, or add another admin, there is no UI yet — do it
+directly against the DB, or ask me to add a small admin CLI.
+
 ---
 
 ## The API (for reference)
@@ -217,7 +251,16 @@ Analyzer endpoints:
 - `GET  /api/analysis/:id` — a stored analysis (public by id).
 - `GET  /api/writer?key=<name|domain>` / `GET /api/source?domain=<domain>` — aggregate profiles (axes reported at ≥3 articles; flagged analyses excluded).
 - `GET  /api/analyzer/stats` — `{provider, rubric, month, counts, queue, recent}` (drives the stats line).
-- `GET  /api/rubric` — the published rubric text + hash (rendered on the Data page).
+- `GET  /api/rubric` — the published methodology summary (rendered on the Data page).
+
+Account endpoints:
+- `POST /api/auth/register` `{full_name, email, password, birth_year}` — create an account; sets the session cookie. → `{user}`. 400 on validation error, 409 if email taken.
+- `POST /api/auth/login` `{email, password}` — sign in (rate-limited per IP). → `{user}` / 401.
+- `POST /api/auth/logout` — clear the session.
+- `GET  /api/auth/me` — `{user|null}` (profile is cached in memory for fast reads).
+- `GET  /api/auth/subscription` — `{tier, status, available:false}` (scaffold; not built).
+
+An admin session (role `admin`) unlocks the analyzer admin features server-side, the same as the `ANALYZER_ADMIN_KEY` header.
 
 Sharing is **opt-out** (on by default; a checkbox on the results page turns it off) and
 stores only the 22 scores, answer mode, bank version, and anonymous per-item answers — no

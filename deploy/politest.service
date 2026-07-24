@@ -18,6 +18,7 @@ Environment=PORT=3200
 Environment=STORE_FILE=/opt/politest/store/results.jsonl
 Environment=ANALYSES_FILE=/opt/politest/store/analyses.jsonl
 Environment=USAGE_FILE=/opt/politest/store/analyzer-usage.jsonl
+Environment=AUTH_DB=/opt/politest/store/politeion.db
 # Analyzer secrets/config (ANTHROPIC_API_KEY, PROVIDER, MODEL, MONTHLY_BUDGET_USD).
 # systemd (root) reads this at start and injects the vars, then drops to User=
 # above — so the file stays root:root 0600 and the app process never reads it.
