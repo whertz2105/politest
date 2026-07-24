@@ -3,34 +3,39 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Question data — Politeion</title>
+  <title>Data &amp; methodology — Politeion</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div data-shell></div>
   <main class="wrap">
-    <h1>Question data</h1>
-    <p class="muted">The full question bank behind the test.</p>
+    <h1>Data &amp; methodology</h1>
+    <p class="muted">How Politeion works, in the open — the article Analyzer's scoring method, and the full test question bank.</p>
 
-    <section id="rubric" class="card" style="margin:1rem 0">
+    <section id="rubric" class="card" style="margin:1.2rem 0">
       <h2 style="margin-top:0">Analyzer methodology</h2>
       <p class="muted">How the article Analyzer scores stance and what it flags. The exact scoring prompt is proprietary; this is a summary of the method. <span id="rubric-meta"></span></p>
       <div id="rubric-summary" class="md-body">Loading…</div>
     </section>
 
-    <div id="validation"></div>
+    <section>
+      <h2>The question bank</h2>
+      <p class="muted">The full set of questions behind the test — separate from the Analyzer above.</p>
 
-    <h2>Per-axis summary</h2>
-    <div class="summary-grid" id="summary"></div>
+      <div id="validation"></div>
 
-    <h2 style="margin-top:1.5rem">Questions</h2>
-    <div class="picker" style="margin-bottom:0.6rem">
-      <input id="filter" type="search" placeholder="Filter by text or id…" style="min-height:44px;padding:0.4rem 0.7rem;background:var(--bg-elev);color:var(--fg);border:1px solid var(--border);border-radius:10px;flex:1;min-width:200px">
-      <span class="muted" id="rowcount"></span>
-    </div>
-    <div class="table-scroll">
-      <table class="data" id="qtable"><thead></thead><tbody></tbody></table>
-    </div>
+      <h3>Per-axis summary</h3>
+      <div class="summary-grid" id="summary"></div>
+
+      <h3 style="margin-top:1.5rem">Questions</h3>
+      <div class="picker" style="margin-bottom:0.6rem">
+        <input id="filter" type="search" placeholder="Filter by text or id…" style="min-height:44px;padding:0.4rem 0.7rem;background:var(--bg-elev);color:var(--fg);border:1px solid var(--border);border-radius:10px;flex:1;min-width:200px">
+        <span class="muted" id="rowcount"></span>
+      </div>
+      <div class="table-scroll">
+        <table class="data" id="qtable"><thead></thead><tbody></tbody></table>
+      </div>
+    </section>
   </main>
 
   <script type="module">
