@@ -45,12 +45,6 @@
       </section>
 
       <section>
-        <h2>Your 22 axes</h2>
-        <p class="muted" id="bars-note" style="font-size:0.85rem"></p>
-        <div id="bars"></div>
-      </section>
-
-      <section>
         <h2>Closest archetypes</h2>
         <div id="arch-panel" class="card"></div>
         <details class="card">
@@ -63,6 +57,12 @@
       </section>
 
       <section>
+        <h2>Your 22 axes</h2>
+        <p class="muted" id="bars-note" style="font-size:0.85rem"></p>
+        <div id="bars"></div>
+      </section>
+
+      <section>
         <h2>Compare</h2>
         <div class="btn-row" id="cmp-toggle">
           <button class="btn btn-primary" type="button" data-mode="figures">Historical figures</button>
@@ -72,10 +72,10 @@
           <select id="cx2"></select><span>×</span><select id="cy2"></select>
           <span class="muted" id="cmp-meta"></span>
         </div>
-        <div class="chart-gallery" style="grid-template-columns:1fr;max-width:520px">
+        <div class="cmp-layout">
           <figure class="chart-card" id="cmp-card"></figure>
+          <div id="cmp-detail" class="card"></div>
         </div>
-        <div id="cmp-detail" class="card"></div>
       </section>
 
       <section id="contribute-section" hidden>

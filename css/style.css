@@ -227,6 +227,11 @@ input[type="range"].slider:focus-visible { box-shadow: 0 0 0 4px var(--ring); }
 
 /* Charts gallery */
 .chart-gallery { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+/* Compare: chart on the left, its detail (closest figures / crowd percentiles) beside it */
+.cmp-layout { display: grid; grid-template-columns: minmax(0, 360px) 1fr; gap: var(--s4); align-items: start; margin: var(--s3) 0; }
+.cmp-layout .card { margin: 0; }
+.cmp-layout .chart-card { margin: 0; }
+@media (max-width: 640px) { .cmp-layout { grid-template-columns: 1fr; } }
 .chart-card { margin: 0; background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--s3); box-shadow: var(--shadow-1); transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease); }
 .chart-card:hover { border-color: var(--gold); box-shadow: var(--shadow-2); }
 .chart-card figcaption { text-align: center; color: var(--fg-dim); font-size: var(--fs-sm); font-weight: 500; margin-top: var(--s2); font-family: var(--serif); font-style: italic; }
