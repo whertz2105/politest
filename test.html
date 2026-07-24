@@ -166,7 +166,10 @@
       // collide across bank versions while the underlying question changed, which
       // would score answers against the wrong questions. Never merge positionally.
       if (validStored && stored.bankSig !== currentSig) { renderBankChanged(); return; }
-      if (validStored) {
+      // Resume into the test ONLY if the started session already has ≥1 answer.
+      // A fresh, answerless session must not throw the user straight into questions.
+      const hasAnswers = validStored && stored.answers && Object.keys(stored.answers).length >= 1;
+      if (hasAnswers) {
         state = stored;
         // Answer STYLE follows the current landing pick even on resume — answers are
         // a unified 0..100 value, so switching classic<->precision mid-test is safe.
@@ -177,11 +180,8 @@
         render();
         return;
       }
-      // No in-progress session: show the most recent completed test's answers (with a
-      // "start new" button), or prompt to start if there is none. Don't auto-begin.
-      const finished = loadFinishedRun();
-      if (finished && finished.answers && Object.keys(finished.answers).length) { renderReview(finished); return; }
-      renderStartPrompt();
+      // Default: show the test options (configure before starting), not the test.
+      renderOptions();
     }
 
     // Read-only review of the most recent completed test's answers.
@@ -206,17 +206,42 @@
         <div class="review-list">${rows.join("") || '<p class="muted">No stored answers.</p>'}</div>`;
     }
 
-    // First-timer prompt (no completed test, no session in progress).
-    function renderStartPrompt() {
-      document.getElementById("stage").innerHTML = `
-        <div class="card" style="text-align:center">
+    // Default landing: choose answer style + length, then start. (Shown unless a
+    // started test already has answers, in which case boot() resumes it.)
+    function renderOptions() {
+      const finished = loadFinishedRun();
+      const stage = document.getElementById("stage");
+      stage.innerHTML = `
+        <div style="text-align:center">
           <h2 style="margin-top:0">Take the compass test</h2>
-          <p class="muted">Answer a bank of statements and see your position on 22 independent political axes — matched to archetypes and historical figures.</p>
-          <div class="btn-row" style="justify-content:center">
-            <a class="btn btn-primary" href="test.html?fresh=1">Start the test</a>
-            <a class="btn" href="index.html">Choose length &amp; style</a>
+          <p class="muted">Choose how you'll answer and how long, then begin — you'll be placed on 22 independent political axes.</p>
+          <div class="picker-label">Answer style</div>
+          <div class="mode-picker" role="radiogroup" aria-label="Answer style">
+            <button class="mode-opt" type="button" data-mode="classic"><b>Classic</b><span class="muted">Five buttons — faster</span></button>
+            <button class="mode-opt" type="button" data-mode="precision"><b>Precision</b><span class="muted">Slider — exact placement</span></button>
+          </div>
+          <div class="picker-label">Length</div>
+          <div class="mode-picker" role="radiogroup" aria-label="Test length">
+            <button class="mode-opt" type="button" data-len="quick"><b>Quick</b><span class="muted">100 questions</span></button>
+            <button class="mode-opt" type="button" data-len="normal"><b>Normal</b><span class="muted">250 questions</span></button>
+            <button class="mode-opt" type="button" data-len="deep"><b>Deep</b><span class="muted">Full 400-item bank</span></button>
+          </div>
+          <div class="btn-row" style="justify-content:center;margin-top:1.2rem">
+            <button class="btn btn-primary" id="opt-start" type="button">Start the test</button>
+            ${finished ? '<a class="btn" href="results.html">See your last result →</a><button class="btn" id="opt-review" type="button">Review your answers</button>' : ""}
           </div>
         </div>`;
+      const styleBtns = [...stage.querySelectorAll("[data-mode]")];
+      const applyStyle = () => styleBtns.forEach((b) => b.classList.toggle("active", b.dataset.mode === answerMode()));
+      styleBtns.forEach((b) => b.addEventListener("click", () => { try { localStorage.setItem("dc_answer_mode", b.dataset.mode); } catch { /* ignore */ } applyStyle(); }));
+      applyStyle();
+      const lenBtns = [...stage.querySelectorAll("[data-len]")];
+      const applyLen = () => lenBtns.forEach((b) => b.classList.toggle("active", b.dataset.len === testMode()));
+      lenBtns.forEach((b) => b.addEventListener("click", () => { try { localStorage.setItem("dc_mode", b.dataset.len); } catch { /* ignore */ } applyLen(); }));
+      applyLen();
+      stage.querySelector("#opt-start").addEventListener("click", () => { startFresh(testMode(), answerMode()); render(); });
+      const rev = stage.querySelector("#opt-review");
+      if (rev) rev.addEventListener("click", () => renderReview(finished));
     }
 
     function renderBankChanged() {

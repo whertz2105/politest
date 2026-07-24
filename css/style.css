@@ -228,7 +228,7 @@ input[type="range"].slider:focus-visible { box-shadow: 0 0 0 4px var(--ring); }
 /* Charts gallery */
 .chart-gallery { display: grid; gap: var(--s4); grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 /* Compare: chart on the left, its detail (closest figures / crowd percentiles) beside it */
-.cmp-layout { display: grid; grid-template-columns: minmax(0, 360px) 1fr; gap: var(--s4); align-items: start; margin: var(--s3) 0; }
+.cmp-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); align-items: start; margin: var(--s3) 0; }
 .cmp-layout .card { margin: 0; }
 .cmp-layout .chart-card { margin: 0; }
 @media (max-width: 640px) { .cmp-layout { grid-template-columns: 1fr; } }
