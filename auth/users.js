@@ -120,9 +120,33 @@ function seedAdmin() {
   console.log(`[auth] seeded admin account '${email}'`);
 }
 
+// ---- saved test results --------------------------------------------------
+// Idempotent per (user, enc): saving the same result twice is a no-op.
+function saveResult(userId, r) {
+  const db = handle();
+  db.prepare(
+    `INSERT OR IGNORE INTO test_results (user_id, enc, vector, bank_version, answer_mode, test_mode, label, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(userId, r.enc, JSON.stringify(r.vector || {}), r.bank || null, r.answerMode || null, r.testMode || null, r.label || null, nowIso());
+  return db.prepare("SELECT * FROM test_results WHERE user_id = ? AND enc = ?").get(userId, r.enc);
+}
+function listResults(userId) {
+  return handle().prepare(
+    "SELECT id, enc, vector, bank_version, answer_mode, test_mode, label, created_at FROM test_results WHERE user_id = ? ORDER BY id DESC"
+  ).all(userId).map((row) => ({
+    id: row.id, enc: row.enc, vector: JSON.parse(row.vector || "{}"),
+    bank_version: row.bank_version, answer_mode: row.answer_mode, test_mode: row.test_mode,
+    label: row.label, created_at: row.created_at,
+  }));
+}
+function deleteResult(userId, id) {
+  return handle().prepare("DELETE FROM test_results WHERE user_id = ? AND id = ?").run(userId, id).changes > 0;
+}
+
 module.exports = {
   hashPassword, verifyPassword, validateRegistration, publicUser,
   getUserByEmail, getUserById, createUser, verifyLogin,
   createSession, getSessionUser, deleteSession, seedAdmin,
+  saveResult, listResults, deleteResult,
   SESSION_TTL_MS,
 };

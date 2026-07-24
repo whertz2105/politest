@@ -29,6 +29,8 @@
         <button id="copy-link" class="btn">Copy share link</button>
         <a class="btn" id="explore-3d" href="explore3d.html">Explore in 3D →</a>
         <a class="btn" href="test.html?fresh=1">Retake</a>
+        <button id="save-account" class="btn" hidden>Save to my account</button>
+        <a id="signin-save" class="btn" hidden>Sign in to save</a>
         <button id="clear-local" class="btn" hidden>Clear my results</button>
         <span class="muted" id="run-meta" style="align-self:center"></span>
       </div>
@@ -407,7 +409,46 @@
           try { localStorage.removeItem("dc_last_result"); localStorage.removeItem(PROGRESS_KEY); } catch {}
           location.href = "index.html";
         });
+        setupAccountSave();
       }
+    }
+
+    // If this is the user's own cached result, let them save it to their account
+    // (or sign in first). Requires the accounts feature to be available.
+    async function setupAccountSave() {
+      if (!last || !last.enc) return;
+      let me;
+      try { me = await (await fetch("/api/auth/me", { cache: "no-cache" })).json(); } catch { return; }
+      if (me.accounts_available === false) return; // accounts disabled on this server
+
+      const saveBtn = document.getElementById("save-account");
+      const signin = document.getElementById("signin-save");
+
+      if (!me.user) {
+        signin.hidden = false;
+        signin.href = "login.html?next=" + encodeURIComponent("results.html" + location.hash);
+        return;
+      }
+
+      saveBtn.hidden = false;
+      let saved = false;
+      try {
+        const list = await (await fetch("/api/auth/results", { cache: "no-cache" })).json();
+        saved = (list.results || []).some((x) => x.enc === last.enc);
+      } catch {}
+      if (saved) { saveBtn.textContent = "Saved to account ✓"; saveBtn.disabled = true; return; }
+
+      saveBtn.addEventListener("click", async () => {
+        saveBtn.disabled = true; saveBtn.textContent = "Saving…";
+        try {
+          const res = await fetch("/api/auth/results", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ enc: last.enc, vector: last.vector, bank: bankVersion, answerMode: last.answerMode, testMode: last.testMode }),
+          });
+          if (res.ok) { saveBtn.textContent = "Saved to account ✓"; toast("Saved to your account"); }
+          else { const d = await res.json(); saveBtn.textContent = "Save to my account"; saveBtn.disabled = false; toast(d.error || "Save failed"); }
+        } catch { saveBtn.textContent = "Save to my account"; saveBtn.disabled = false; toast("Save failed"); }
+      });
     }
 
     window.addEventListener("hashchange", () => location.reload());

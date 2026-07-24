@@ -141,6 +141,44 @@ async function handle(req, res, urlPath) {
     return true;
   }
 
+  if (urlPath === "/api/auth/results" && req.method === "GET") {
+    const u = currentUser(req);
+    if (!u) { sendJson(res, 401, { error: "not signed in" }); return true; }
+    sendJson(res, 200, { results: U.listResults(u.id) });
+    return true;
+  }
+
+  if (urlPath === "/api/auth/results" && req.method === "POST") {
+    try {
+      const u = currentUser(req);
+      if (!u) { sendJson(res, 401, { error: "Sign in to save this result." }); return true; }
+      const p = JSON.parse((await readBody(req)) || "{}");
+      const enc = typeof p.enc === "string" ? p.enc : "";
+      if (!/^[A-Za-z0-9_\-=]{4,4000}$/.test(enc)) { sendJson(res, 400, { error: "invalid result" }); return true; }
+      const vin = p.vector && typeof p.vector === "object" ? p.vector : {};
+      const vector = {}; let n = 0;
+      for (const k of Object.keys(vin)) { if (n++ > 50) break; const v = Math.round(Number(vin[k])); if (Number.isFinite(v)) vector[k] = Math.max(-100, Math.min(100, v)); }
+      const row = U.saveResult(u.id, {
+        enc, vector,
+        bank: Number(p.bank) || null,
+        answerMode: p.answerMode ? String(p.answerMode).slice(0, 20) : null,
+        testMode: p.testMode ? String(p.testMode).slice(0, 20) : null,
+        label: p.label ? String(p.label).slice(0, 80) : null,
+      });
+      sendJson(res, 200, { ok: true, id: row ? row.id : null });
+    } catch (e) { sendJson(res, 400, { error: e.message }); }
+    return true;
+  }
+
+  if (urlPath.startsWith("/api/auth/results/") && req.method === "DELETE") {
+    const u = currentUser(req);
+    if (!u) { sendJson(res, 401, { error: "not signed in" }); return true; }
+    const id = Number(urlPath.slice("/api/auth/results/".length));
+    U.deleteResult(u.id, id);
+    sendJson(res, 200, { ok: true });
+    return true;
+  }
+
   if (urlPath === "/api/auth/logout" && req.method === "POST") {
     const token = parseCookies(req)[COOKIE];
     U.deleteSession(token);

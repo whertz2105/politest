@@ -53,6 +53,11 @@
         </section>
 
         <section class="card">
+          <h2 class="section-h" style="margin-top:0">Your saved results</h2>
+          <div id="saved-results"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section class="card">
           <h2 class="section-h" style="margin-top:0">Subscription &amp; API access</h2>
           <p>Current plan: <strong>${fmtTier(u.subscription)}</strong></p>
           <p class="muted">Paid subscriptions and programmatic API access are coming soon. Your account is ready for them — nothing to do yet.</p>
@@ -68,6 +73,31 @@
         try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
         location.href = "login.html";
       });
+
+      renderSavedResults();
+    }
+
+    async function renderSavedResults() {
+      const box = document.getElementById("saved-results");
+      let results = [];
+      try { results = (await (await fetch("/api/auth/results", { cache: "no-cache" })).json()).results || []; }
+      catch { box.innerHTML = '<p class="muted">Could not load saved results.</p>'; return; }
+      if (!results.length) {
+        box.innerHTML = '<p class="muted">No saved results yet. Take the <a href="test.html">test</a>, then use “Save to my account” on the results page.</p>';
+        return;
+      }
+      box.innerHTML = '<div class="article-list">' + results.map((r) => {
+        const when = (r.created_at || "").slice(0, 10);
+        const mode = [r.answer_mode, r.bank_version ? "v" + r.bank_version + " bank" : ""].filter(Boolean).join(" · ");
+        return `<div class="article-card" style="justify-content:space-between">
+          <a class="article-card-title" href="results.html#r=${encodeURIComponent(r.enc)}" style="flex:1">Result — ${escapeHtml(when)}${mode ? ` <span class="muted">(${escapeHtml(mode)})</span>` : ""}</a>
+          <button class="btn" type="button" data-del="${r.id}" style="min-height:32px;padding:.2rem .6rem">Remove</button>
+        </div>`;
+      }).join("") + "</div>";
+      box.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
+        b.disabled = true;
+        try { await fetch("/api/auth/results/" + b.dataset.del, { method: "DELETE" }); renderSavedResults(); } catch { b.disabled = false; }
+      }));
     }
     load();
   </script>

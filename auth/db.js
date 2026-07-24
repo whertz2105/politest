@@ -78,9 +78,25 @@ function migrate() {
       FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    -- Saved test results, tied to an account (one row per unique encoded result).
+    CREATE TABLE IF NOT EXISTS test_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      enc TEXT NOT NULL,
+      vector TEXT NOT NULL,
+      bank_version INTEGER,
+      answer_mode TEXT,
+      test_mode TEXT,
+      label TEXT,
+      created_at TEXT NOT NULL,
+      UNIQUE(user_id, enc),
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_subs_user ON subscriptions(user_id);
     CREATE INDEX IF NOT EXISTS idx_apikeys_user ON api_keys(user_id);
+    CREATE INDEX IF NOT EXISTS idx_results_user ON test_results(user_id);
   `);
 }
 
