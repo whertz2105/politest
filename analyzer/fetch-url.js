@@ -95,7 +95,7 @@ function safeLookup(hostname, options, cb) {
 }
 
 // ---- fetch with redirect re-validation -----------------------------------
-function once(urlStr) {
+function once(urlStr, opts = {}) {
   return new Promise((resolve, reject) => {
     let u;
     try { u = new URL(urlStr); } catch { return reject(new Error("invalid URL")); }
@@ -115,7 +115,7 @@ function once(urlStr) {
         lookup: safeLookup,
         headers: {
           "user-agent": "PoliteionAnalyzer/1.0 (+https://politeion.com)",
-          accept: "text/html,application/xhtml+xml",
+          accept: opts.json ? "application/json" : "text/html,application/xhtml+xml",
         },
       },
       (res) => {
@@ -128,7 +128,7 @@ function once(urlStr) {
         }
         if (res.statusCode !== 200) { res.resume(); return reject(new Error(`fetch HTTP ${res.statusCode}`)); }
         const ct = String(res.headers["content-type"] || "");
-        if (ct && !/text\/html|application\/xhtml/i.test(ct)) { res.resume(); return reject(new Error(`unsupported content-type: ${ct}`)); }
+        if (!opts.json && ct && !/text\/html|application\/xhtml/i.test(ct)) { res.resume(); return reject(new Error(`unsupported content-type: ${ct}`)); }
         let size = 0;
         const chunks = [];
         res.on("data", (c) => { size += c.length; if (size > MAX_BYTES) { req.destroy(new Error("page exceeds 25MB fetch limit")); return; } chunks.push(c); });
@@ -141,18 +141,39 @@ function once(urlStr) {
   });
 }
 
-async function fetchArticle(urlStr) {
+async function fetchRaw(urlStr, opts = {}) {
+  const maxRedirects = opts.maxRedirects == null ? MAX_REDIRECTS : opts.maxRedirects;
   let current = urlStr;
-  for (let i = 0; i <= MAX_REDIRECTS; i++) {
-    const r = await once(current);
+  for (let i = 0; i <= maxRedirects; i++) {
+    const r = await once(current, opts);
     if (r.redirect) {
-      if (i === MAX_REDIRECTS) throw new Error("too many redirects");
+      if (i === maxRedirects) throw new Error("too many redirects");
       current = r.redirect;
       continue;
     }
     return { html: r.html, finalUrl: r.finalUrl };
   }
   throw new Error("too many redirects");
+}
+
+// WordPress REST fallback: many sites (National Review, etc.) render the article
+// body client-side, so the server HTML has no readable text — but the WP REST API
+// returns the body as JSON. Try {origin}/wp-json/wp/v2/posts?slug=<slug>. Same
+// host as the (already validated) article, re-validated by fetchRaw's SSRF guards.
+// Returns { text, title } or null.
+async function tryWordPress(finalUrl) {
+  try {
+    const u = new URL(finalUrl);
+    const slug = u.pathname.split("/").filter(Boolean).pop();
+    if (!slug) return null;
+    const api = `${u.origin}/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_fields=title,content,excerpt`;
+    const { html: body } = await fetchRaw(api, { json: true, maxRedirects: 1 });
+    const arr = JSON.parse(body);
+    if (!Array.isArray(arr) || !arr[0] || !arr[0].content) return null;
+    const text = extractText(arr[0].content.rendered || "");
+    const title = arr[0].title && arr[0].title.rendered ? collapse(stripTags(arr[0].title.rendered)) : null;
+    return text && text.length >= 120 ? { text, title } : null;
+  } catch { return null; }
 }
 
 // ---- extraction ----------------------------------------------------------
@@ -204,12 +225,8 @@ function extractByline(html) {
   return null;
 }
 
-function extractText(html) {
-  let body = html;
-  const artMatch = html.match(/<article[\s\S]*?<\/article>/i) || html.match(/<main[\s\S]*?<\/main>/i);
-  if (artMatch) body = artMatch[0];
-  // remove non-content regions
-  body = body
+function cleanBlock(s) {
+  return s
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
@@ -217,18 +234,34 @@ function extractText(html) {
     .replace(/<header[\s\S]*?<\/header>/gi, " ")
     .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
     .replace(/<aside[\s\S]*?<\/aside>/gi, " ")
-    .replace(/<form[\s\S]*?<\/form>/gi, " ");
-  // paragraph-aware: keep <p> and heading text, join with newlines
+    .replace(/<form[\s\S]*?<\/form>/gi, " ")
+    .replace(/<figure[\s\S]*?<\/figure>/gi, " ");
+}
+function extractParas(block) {
   const paras = [];
   const re = /<(p|h1|h2|h3|li|blockquote)\b[^>]*>([\s\S]*?)<\/\1>/gi;
   let m;
-  while ((m = re.exec(body))) {
+  while ((m = re.exec(block))) {
     const t = collapse(stripTags(m[2]));
     if (t.length >= 20) paras.push(t);
   }
-  let text = paras.join("\n\n");
-  if (text.length < 200) text = collapse(stripTags(body)); // fallback: whole block
-  return text.slice(0, 60_000); // hard cap on what we send to the model
+  return paras.join("\n\n");
+}
+// Readability-style: clean non-content regions, then choose the candidate region
+// (each <article>, each <main>, or the whole doc) with the MOST paragraph text.
+// Picking the richest region — not the first <article> — avoids grabbing a teaser
+// card on sites (National Review, most CMSs) that wrap teasers in <article>.
+function extractText(html) {
+  const clean = cleanBlock(html);
+  const candidates = [];
+  for (const re of [/<article\b[\s\S]*?<\/article>/gi, /<main\b[\s\S]*?<\/main>/gi]) {
+    let m; while ((m = re.exec(clean))) candidates.push(m[0]);
+  }
+  candidates.push(clean); // whole doc — catches div-based article bodies too
+  let best = "";
+  for (const c of candidates) { const t = extractParas(c); if (t.length > best.length) best = t; }
+  if (best.length < 200) best = collapse(stripTags(clean)); // last-ditch: all visible text
+  return best.slice(0, 60_000); // hard cap on what we send to the model
 }
 
 function canonicalDomain(html, finalUrl) {
@@ -248,12 +281,19 @@ function titleOf(html) {
 }
 
 async function fetchAndExtract(urlStr) {
-  const { html, finalUrl } = await fetchArticle(urlStr);
-  const text = extractText(html);
-  if (!text || text.length < 120) throw new Error("could not extract article text (paywall or unsupported page?)");
+  const { html, finalUrl } = await fetchRaw(urlStr, {});
+  let text = extractText(html);
+  let title = titleOf(html);
+  // If the server HTML yielded little text (client-side-rendered body), try the
+  // WordPress REST API for the full article body.
+  if (text.length < 400) {
+    const wp = await tryWordPress(finalUrl);
+    if (wp && wp.text.length > text.length) { text = wp.text; title = title || wp.title; }
+  }
+  if (!text || text.length < 120) throw new Error("could not extract article text (client-side-rendered or paywalled — try pasting the text)");
   return {
     text,
-    title: titleOf(html),
+    title,
     byline: extractByline(html),
     domain: canonicalDomain(html, finalUrl),
     finalUrl,

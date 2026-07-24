@@ -17,7 +17,9 @@ const SUMMARY_FILE = path.join(__dirname, "..", "data", "rubric_summary.md");
 
 // Human-facing rubric revision. Bump on any deliberate rubric edit.
 // v2 added the required neutral_summary output field.
-const RUBRIC_VERSION = "v2";
+// v3 added the "hostile coverage is opposition, not endorsement" scoring rule
+// (fixes critical pieces being scored toward the position they attack).
+const RUBRIC_VERSION = "v3";
 
 let _text = null;
 let _sha = null;
