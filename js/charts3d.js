@@ -194,6 +194,7 @@ export function createExplorer(mount, opts) {
   const youCore = new THREE.Mesh(
     new THREE.SphereGeometry(7, 24, 24),
     new THREE.MeshStandardMaterial({ color: 0x4da3ff, emissive: 0x2f7fdc, emissiveIntensity: 0.9 }));
+  youCore.userData = { name: "You", v: vector };
   const youHalo = new THREE.Mesh(
     new THREE.SphereGeometry(12, 20, 20),
     new THREE.MeshBasicMaterial({ color: 0x4da3ff, transparent: true, opacity: 0.22 }));
@@ -210,12 +211,13 @@ export function createExplorer(mount, opts) {
     const g = new THREE.Group();
     const dot = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 16),
       new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.35 }));
+    dot.userData = { name: a.name, v: a.v };
     const label = makeLabel(a.name, "#" + color.getHexString(), 0.8);
     label.position.set(0, 9, 0);
     label.visible = labelsOn;
     g.add(dot, label);
     scene.add(g);
-    return { name: a.name, v: a.v, group: g, label, colorCss: color.getStyle(), visible: true };
+    return { name: a.name, v: a.v, group: g, dot, label, colorCss: color.getStyle(), visible: true };
   });
 
   function positionMarkers() {
@@ -245,6 +247,28 @@ export function createExplorer(mount, opts) {
   const ro = new ResizeObserver(resize); ro.observe(mount);
   resize(); frame();
 
+  // hover tooltips over the user marker + visible archetype dots (raycasting)
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  function tip3d() { let t = document.getElementById("chart-tip"); if (!t) { t = document.createElement("div"); t.id = "chart-tip"; t.className = "chart-tip"; document.body.appendChild(t); } return t; }
+  function onHover(e) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(ndc, camera);
+    const targets = archObjs.filter((o) => o.visible).map((o) => o.dot).concat(youCore);
+    const hit = raycaster.intersectObjects(targets, false)[0];
+    const t = tip3d();
+    if (hit) {
+      const ud = hit.object.userData;
+      const vals = trio.map((k) => `${axisByKey(k).label} ${Math.round((ud.v[k] || 0) * 10) / 10}`).join(" · ");
+      t.innerHTML = `<b>${ud.name}</b><span>${vals}</span>`;
+      t.style.left = (e.clientX + 12) + "px"; t.style.top = (e.clientY + 12) + "px";
+      t.classList.add("show"); renderer.domElement.style.cursor = "pointer";
+    } else { t.classList.remove("show"); renderer.domElement.style.cursor = ""; }
+  }
+  renderer.domElement.addEventListener("pointermove", onHover);
+
   return {
     controls,
     setTrio(newTrio) { trio = newTrio.slice(); rebuildLabels(); positionMarkers(); },
@@ -260,7 +284,7 @@ export function createExplorer(mount, opts) {
     setCameraState(s) { controls.setState(s); },
     legend() { return archObjs.map((o) => ({ name: o.name, color: o.colorCss, visible: o.visible })); },
     resize,
-    dispose() { running = false; cancelAnimationFrame(raf); ro.disconnect(); renderer.dispose(); mount.innerHTML = ""; },
+    dispose() { running = false; cancelAnimationFrame(raf); ro.disconnect(); renderer.domElement.removeEventListener("pointermove", onHover); const t = document.getElementById("chart-tip"); if (t) t.classList.remove("show"); renderer.dispose(); mount.innerHTML = ""; },
   };
 }
 

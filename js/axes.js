@@ -46,6 +46,27 @@ export const AXES = [
   { key: "env",         label: "Environment",    posLabel: "Growth priority",         negLabel: "Environmental priority",   description: "Whether economic growth or environmental protection takes priority." },
 ];
 
+// Short pole labels (≤14 chars) for tight chart gutters, [posShort, negShort].
+// Full posLabel/negLabel are used when they fit and in tooltips/fullscreen.
+const SHORT = {
+  mkt: ["Free market", "State-led"], wel: ["Minimal net", "Welfare state"],
+  trd: ["Protectionist", "Free trade"], soc: ["Traditional", "Progressive"],
+  rel: ["Religious", "Secular"], auth_pat: ["Paternalist", "Autonomy"],
+  auth_pw: ["Strong state", "Limited state"], sec: ["Surveillance", "Privacy"],
+  spe: ["Regulated", "Free speech"], jus: ["Punitive", "Rehabilitative"],
+  dem_fr: ["Limited vote", "Universal vote"], dem_tc: ["Technocratic", "Popular rule"],
+  trust_pol: ["Trusts pols", "Distrusts pols"], trust_sys: ["Trusts system", "Distrusts sys"],
+  meth_scope: ["Sweeping", "Status quo"], meth_means: ["Extra. means", "Lawful process"],
+  fed: ["Federal", "State/local"], natl: ["Nationalist", "Globalist"],
+  imm: ["Restrictive", "Open borders"], fp: ["Intervention", "Restraint"],
+  tech: ["Pro-tech", "Precautionary"], env: ["Growth first", "Environment"],
+};
+for (const a of AXES) {
+  const s = SHORT[a.key];
+  a.posShort = s ? s[0] : a.posLabel;
+  a.negShort = s ? s[1] : a.negLabel;
+}
+
 // Fixed key order — canonical iteration/encoding order.
 export const AXIS_KEYS = AXES.map((a) => a.key);
 

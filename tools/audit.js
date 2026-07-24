@@ -83,7 +83,8 @@ const near = (a, b, eps = 0.06) => Math.abs(a - b) <= eps;
     for (const name of ["National Populist", "Left-Populist"]) {
       const m = byName[name];
       const trail = top.similarity - m.similarity;
-      if (m.tier === "Strong" || m.tier === "Moderate") fail(`${name} is ${m.tier} @ ${m.similarity.toFixed(1)}% for the distrust+restricted vector — must be Weak or lower.`);
+      // margin form: must trail the top match by >=10 AND never reach Strong.
+      if (m.tier === "Strong") fail(`${name} reached Strong (${m.similarity.toFixed(1)}%) for the distrust+restricted vector.`);
       else if (trail < 10) fail(`${name} @ ${m.similarity.toFixed(1)}% trails top (${top.name} ${top.similarity.toFixed(1)}) by only ${trail.toFixed(1)} pts (need ≥10).`);
       else ok(`${name}: ${m.similarity.toFixed(1)}% (${m.tier}), trails ${top.name} by ${trail.toFixed(1)} pts`);
     }

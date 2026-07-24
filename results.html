@@ -85,7 +85,7 @@
     import { initShell, loadQuestionData, vectorFromHash, encodeVector, escapeHtml, PROGRESS_KEY } from "./js/app.js";
     import { AXES, AXIS_KEYS, axisByKey, axisLabel } from "./js/axes.js";
     import { computeScores, questionsForMode } from "./js/scoring.js";
-    import { renderBarReadout, quadrantSVG, quadrantCard, downloadSvgAsPng, axisLineSVG } from "./js/charts2d.js";
+    import { renderBarReadout, quadrantCard, wireQuadrant, axisLineSVG, runChartDevAssertions } from "./js/charts2d.js";
     import { ARCHETYPES, matchArchetypes, singleAxisMatch } from "./js/archetypes.js";
     import { validateFigures, nearestFigures } from "./js/figures.js";
 
@@ -199,36 +199,34 @@
     function renderCompare(vector) {
       const x = document.getElementById("cx2").value, y = document.getElementById("cy2").value;
       const card = document.getElementById("cmp-card"), detail = document.getElementById("cmp-detail"), meta = document.getElementById("cmp-meta");
-      const ax = axisByKey(x), ay = axisByKey(y);
-      const cap = (e) => `<figcaption>${escapeHtml(ax.label)} × ${escapeHtml(ay.label)}${e || ""}</figcaption>`;
 
       if (cmpMode === "figures") {
-        meta.textContent = figures.length ? `${figures.length} figures · nearest labelled` : "no figures loaded";
         const near = nearestFigures(vector, figures, 6);
-        card.innerHTML = quadrantSVG(vector, x, y, { figures, labelNames: near.map((f) => f.name) }) + cap(" — you vs figures");
+        meta.textContent = figures.length ? `you vs ${figures.length} figures · nearest 3 labelled · click to expand` : "no figures loaded";
+        wireQuadrant(card, vector, x, y, { figures, labelNames: near.slice(0, 3).map((f) => f.name) });
         if (!figures.length) { detail.innerHTML = `<p class="muted">No figures loaded.</p>`; return; }
         detail.innerHTML = `<h4 style="margin-top:0">Closest historical figures</h4>
-          <p class="muted" style="font-size:0.82rem">Full-vector similarity across all 22 axes.</p>
+          <p class="muted" style="font-size:0.82rem">Full-vector similarity across all 22 axes. Hover any dot for its position; click the chart to enlarge.</p>
           <ul class="arch-list">${near.map((f) => `<li><span>${escapeHtml(f.name)}${f.era ? ` <span class="muted" style="font-size:0.76rem">${escapeHtml(f.era)}</span>` : ""}</span><span class="sim">${f.proximity.toFixed(0)}%</span></li>`).join("")}</ul>`;
         return;
       }
       if (crowdError || !crowd) {
         meta.textContent = "";
-        card.innerHTML = quadrantSVG(vector, x, y, {}) + cap();
+        wireQuadrant(card, vector, x, y, {});
         detail.innerHTML = `<p class="muted">Crowd comparison needs the live <code>/api</code> backend (deployed site only).</p>`;
         return;
       }
       if (crowd.count === 0) {
         meta.textContent = "0 takers yet";
-        card.innerHTML = quadrantSVG(vector, x, y, {}) + cap();
+        wireQuadrant(card, vector, x, y, {});
         detail.innerHTML = `<p class="muted">No one else has completed the test on this bank version yet.</p>`;
         return;
       }
       const ix = crowd.axisOrder.indexOf(x), iy = crowd.axisOrder.indexOf(y);
       const cloud = (crowd.sample || []).map((a) => [a[ix], a[iy]]);
       const shown = crowd.sample ? crowd.sample.length : 0;
-      meta.textContent = `${crowd.count} taker${crowd.count === 1 ? "" : "s"} (v${bankVersion} bank)${shown < crowd.count ? ` · cloud shows ${shown}` : ""}`;
-      card.innerHTML = quadrantSVG(vector, x, y, { cloud }) + cap(" — you vs everyone");
+      meta.textContent = `you vs ${crowd.count} taker${crowd.count === 1 ? "" : "s"} (v${bankVersion} bank)${shown < crowd.count ? ` · cloud shows ${shown}` : ""}`;
+      wireQuadrant(card, vector, x, y, { cloud });
       const p = crowd.percentiles || {};
       const line = (k) => { const a = axisByKey(k); if (p[k] == null) return ""; return `<li><span>${escapeHtml(a.label)}</span><span class="sim">higher than ${p[k]}% · leans ${p[k] >= 50 ? escapeHtml(a.posLabel) : escapeHtml(a.negLabel)}</span></li>`; };
       const gate = crowd.count >= 30 ? "" : `<p class="muted" style="font-size:0.8rem">Percentiles firm up at n≥30 (currently ${crowd.count}).</p>`;
@@ -326,15 +324,13 @@
       });
     }
 
+    // Small multiples: short pole labels always; click to expand (modal has PNG export).
     function galleryCard(vector, x, y) {
-      const card = quadrantCard(vector, x, y, { archetypes: ARCHETYPES });
-      const btn = document.createElement("button");
-      btn.className = "btn"; btn.textContent = "Download PNG"; btn.style.marginTop = "0.4rem"; btn.style.width = "100%";
-      btn.addEventListener("click", () => downloadSvgAsPng(card.querySelector("svg"), `politeion-${x}-${y}.png`));
-      card.appendChild(btn); return card;
+      return quadrantCard(vector, x, y, { archetypes: ARCHETYPES, shortLabels: true });
     }
 
     async function boot() {
+      if (location.search.includes("devcharts")) runChartDevAssertions();
       const resolved = resolveVector();
       if (!resolved) { document.getElementById("empty").hidden = false; return; }
       const { vector, own } = resolved;

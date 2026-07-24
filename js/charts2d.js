@@ -3,10 +3,8 @@ import { AXES, axisByKey } from "./axes.js";
 import { escapeHtml } from "./app.js";
 
 // ---------------------------------------------------------------------------
-// 18-row horizontal bar readout (built as accessible HTML + inline SVG bars).
+// 22-row horizontal bar readout (accessible HTML + inline SVG bars).
 // ---------------------------------------------------------------------------
-// opts: { counts, bands (bootstrap {lo,hi,spansZero}), consistency ({axisWarn}),
-//         percentiles ({key:0..100}), approximated ([keys]) } — all optional.
 export function renderBarReadout(container, vector, opts = {}) {
   const { counts, bands, consistency, percentiles, approximated } = opts;
   const pctX = (v) => Math.max(0, Math.min(100, (v + 100) / 2));
@@ -68,111 +66,125 @@ export function renderBarReadout(container, vector, opts = {}) {
   }).join("");
   container.innerHTML = `<div class="bar-readout">${rows}</div>`;
 }
-
 function ordinal(n) { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
 
 // ---------------------------------------------------------------------------
-// Quadrant chart (inline SVG string). xKey on horizontal, yKey on vertical
-// (positive up). Optional archetype markers.
+// Text measurement (browser canvas; length estimate as a headless fallback).
 // ---------------------------------------------------------------------------
+let _mctx = null;
+function measureText(str, fontPx) {
+  try {
+    if (!_mctx) _mctx = document.createElement("canvas").getContext("2d");
+    const fam = (getComputedStyle(document.body).fontFamily) || "sans-serif";
+    _mctx.font = `500 ${fontPx}px ${fam}`;
+    return _mctx.measureText(str).width;
+  } catch { return String(str).length * fontPx * 0.55; }
+}
+
+// ---------------------------------------------------------------------------
+// Quadrant scatter. ALL four pole labels are DERIVED from axes.js at render time
+// for {xKey, yKey}: xNeg left, xPos right (horizontal, bottom gutter halves);
+// yPos upper, yNeg lower (rotated 90° in the LEFT gutter, reading bottom-to-top).
+// One shared 4%-inner-padded scale maps −100..+100 into the plot for EVERY marker.
+// ---------------------------------------------------------------------------
+const INNER_PAD = 0.04;
+
 export function quadrantSVG(vector, xKey, yKey, opts = {}) {
   const size = opts.size || 300;
-  // Labels sit in the margins on their own rows/corners so long pole names never
-  // clip off-canvas. Horizontal poles go in the BOTTOM corners (full plot width
-  // to breathe); vertical poles are centred top and bottom.
-  const padSide = 20, padTop = 26, padBottom = 52;
-  const plot = size;
-  const W = plot + padSide * 2;
-  const H = plot + padTop + padBottom;
+  const forceShort = !!opts.shortLabels;
+  const font = Math.max(9, Math.min(15, Math.round(size * 0.037)));
+  const gL = Math.round(font * 2.5), gB = Math.round(font * 2.3), gT = Math.round(font * 1.5), gR = Math.round(font * 1.2);
+  const plot = size, x0 = gL, y0 = gT, W = gL + plot + gR, H = gT + plot + gB;
   const ax = axisByKey(xKey), ay = axisByKey(yKey);
-  const cx = padSide, cy = padTop;
-  const labelSet = opts.labelNames ? new Set(opts.labelNames) : null; // figures to label (declutter)
 
-  const toX = (v) => cx + ((v + 100) / 200) * plot;
-  const toY = (v) => cy + ((100 - v) / 200) * plot; // positive up
-
-  const px = toX(vector[xKey] || 0);
-  const py = toY(vector[yKey] || 0);
+  // one shared scale — 4% inner padding so ±100 renders inside the frame
+  const toX = (v) => x0 + (INNER_PAD + (1 - 2 * INNER_PAD) * ((v + 100) / 200)) * plot;
+  const toY = (v) => y0 + (INNER_PAD + (1 - 2 * INNER_PAD) * ((100 - v) / 200)) * plot;
+  const midX = x0 + plot / 2, midY = y0 + plot / 2;
+  const r1 = (n) => Math.round(n * 10) / 10;
+  const tip = (name, xv, yv) => `class="dot" data-name="${escapeHtml(name)}" data-x="${r1(xv)}" data-y="${r1(yv)}" data-xa="${escapeHtml(ax.label)}" data-ya="${escapeHtml(ay.label)}"`;
 
   // quadrant tints
-  const midX = cx + plot / 2, midY = cy + plot / 2;
   const q = (x, y, w, h, cls) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="quad ${cls}"/>`;
-  const tints =
-    q(cx, cy, plot / 2, plot / 2, "q-tl") +
-    q(midX, cy, plot / 2, plot / 2, "q-tr") +
-    q(cx, midY, plot / 2, plot / 2, "q-bl") +
-    q(midX, midY, plot / 2, plot / 2, "q-br");
+  const tints = q(x0, y0, plot / 2, plot / 2, "q-tl") + q(midX, y0, plot / 2, plot / 2, "q-tr") +
+    q(x0, midY, plot / 2, plot / 2, "q-bl") + q(midX, midY, plot / 2, plot / 2, "q-br");
 
-  // archetype markers
+  // markers ------------------------------------------------------------------
+  let cloudMarks = "";
+  if (opts.cloud && opts.cloud.length) {  // anonymous crowd — no tooltip
+    cloudMarks = opts.cloud.map((p) => `<circle cx="${toX(p[0])}" cy="${toY(p[1])}" r="2.5" class="cloud-dot"/>`).join("");
+  }
   let archMarks = "";
   if (opts.archetypes && opts.archetypes.length) {
-    archMarks = opts.archetypes.map((a) => {
-      const x = toX(a.v[xKey] || 0), y = toY(a.v[yKey] || 0);
-      return `<circle cx="${x}" cy="${y}" r="3" class="arch-dot"><title>${escapeHtml(a.name)}</title></circle>`;
-    }).join("");
+    archMarks = opts.archetypes.map((a) =>
+      `<circle cx="${toX(a.v[xKey] || 0)}" cy="${toY(a.v[yKey] || 0)}" r="3" class="arch-dot" ${tip(a.name, a.v[xKey] || 0, a.v[yKey] || 0)}></circle>`).join("");
   }
 
-  // crowd cloud: many translucent dots (drawn behind everything else).
-  // opts.cloud is an array of [xScore, yScore] pairs already projected to the axes.
-  let cloudMarks = "";
-  if (opts.cloud && opts.cloud.length) {
-    cloudMarks = opts.cloud.map((p) =>
-      `<circle cx="${toX(p[0])}" cy="${toY(p[1])}" r="2.5" class="cloud-dot"/>`).join("");
-  }
-
-  // figure markers: dots always (with hover title); labels only for a highlight
-  // set (e.g. the nearest few) so 24 names don't collide into an unreadable mass.
+  // figure markers: dots always; labels only for the highlight set, with an
+  // optional vertical declutter pass (used in the fullscreen modal).
   let figMarks = "";
   if (opts.figures && opts.figures.length) {
-    figMarks = opts.figures.map((f) => {
-      const x = toX(f.v[xKey] || 0), y = toY(f.v[yKey] || 0);
-      const showLabel = !labelSet || labelSet.has(f.name);
-      const lbl = showLabel ? `<text x="${x + 5}" y="${y - 4}" class="fig-lbl">${escapeHtml(f.name)}</text>` : "";
-      return `<g class="fig"><circle cx="${x}" cy="${y}" r="4" class="fig-dot"><title>${escapeHtml(f.name)}</title></circle>${lbl}</g>`;
+    const labelSet = opts.labelNames ? new Set(opts.labelNames) : null;
+    const labelled = opts.figures.map((f) => ({ f, x: toX(f.v[xKey] || 0), y: toY(f.v[yKey] || 0), show: !labelSet || labelSet.has(f.name) }));
+    if (opts.nudge) {
+      const gap = font * 1.15;
+      labelled.filter((d) => d.show).sort((a, b) => a.y - b.y)
+        .reduce((last, d) => { d.ly = d.y - 5 < last + gap ? last + gap : d.y - 5; return d.ly; }, -Infinity);
+    }
+    figMarks = labelled.map((d) => {
+      const ly = d.ly != null ? d.ly : d.y - 5;
+      const lbl = d.show ? `<text x="${d.x + 5}" y="${ly}" class="fig-lbl" style="font-size:${Math.max(8, font - 1)}px">${escapeHtml(d.f.name)}</text>` : "";
+      return `<g><circle cx="${d.x}" cy="${d.y}" r="4" class="fig-dot dot" ${tip(d.f.name, d.f.v[xKey] || 0, d.f.v[yKey] || 0)}></circle>${lbl}</g>`;
     }).join("");
   }
+
+  const ux = toX(vector[xKey] || 0), uy = toY(vector[yKey] || 0);
+
+  // pole labels (derived; short-label fallback when the full label won't fit) ---
+  const halfW = plot / 2 - font;
+  const fit = (full, short) => (forceShort || measureText(full, font) > halfW) ? short : full;
+  const xNeg = fit(ax.negLabel, ax.negShort), xPos = fit(ax.posLabel, ax.posShort);
+  const yPos = fit(ay.posLabel, ay.posShort), yNeg = fit(ay.negLabel, ay.negShort);
+  const xLabY = y0 + plot + Math.round(gB * 0.72);
+  const yLx = Math.round(gL * 0.4);
+  const yPosY = y0 + plot * 0.25, yNegY = y0 + plot * 0.75;
 
   return `
   <svg class="quad-chart" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img"
        aria-label="${escapeHtml(ax.label)} vs ${escapeHtml(ay.label)}">
     <rect x="0" y="0" width="${W}" height="${H}" class="quad-bg"/>
     ${tints}
-    <line x1="${midX}" y1="${cy}" x2="${midX}" y2="${cy + plot}" class="quad-axis"/>
-    <line x1="${cx}" y1="${midY}" x2="${cx + plot}" y2="${midY}" class="quad-axis"/>
-    <rect x="${cx}" y="${cy}" width="${plot}" height="${plot}" class="quad-frame"/>
-    ${cloudMarks}
-    ${archMarks}
-    ${figMarks}
-    <circle cx="${px}" cy="${py}" r="6" class="you-dot"/>
-    <circle cx="${px}" cy="${py}" r="11" class="you-halo"/>
-    <!-- pole labels: y+ top-centre, y- bottom-centre, x-/x+ in the bottom corners -->
-    <text x="${midX}" y="${cy - 12}" class="pole-lbl top">${escapeHtml(ay.posLabel)}</text>
-    <text x="${cx}" y="${cy + plot + 18}" class="pole-lbl xneg">◀ ${escapeHtml(ax.negLabel)}</text>
-    <text x="${cx + plot}" y="${cy + plot + 18}" class="pole-lbl xpos">${escapeHtml(ax.posLabel)} ▶</text>
-    <text x="${midX}" y="${cy + plot + 38}" class="pole-lbl bot">${escapeHtml(ay.negLabel)}</text>
+    <line x1="${midX}" y1="${y0}" x2="${midX}" y2="${y0 + plot}" class="quad-axis"/>
+    <line x1="${x0}" y1="${midY}" x2="${x0 + plot}" y2="${midY}" class="quad-axis"/>
+    <rect x="${x0}" y="${y0}" width="${plot}" height="${plot}" class="quad-frame"/>
+    ${cloudMarks}${archMarks}${figMarks}
+    <circle cx="${ux}" cy="${uy}" r="11" class="you-halo"/>
+    <circle cx="${ux}" cy="${uy}" r="6" class="you-dot dot" ${tip("You", vector[xKey] || 0, vector[yKey] || 0)}></circle>
+    <text class="pole-lbl xneg" x="${x0 + plot * 0.25}" y="${xLabY}" style="font-size:${font}px">${escapeHtml(xNeg)}</text>
+    <text class="pole-lbl xpos" x="${x0 + plot * 0.75}" y="${xLabY}" style="font-size:${font}px">${escapeHtml(xPos)}</text>
+    <text class="pole-lbl ypos" x="${yLx}" y="${yPosY}" transform="rotate(-90 ${yLx} ${yPosY})" style="font-size:${font}px">${escapeHtml(yPos)}</text>
+    <text class="pole-lbl yneg" x="${yLx}" y="${yNegY}" transform="rotate(-90 ${yLx} ${yNegY})" style="font-size:${font}px">${escapeHtml(yNeg)}</text>
   </svg>`;
 }
 
 // ---------------------------------------------------------------------------
 // Single-axis number line: user marker + every archetype's position on ONE axis.
-// (No percentage — positions and distances only.) Returns an inline SVG string.
 // ---------------------------------------------------------------------------
 export function axisLineSVG(userVec, axisKey, archetypes, labelNames) {
   const a = axisByKey(axisKey);
   const W = 460, H = 96, padX = 24, midY = 48;
   const x0 = padX, x1 = W - padX, span = x1 - x0;
-  const toX = (v) => x0 + ((v + 100) / 200) * span;
+  const toX = (v) => x0 + (0.04 + 0.92 * ((v + 100) / 200)) * span;
   const u = userVec[axisKey] || 0;
   const labelSet = labelNames ? new Set(labelNames) : null;
 
   const ticks = archetypes.map((arch, i) => {
     const x = toX(arch.v[axisKey] || 0);
     const show = !labelSet || labelSet.has(arch.name);
-    // stagger labels above/below the axis to reduce collision
     const above = i % 2 === 0;
     const ly = above ? midY - 12 : midY + 20;
     const lbl = show ? `<text x="${x}" y="${ly}" class="axl-arch">${escapeHtml(arch.name)}</text>` : "";
-    return `<line x1="${x}" y1="${midY - 5}" x2="${x}" y2="${midY + 5}" class="axl-tick"><title>${escapeHtml(arch.name)}: ${arch.v[axisKey]}</title></line>${lbl}`;
+    return `<line x1="${x}" y1="${midY - 5}" x2="${x}" y2="${midY + 5}" class="axl-tick dot" data-name="${escapeHtml(arch.name)}" data-x="${arch.v[axisKey]}" data-xa="${escapeHtml(a.label)}"><title>${escapeHtml(arch.name)}: ${arch.v[axisKey]}</title></line>${lbl}`;
   }).join("");
 
   const ux = toX(u);
@@ -190,22 +202,128 @@ export function axisLineSVG(userVec, axisKey, archetypes, labelNames) {
   </svg>`;
 }
 
-// Render a quadrant chart into a card element and return that element.
-export function quadrantCard(vector, xKey, yKey, opts = {}) {
+// ---------------------------------------------------------------------------
+// Interactivity: hover/tap tooltips on every .dot[data-name], and a fullscreen
+// lightbox that RE-RENDERS the chart fresh at large size.
+// ---------------------------------------------------------------------------
+function tipEl() {
+  let t = document.getElementById("chart-tip");
+  if (!t) { t = document.createElement("div"); t.id = "chart-tip"; t.className = "chart-tip"; document.body.appendChild(t); }
+  return t;
+}
+function showTip(dot, x, y) {
+  const t = tipEl();
+  const name = dot.getAttribute("data-name");
+  const xa = dot.getAttribute("data-xa"), xv = dot.getAttribute("data-x");
+  const ya = dot.getAttribute("data-ya"), yv = dot.getAttribute("data-y");
+  let detail = "";
+  if (xa && xv != null) detail += `${escapeHtml(xa)} ${xv}`;
+  if (ya && yv != null) detail += `${detail ? " · " : ""}${escapeHtml(ya)} ${yv}`;
+  t.innerHTML = `<b>${escapeHtml(name)}</b>${detail ? `<span>${detail}</span>` : ""}`;
+  t.style.left = x + "px"; t.style.top = y + "px";
+  t.classList.add("show");
+}
+function hideTip() { const t = document.getElementById("chart-tip"); if (t) t.classList.remove("show"); }
+
+let _docTipWired = false;
+export function attachTooltips(container) {
+  if (!_docTipWired) { document.addEventListener("click", hideTip, { passive: true }); _docTipWired = true; }
+  if (container.__tipWired) return;   // idempotent — safe across re-renders of the same node
+  container.__tipWired = true;
+  container.addEventListener("pointermove", (e) => {
+    const d = e.target.closest && e.target.closest(".dot[data-name]");
+    if (d) showTip(d, e.clientX + 12, e.clientY + 12); else if (e.pointerType === "mouse") hideTip();
+  });
+  container.addEventListener("pointerleave", hideTip);
+  container.addEventListener("click", (e) => {
+    const d = e.target.closest && e.target.closest(".dot[data-name]");
+    if (d) { showTip(d, e.clientX + 12, e.clientY + 12); e.stopPropagation(); }
+  });
+}
+
+export function openChartModal({ title, render, filename }) {
+  const small = window.innerWidth < 700;
+  const s = Math.round(Math.min(window.innerWidth, window.innerHeight) * (small ? 0.86 : 0.72));
+  const overlay = document.createElement("div");
+  overlay.className = "chart-modal";
+  overlay.innerHTML = `<div class="chart-modal-inner" role="dialog" aria-modal="true" aria-label="${escapeHtml(title || "chart")}">
+      <div class="chart-modal-head"><span>${escapeHtml(title || "")}</span><button class="chart-modal-close" aria-label="Close">✕</button></div>
+      <div class="chart-modal-body"></div>
+      <div class="chart-modal-foot"><button class="btn dl-png">Download PNG</button></div>
+    </div>`;
+  const body = overlay.querySelector(".chart-modal-body");
+  body.innerHTML = render(s);
+  attachTooltips(body);
+  const close = () => { hideTip(); overlay.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector(".chart-modal-close").addEventListener("click", close);
+  overlay.querySelector(".dl-png").addEventListener("click", () => downloadSvgAsPng(body.querySelector("svg"), filename || "politeion.png"));
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(overlay);
+}
+
+// Paint a quadrant into a <figure>, wire tooltips + click-to-expand (modal).
+function paintQuadrant(fig, vector, xKey, yKey, opts) {
   const ax = axisByKey(xKey), ay = axisByKey(yKey);
-  const card = document.createElement("figure");
-  card.className = "chart-card";
-  card.innerHTML = quadrantSVG(vector, xKey, yKey, opts) +
-    `<figcaption>${escapeHtml(ax.label)} × ${escapeHtml(ay.label)}</figcaption>`;
-  return card;
+  fig.className = "chart-card zoomable";
+  fig.innerHTML = quadrantSVG(vector, xKey, yKey, opts) +
+    `<button class="chart-expand" type="button" title="Expand" aria-label="Expand chart">⤢</button>` +
+    (opts.caption === false ? "" : `<figcaption>${escapeHtml(ax.label)} × ${escapeHtml(ay.label)}</figcaption>`);
+  attachTooltips(fig);
+  const open = () => openChartModal({
+    title: `${ax.label} × ${ay.label}`,
+    filename: `politeion-${xKey}-${yKey}.png`,
+    render: (s) => quadrantSVG(vector, xKey, yKey, {
+      ...opts, size: s, shortLabels: false, nudge: true,
+      labelNames: opts.figures ? opts.figures.map((f) => f.name) : opts.labelNames,
+    }),
+  });
+  fig.querySelector(".chart-expand").addEventListener("click", (e) => { e.stopPropagation(); open(); });
+  const svg = fig.querySelector("svg");
+  svg.addEventListener("click", (e) => { if (!(e.target.closest && e.target.closest(".dot[data-name]"))) open(); });
+  return fig;
+}
+export function quadrantCard(vector, xKey, yKey, opts = {}) { return paintQuadrant(document.createElement("figure"), vector, xKey, yKey, opts); }
+export function wireQuadrant(figEl, vector, xKey, yKey, opts = {}) { return paintQuadrant(figEl, vector, xKey, yKey, opts); }
+
+// ---------------------------------------------------------------------------
+// Dev assertions (call with ?devcharts or from tests). Verifies (1) each pole
+// label matches the axes.js pole for its position, and (3) no marker falls
+// outside the plot rect for any score in [−100,100].
+// ---------------------------------------------------------------------------
+export function runChartDevAssertions() {
+  const errs = [];
+  const grab = (svg, cls) => { const m = new RegExp(`class="pole-lbl ${cls}"[^>]*>([^<]*)<`).exec(svg); return m ? m[1] : "(missing)"; };
+  for (const [x, y] of [["mkt", "soc"], ["trust_sys", "meth_scope"], ["env", "fp"]]) {
+    const ax = axisByKey(x), ay = axisByKey(y);
+    const svg = quadrantSVG({}, x, y, { size: 320 });
+    const cases = [["xneg", ax.negLabel, ax.negShort], ["xpos", ax.posLabel, ax.posShort],
+                   ["ypos", ay.posLabel, ay.posShort], ["yneg", ay.negLabel, ay.negShort]];
+    for (const [cls, full, short] of cases) {
+      const got = grab(svg, cls);
+      if (got !== full && got !== short) errs.push(`${x}×${y} ${cls} = "${got}" (expected "${full}" or "${short}")`);
+    }
+  }
+  // transform bounds: scale must keep every score inside [x0, x0+plot]
+  const size = 300, font = Math.max(9, Math.min(15, Math.round(size * 0.037)));
+  const gL = Math.round(font * 2.5), plot = size, x0 = gL;
+  const toX = (v) => x0 + (INNER_PAD + (1 - 2 * INNER_PAD) * ((v + 100) / 200)) * plot;
+  for (const v of [-100, -50, 0, 50, 100]) {
+    const px = toX(v);
+    if (px < x0 - 0.01 || px > x0 + plot + 0.01) errs.push(`point ${v} -> ${px.toFixed(1)} outside [${x0}, ${x0 + plot}]`);
+  }
+  if (typeof console !== "undefined") console[errs.length ? "error" : "log"]("[chart dev assertions]", errs.length ? errs : "OK");
+  return errs;
 }
 
 // ---------------------------------------------------------------------------
-// SVG -> PNG download (canvas). Works entirely client-side.
+// SVG -> PNG download (canvas). Rotated pole labels survive because the rotation
+// lives in the SVG markup (a transform attribute), not the canvas text API — we
+// rasterise the serialized SVG as an image.
 // ---------------------------------------------------------------------------
 export function downloadSvgAsPng(svgEl, filename = "politeion.png", scale = 2) {
   const clone = svgEl.cloneNode(true);
-  // Inline computed colors so the rasterised PNG matches the current theme.
   inlineStyles(svgEl, clone);
   const xml = new XMLSerializer().serializeToString(clone);
   const svg64 = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(xml)));
@@ -215,10 +333,8 @@ export function downloadSvgAsPng(svgEl, filename = "politeion.png", scale = 2) {
   const img = new Image();
   img.onload = () => {
     const canvas = document.createElement("canvas");
-    canvas.width = w * scale;
-    canvas.height = h * scale;
+    canvas.width = w * scale; canvas.height = h * scale;
     const ctx = canvas.getContext("2d");
-    // fill background so transparent areas aren't black
     ctx.fillStyle = getComputedStyle(document.body).backgroundColor || "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -233,19 +349,15 @@ export function downloadSvgAsPng(svgEl, filename = "politeion.png", scale = 2) {
   img.src = svg64;
 }
 
-// Copy computed presentation styles from source tree onto the clone so the
-// serialized SVG is self-contained for rasterisation.
 function inlineStyles(srcRoot, cloneRoot) {
-  const props = ["fill", "stroke", "stroke-width", "opacity", "fill-opacity",
-    "stroke-opacity", "font-size", "font-family", "font-weight", "text-anchor"];
+  const props = ["fill", "stroke", "stroke-width", "opacity", "fill-opacity", "stroke-opacity",
+    "font-size", "font-family", "font-weight", "text-anchor", "dominant-baseline"];
   const srcNodes = srcRoot.querySelectorAll("*");
   const cloneNodes = cloneRoot.querySelectorAll("*");
   const rootStyle = getComputedStyle(srcRoot);
-  cloneRoot.setAttribute("style",
-    props.map((p) => `${p}:${rootStyle.getPropertyValue(p)}`).join(";"));
+  cloneRoot.setAttribute("style", props.map((p) => `${p}:${rootStyle.getPropertyValue(p)}`).join(";"));
   srcNodes.forEach((node, i) => {
     const cs = getComputedStyle(node);
-    const decl = props.map((p) => `${p}:${cs.getPropertyValue(p)}`).join(";");
-    if (cloneNodes[i]) cloneNodes[i].setAttribute("style", decl);
+    if (cloneNodes[i]) cloneNodes[i].setAttribute("style", props.map((p) => `${p}:${cs.getPropertyValue(p)}`).join(";"));
   });
 }
